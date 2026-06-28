@@ -8,8 +8,23 @@
 
 /* Begin PBXBuildFile section */
 		0A20C2B5AEEBCA76A32C54AA /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBFCBCE0FBCEF7C83ABACD61 /* Constants.swift */; };
+		0BC90785D91585C04CE04E06 /* Medication+CoreDataClass.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC56038896F0C90A1C63B76F /* Medication+CoreDataClass.swift */; };
+		252DA2BBDFE91030C731389E /* PersistenceController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 783256424249ECF294A3B6D3 /* PersistenceController.swift */; };
+		2C98FE3103EBB26D84D66BB2 /* DoseTrackApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C581B6A1682A93A48B3FCC0 /* DoseTrackApp.swift */; };
+		2E3B16F548370D35434679C9 /* SubscriptionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = EBAFC4266E63CAD4933926A5 /* SubscriptionManager.swift */; };
+		2F4666001E67FF1A940B4CB1 /* DoseLog+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABE8C1BB6ADF181C91D7B1B5 /* DoseLog+Extensions.swift */; };
+		5779CA573B4CF9E77729B6C5 /* Schedule+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4F92BE8F2BEE4599D462CEC /* Schedule+Extensions.swift */; };
+		6C4CF3F6F5157E4806D48163 /* ColorExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB8881AEF9994F330EEA6BB1 /* ColorExtensions.swift */; };
+		6D92A43FEDE7869853A09B55 /* DoseLog+CoreDataClass.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80992CD6D8F672994CF27502 /* DoseLog+CoreDataClass.swift */; };
 		758648FC943D5E93E40B4D86 /* Placeholder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1334F53F193DF18162FD3082 /* Placeholder.swift */; };
 		76D9800A8F47390FB96F17C5 /* WidgetPlaceholder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DD12EC31C090F2859EF3CCC /* WidgetPlaceholder.swift */; };
+		BEC5562B72ADC40E2C675180 /* DoseTrack.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = D4341C7F0E59FA9C0240094D /* DoseTrack.xcdatamodeld */; };
+		C00D5FEE995F258E5957DAF3 /* Medication+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9367CCC57B52B1828EB6D21 /* Medication+Extensions.swift */; };
+		C946DC2FCC34233F54D48A3B /* CoreDataTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8DF9733C237D4FC1AC12A310 /* CoreDataTests.swift */; };
+		CC32A8FABA8182BE6986EDB8 /* SubscriptionManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FA89388364D687BFC710600 /* SubscriptionManagerTests.swift */; };
+		D76707027834FD6DCC843135 /* Products.storekit in Resources */ = {isa = PBXBuildFile; fileRef = 2F9FC8A28D3514A8AF3C2784 /* Products.storekit */; };
+		FB10E263F64A40D6F09922AB /* Schedule+CoreDataClass.swift in Sources */ = {isa = PBXBuildFile; fileRef = 659421C828B6315E4C40041A /* Schedule+CoreDataClass.swift */; };
+		FF4F8AB24C069BA1A44BFE2B /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62B58FEC4F155887E0B66ABB /* ContentView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -24,22 +39,64 @@
 
 /* Begin PBXFileReference section */
 		1334F53F193DF18162FD3082 /* Placeholder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Placeholder.swift; sourceTree = "<group>"; };
+		1FA89388364D687BFC710600 /* SubscriptionManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionManagerTests.swift; sourceTree = "<group>"; };
 		2DD12EC31C090F2859EF3CCC /* WidgetPlaceholder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetPlaceholder.swift; sourceTree = "<group>"; };
+		2F9FC8A28D3514A8AF3C2784 /* Products.storekit */ = {isa = PBXFileReference; path = Products.storekit; sourceTree = "<group>"; };
 		3833AC585BF70A401BF55B25 /* DoseTrack.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = DoseTrack.entitlements; sourceTree = "<group>"; };
+		62B58FEC4F155887E0B66ABB /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		659421C828B6315E4C40041A /* Schedule+CoreDataClass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Schedule+CoreDataClass.swift"; sourceTree = "<group>"; };
+		6D930F0954890B9A4E797A28 /* DoseTrack.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = DoseTrack.xcdatamodel; sourceTree = "<group>"; };
+		783256424249ECF294A3B6D3 /* PersistenceController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersistenceController.swift; sourceTree = "<group>"; };
+		7C581B6A1682A93A48B3FCC0 /* DoseTrackApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DoseTrackApp.swift; sourceTree = "<group>"; };
+		80992CD6D8F672994CF27502 /* DoseLog+CoreDataClass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "DoseLog+CoreDataClass.swift"; sourceTree = "<group>"; };
+		8DF9733C237D4FC1AC12A310 /* CoreDataTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreDataTests.swift; sourceTree = "<group>"; };
 		A5E172956AA9F4089113D3E7 /* DoseTrackTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = DoseTrackTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		A68FE0D696E5C1C84C0E33C1 /* DoseTrackWidgets.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = DoseTrackWidgets.entitlements; sourceTree = "<group>"; };
+		ABE8C1BB6ADF181C91D7B1B5 /* DoseLog+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "DoseLog+Extensions.swift"; sourceTree = "<group>"; };
 		BBFCBCE0FBCEF7C83ABACD61 /* Constants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Constants.swift; sourceTree = "<group>"; };
+		C4F92BE8F2BEE4599D462CEC /* Schedule+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Schedule+Extensions.swift"; sourceTree = "<group>"; };
 		C984C953B3380BEBE5D370EA /* DoseTrack.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = DoseTrack.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		CD41BB94C55051360C9BC444 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		DB8881AEF9994F330EEA6BB1 /* ColorExtensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorExtensions.swift; sourceTree = "<group>"; };
+		EBAFC4266E63CAD4933926A5 /* SubscriptionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionManager.swift; sourceTree = "<group>"; };
 		F15771DBF13A86D21DFD3720 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		F2C5A665408198A48126D5B9 /* DoseTrackWidgets.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = DoseTrackWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		F9367CCC57B52B1828EB6D21 /* Medication+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Medication+Extensions.swift"; sourceTree = "<group>"; };
+		FC56038896F0C90A1C63B76F /* Medication+CoreDataClass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Medication+CoreDataClass.swift"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
+		07322AB8A706A7F5B01DE6F6 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				D4341C7F0E59FA9C0240094D /* DoseTrack.xcdatamodeld */,
+				80992CD6D8F672994CF27502 /* DoseLog+CoreDataClass.swift */,
+				ABE8C1BB6ADF181C91D7B1B5 /* DoseLog+Extensions.swift */,
+				FC56038896F0C90A1C63B76F /* Medication+CoreDataClass.swift */,
+				F9367CCC57B52B1828EB6D21 /* Medication+Extensions.swift */,
+				659421C828B6315E4C40041A /* Schedule+CoreDataClass.swift */,
+				C4F92BE8F2BEE4599D462CEC /* Schedule+Extensions.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		2836CB6CC1F7F7B3380E1EE8 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				62B58FEC4F155887E0B66ABB /* ContentView.swift */,
+				7C581B6A1682A93A48B3FCC0 /* DoseTrackApp.swift */,
+				783256424249ECF294A3B6D3 /* PersistenceController.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
 		46894BC8E5CCAB2BAC6D834D /* DoseTrack */ = {
 			isa = PBXGroup;
 			children = (
+				2836CB6CC1F7F7B3380E1EE8 /* App */,
+				07322AB8A706A7F5B01DE6F6 /* Models */,
 				B08961C188C5FA72EB8A21CE /* Resources */,
+				8E8FADDA792EEF309027CA2F /* Services */,
 				A014992D42ABF467D8150491 /* Utilities */,
 				6823DF62CD72AABE20CA8CEC /* Views */,
 			);
@@ -53,9 +110,18 @@
 			path = Views;
 			sourceTree = "<group>";
 		};
+		8E8FADDA792EEF309027CA2F /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				EBAFC4266E63CAD4933926A5 /* SubscriptionManager.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
 		A014992D42ABF467D8150491 /* Utilities */ = {
 			isa = PBXGroup;
 			children = (
+				DB8881AEF9994F330EEA6BB1 /* ColorExtensions.swift */,
 				BBFCBCE0FBCEF7C83ABACD61 /* Constants.swift */,
 			);
 			path = Utilities;
@@ -66,6 +132,7 @@
 			children = (
 				3833AC585BF70A401BF55B25 /* DoseTrack.entitlements */,
 				F15771DBF13A86D21DFD3720 /* Info.plist */,
+				2F9FC8A28D3514A8AF3C2784 /* Products.storekit */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -83,7 +150,9 @@
 		CC055E304B321B386F61B6E5 /* DoseTrackTests */ = {
 			isa = PBXGroup;
 			children = (
+				8DF9733C237D4FC1AC12A310 /* CoreDataTests.swift */,
 				1334F53F193DF18162FD3082 /* Placeholder.swift */,
+				1FA89388364D687BFC710600 /* SubscriptionManagerTests.swift */,
 			);
 			path = DoseTrackTests;
 			sourceTree = "<group>";
@@ -151,6 +220,7 @@
 			buildConfigurationList = 00C1243C4D39362B4D30D90F /* Build configuration list for PBXNativeTarget "DoseTrack" */;
 			buildPhases = (
 				E0C579F13CF90BA39CE097EF /* Sources */,
+				FDBEC95A4DCCD07DA5E96067 /* Resources */,
 			);
 			buildRules = (
 			);
@@ -204,12 +274,25 @@
 		};
 /* End PBXProject section */
 
+/* Begin PBXResourcesBuildPhase section */
+		FDBEC95A4DCCD07DA5E96067 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D76707027834FD6DCC843135 /* Products.storekit in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		A09C3720157F849CC42B791F /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C946DC2FCC34233F54D48A3B /* CoreDataTests.swift in Sources */,
 				758648FC943D5E93E40B4D86 /* Placeholder.swift in Sources */,
+				CC32A8FABA8182BE6986EDB8 /* SubscriptionManagerTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -225,7 +308,19 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				6C4CF3F6F5157E4806D48163 /* ColorExtensions.swift in Sources */,
 				0A20C2B5AEEBCA76A32C54AA /* Constants.swift in Sources */,
+				FF4F8AB24C069BA1A44BFE2B /* ContentView.swift in Sources */,
+				6D92A43FEDE7869853A09B55 /* DoseLog+CoreDataClass.swift in Sources */,
+				2F4666001E67FF1A940B4CB1 /* DoseLog+Extensions.swift in Sources */,
+				BEC5562B72ADC40E2C675180 /* DoseTrack.xcdatamodeld in Sources */,
+				2C98FE3103EBB26D84D66BB2 /* DoseTrackApp.swift in Sources */,
+				0BC90785D91585C04CE04E06 /* Medication+CoreDataClass.swift in Sources */,
+				C00D5FEE995F258E5957DAF3 /* Medication+Extensions.swift in Sources */,
+				252DA2BBDFE91030C731389E /* PersistenceController.swift in Sources */,
+				FB10E263F64A40D6F09922AB /* Schedule+CoreDataClass.swift in Sources */,
+				5779CA573B4CF9E77729B6C5 /* Schedule+Extensions.swift in Sources */,
+				2E3B16F548370D35434679C9 /* SubscriptionManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -244,6 +339,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -421,6 +517,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -509,6 +606,19 @@
 			defaultConfigurationName = Debug;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCVersionGroup section */
+		D4341C7F0E59FA9C0240094D /* DoseTrack.xcdatamodeld */ = {
+			isa = XCVersionGroup;
+			children = (
+				6D930F0954890B9A4E797A28 /* DoseTrack.xcdatamodel */,
+			);
+			currentVersion = 6D930F0954890B9A4E797A28 /* DoseTrack.xcdatamodel */;
+			path = DoseTrack.xcdatamodeld;
+			sourceTree = "<group>";
+			versionGroupType = wrapper.xcdatamodel;
+		};
+/* End XCVersionGroup section */
 	};
 	rootObject = 6315B9B4813F5F27900F9403 /* Project object */;
 }
