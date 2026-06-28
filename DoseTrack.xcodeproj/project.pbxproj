@@ -10,6 +10,8 @@
 		058CB864FC21FFD0B15D5D62 /* WatchConnectivityReceiver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95BD112A0D8B0134A22442EA /* WatchConnectivityReceiver.swift */; };
 		0A20C2B5AEEBCA76A32C54AA /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBFCBCE0FBCEF7C83ABACD61 /* Constants.swift */; };
 		0BC90785D91585C04CE04E06 /* Medication+CoreDataClass.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC56038896F0C90A1C63B76F /* Medication+CoreDataClass.swift */; };
+		1158F9B3D8437466D48B2052 /* Secrets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F9568B988B88A0C6E1034A3 /* Secrets.swift */; };
+		1C754212C521F888A1A4EEBB /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52ACDE6D4899772FC43A7390 /* MainTabView.swift */; };
 		1E6D95CE6D459A3E57CC30D7 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAB551C1FB8D1EA35972B282 /* OnboardingView.swift */; };
 		22EE2C8CD64A1DBD581B3AAA /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0092AEE5F32DECE392F1FBC5 /* PaywallView.swift */; };
 		252DA2BBDFE91030C731389E /* PersistenceController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 783256424249ECF294A3B6D3 /* PersistenceController.swift */; };
@@ -24,6 +26,7 @@
 		4F3261C581BABC751AD313E9 /* TodayWatchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DDD5DD43921C6555BF1DFC38 /* TodayWatchView.swift */; };
 		5356CA88CFBF7B7259AB067C /* LockScreenWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F20E87845CCE9E5F84D954F /* LockScreenWidget.swift */; };
 		5779CA573B4CF9E77729B6C5 /* Schedule+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4F92BE8F2BEE4599D462CEC /* Schedule+Extensions.swift */; };
+		623A9C44933B55211AE28103 /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = C24F0588AB31B9A4902090E6 /* GoogleSignInSwift */; };
 		625A5FD00337A7B9592D47AB /* CalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8CD6CA5C53F86C4B81BF09D /* CalendarView.swift */; };
 		62DEC3A7AF026355FB049F44 /* SmallWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6EC0ECE28E942CC99534F64 /* SmallWidget.swift */; };
 		69A9CC9A6BCDF42A46280271 /* TodayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B9416BCF667D44B1B1CCB75 /* TodayView.swift */; };
@@ -31,6 +34,8 @@
 		6C986A2D0DFCBCC472B41B60 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 020BE8E8783CD63DD6223C2A /* SettingsView.swift */; };
 		6D92A43FEDE7869853A09B55 /* DoseLog+CoreDataClass.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80992CD6D8F672994CF27502 /* DoseLog+CoreDataClass.swift */; };
 		6F0BF41105812A2D4130060F /* NotificationSchedulerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA1090D2A5C494DAAB7160DC /* NotificationSchedulerTests.swift */; };
+		6FF0D471179DFC7041436CFF /* AuthManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D6DF55F60C00C6E0341B0DD /* AuthManager.swift */; };
+		71C3618EEB9801B8A92A5086 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58A9A5F0AF20BE1EEE3AC7D9 /* RootView.swift */; };
 		75788434334E446254CBC72A /* WidgetDataProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = F85B31DF4FE76BC475F9D0CC /* WidgetDataProvider.swift */; };
 		758648FC943D5E93E40B4D86 /* Placeholder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1334F53F193DF18162FD3082 /* Placeholder.swift */; };
 		78E1CEACF8B5258CF4F98F5C /* DoseTrackWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB37B24455EDD3E856F140EB /* DoseTrackWatchApp.swift */; };
@@ -44,6 +49,7 @@
 		9E616B26A43CE714DF125AE8 /* MedicationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 878B68C292228E0060558260 /* MedicationsView.swift */; };
 		9F8C388D5ADC9D1FADE1F537 /* DoseTrackWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = F2C5A665408198A48126D5B9 /* DoseTrackWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		9FC04EC45190B3E5A1D30337 /* AddEditMedicationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8DB6178CE8B08859DAC559F /* AddEditMedicationView.swift */; };
+		A268478FCA48D8A108362FF6 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = ABAACB239219E084D4E75FD2 /* GoogleSignIn */; };
 		A7BF7E3D338864668FBF87CE /* AdherenceCalculatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3C137AE71909B05AA99C229 /* AdherenceCalculatorTests.swift */; };
 		AB9F67B2E65BA6CEFE554DB2 /* TodayViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5010CFC8C3F763A36668FE2C /* TodayViewModel.swift */; };
 		B69642E8F4E8AED1DA17645A /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7AFD860AD438BA066A78EAAE /* AppDelegate.swift */; };
@@ -53,6 +59,7 @@
 		B88C9038817C7EB6A325029B /* HistoryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF2BEF367E2B42E12D66BD9B /* HistoryViewModel.swift */; };
 		BABB26DA058420EBB0B1D916 /* NotificationController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A50BE4785E63F56B342BE48B /* NotificationController.swift */; };
 		BC56C6A9A93C59C8711F695F /* ReportGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB4EAC2257487A3F340D6310 /* ReportGenerator.swift */; };
+		BCB4379E53AC435DDF9DD4A4 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 565A84AEE813DED51223FB82 /* Supabase */; };
 		BEC5562B72ADC40E2C675180 /* DoseTrack.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = D4341C7F0E59FA9C0240094D /* DoseTrack.xcdatamodeld */; };
 		C00D5FEE995F258E5957DAF3 /* Medication+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9367CCC57B52B1828EB6D21 /* Medication+Extensions.swift */; };
 		C02195D91642F8D7E77AE383 /* WidgetColorExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = 822594ED54F9EFC6980C7E5D /* WidgetColorExtension.swift */; };
@@ -62,6 +69,7 @@
 		D76707027834FD6DCC843135 /* Products.storekit in Resources */ = {isa = PBXBuildFile; fileRef = 2F9FC8A28D3514A8AF3C2784 /* Products.storekit */; };
 		EE0B061F283193D38947F26F /* ComplicationProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A9188EED915483498FCA7AC /* ComplicationProvider.swift */; };
 		F0A7B2D87E92A1DAA3DBB899 /* NotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CEB631C97363324CCE1380C /* NotificationManager.swift */; };
+		F24737D9C6039DF5252A4B6C /* AuthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E39FEC22DAEF5212C58A309 /* AuthView.swift */; };
 		F31CD3B97CC2F0790CD8B8A1 /* ScheduleBuilderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BC2F0E0ED26B72A8489BC6E /* ScheduleBuilderView.swift */; };
 		F8AD1AB23B97957617500CC6 /* ExportManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 326537A1EABFA4A5B04DE7DA /* ExportManagerTests.swift */; };
 		FB10E263F64A40D6F09922AB /* Schedule+CoreDataClass.swift in Sources */ = {isa = PBXBuildFile; fileRef = 659421C828B6315E4C40041A /* Schedule+CoreDataClass.swift */; };
@@ -107,6 +115,7 @@
 		14894400AD92BDDA5EEA2A18 /* MedicationsViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MedicationsViewModelTests.swift; sourceTree = "<group>"; };
 		15FB0D0175781373455B3A93 /* AdherenceChartView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdherenceChartView.swift; sourceTree = "<group>"; };
 		1B9416BCF667D44B1B1CCB75 /* TodayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayView.swift; sourceTree = "<group>"; };
+		1F9568B988B88A0C6E1034A3 /* Secrets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Secrets.swift; sourceTree = "<group>"; };
 		1FA89388364D687BFC710600 /* SubscriptionManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionManagerTests.swift; sourceTree = "<group>"; };
 		2D2674E5A99319CB33B5C5B6 /* AddEditMedicationViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddEditMedicationViewModel.swift; sourceTree = "<group>"; };
 		2F20E87845CCE9E5F84D954F /* LockScreenWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LockScreenWidget.swift; sourceTree = "<group>"; };
@@ -116,7 +125,9 @@
 		3B989472EF06D9A177E413CA /* DoseTrackWatch.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = DoseTrackWatch.entitlements; sourceTree = "<group>"; };
 		49E70FC6E1596E9EFC428455 /* ExportManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportManager.swift; sourceTree = "<group>"; };
 		5010CFC8C3F763A36668FE2C /* TodayViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayViewModel.swift; sourceTree = "<group>"; };
+		52ACDE6D4899772FC43A7390 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
 		56B5E2D8D1A525B4D9624923 /* AddEditMedicationViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddEditMedicationViewModelTests.swift; sourceTree = "<group>"; };
+		58A9A5F0AF20BE1EEE3AC7D9 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		59C94278F5723E542529E8BA /* MarkDoseTakenIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkDoseTakenIntent.swift; sourceTree = "<group>"; };
 		62B58FEC4F155887E0B66ABB /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		659421C828B6315E4C40041A /* Schedule+CoreDataClass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Schedule+CoreDataClass.swift"; sourceTree = "<group>"; };
@@ -126,12 +137,14 @@
 		7A9188EED915483498FCA7AC /* ComplicationProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComplicationProvider.swift; sourceTree = "<group>"; };
 		7AFD860AD438BA066A78EAAE /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		7C581B6A1682A93A48B3FCC0 /* DoseTrackApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DoseTrackApp.swift; sourceTree = "<group>"; };
+		7E39FEC22DAEF5212C58A309 /* AuthView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthView.swift; sourceTree = "<group>"; };
 		80992CD6D8F672994CF27502 /* DoseLog+CoreDataClass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "DoseLog+CoreDataClass.swift"; sourceTree = "<group>"; };
 		822594ED54F9EFC6980C7E5D /* WidgetColorExtension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetColorExtension.swift; sourceTree = "<group>"; };
 		862F377A339FECEE7C6CCC43 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		878B68C292228E0060558260 /* MedicationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MedicationsView.swift; sourceTree = "<group>"; };
 		8C08ADCFD6A3E049DEBD7438 /* MedicationsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MedicationsViewModel.swift; sourceTree = "<group>"; };
 		8CEB631C97363324CCE1380C /* NotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationManager.swift; sourceTree = "<group>"; };
+		8D6DF55F60C00C6E0341B0DD /* AuthManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthManager.swift; sourceTree = "<group>"; };
 		8DF9733C237D4FC1AC12A310 /* CoreDataTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreDataTests.swift; sourceTree = "<group>"; };
 		8F171A7EC3E2D466D5BF55CC /* MedicationDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MedicationDetailView.swift; sourceTree = "<group>"; };
 		95BD112A0D8B0134A22442EA /* WatchConnectivityReceiver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchConnectivityReceiver.swift; sourceTree = "<group>"; };
@@ -171,6 +184,19 @@
 		FAE408261B453CFADBF3254C /* WatchConnectivityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchConnectivityManager.swift; sourceTree = "<group>"; };
 		FC56038896F0C90A1C63B76F /* Medication+CoreDataClass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Medication+CoreDataClass.swift"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		90195143BDEDD82E2DCFB102 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				BCB4379E53AC435DDF9DD4A4 /* Supabase in Frameworks */,
+				A268478FCA48D8A108362FF6 /* GoogleSignIn in Frameworks */,
+				623A9C44933B55211AE28103 /* GoogleSignInSwift in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		07322AB8A706A7F5B01DE6F6 /* Models */ = {
@@ -212,7 +238,9 @@
 				7AFD860AD438BA066A78EAAE /* AppDelegate.swift */,
 				62B58FEC4F155887E0B66ABB /* ContentView.swift */,
 				7C581B6A1682A93A48B3FCC0 /* DoseTrackApp.swift */,
+				52ACDE6D4899772FC43A7390 /* MainTabView.swift */,
 				783256424249ECF294A3B6D3 /* PersistenceController.swift */,
+				58A9A5F0AF20BE1EEE3AC7D9 /* RootView.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -229,6 +257,14 @@
 				6823DF62CD72AABE20CA8CEC /* Views */,
 			);
 			path = DoseTrack;
+			sourceTree = "<group>";
+		};
+		4ED7AEF710ED0035F538BAEE /* Auth */ = {
+			isa = PBXGroup;
+			children = (
+				7E39FEC22DAEF5212C58A309 /* AuthView.swift */,
+			);
+			path = Auth;
 			sourceTree = "<group>";
 		};
 		649F051657FEDDCD378A902B /* Today */ = {
@@ -255,6 +291,7 @@
 		6823DF62CD72AABE20CA8CEC /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				4ED7AEF710ED0035F538BAEE /* Auth */,
 				7C96C8F80887C08158E45381 /* History */,
 				11A63262D17D40036F5091A6 /* Medications */,
 				2251F76349D4D912AD43FC43 /* Onboarding */,
@@ -278,6 +315,7 @@
 		8E8FADDA792EEF309027CA2F /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				8D6DF55F60C00C6E0341B0DD /* AuthManager.swift */,
 				49E70FC6E1596E9EFC428455 /* ExportManager.swift */,
 				8CEB631C97363324CCE1380C /* NotificationManager.swift */,
 				DFA3D671FBA09F78CAF744E2 /* NotificationScheduler.swift */,
@@ -326,6 +364,7 @@
 				F15771DBF13A86D21DFD3720 /* Info.plist */,
 				ADB416975961EB51DF364A82 /* PrivacyInfo.xcprivacy */,
 				2F9FC8A28D3514A8AF3C2784 /* Products.storekit */,
+				1F9568B988B88A0C6E1034A3 /* Secrets.swift */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -436,6 +475,7 @@
 			buildPhases = (
 				E0C579F13CF90BA39CE097EF /* Sources */,
 				FDBEC95A4DCCD07DA5E96067 /* Resources */,
+				90195143BDEDD82E2DCFB102 /* Frameworks */,
 				60446C80854DE12B4CEEBBC2 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
@@ -445,6 +485,9 @@
 			);
 			name = DoseTrack;
 			packageProductDependencies = (
+				565A84AEE813DED51223FB82 /* Supabase */,
+				ABAACB239219E084D4E75FD2 /* GoogleSignIn */,
+				C24F0588AB31B9A4902090E6 /* GoogleSignInSwift */,
 			);
 			productName = DoseTrack;
 			productReference = C984C953B3380BEBE5D370EA /* DoseTrack.app */;
@@ -499,6 +542,10 @@
 			);
 			mainGroup = EB0C40386B630159CC5A9CC1;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				5F6C96B8BB97ACA99B4A932C /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
+				4AF27CC026B2093DD070D18A /* XCRemoteSwiftPackageReference "supabase-swift" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = B4C74E21B63C636282DBF037 /* Products */;
 			projectDirPath = "";
@@ -575,6 +622,8 @@
 				9D77D04CB6E41B3632210DA9 /* AddEditMedicationViewModel.swift in Sources */,
 				3AC02CB59E3F208940FCC564 /* AdherenceChartView.swift in Sources */,
 				B69642E8F4E8AED1DA17645A /* AppDelegate.swift in Sources */,
+				6FF0D471179DFC7041436CFF /* AuthManager.swift in Sources */,
+				F24737D9C6039DF5252A4B6C /* AuthView.swift in Sources */,
 				625A5FD00337A7B9592D47AB /* CalendarView.swift in Sources */,
 				6C4CF3F6F5157E4806D48163 /* ColorExtensions.swift in Sources */,
 				0A20C2B5AEEBCA76A32C54AA /* Constants.swift in Sources */,
@@ -588,6 +637,7 @@
 				93B2CC95359EBB9FD24E0837 /* ExportManager.swift in Sources */,
 				CF78CFEB0883C456B2A70708 /* HistoryView.swift in Sources */,
 				B88C9038817C7EB6A325029B /* HistoryViewModel.swift in Sources */,
+				1C754212C521F888A1A4EEBB /* MainTabView.swift in Sources */,
 				0BC90785D91585C04CE04E06 /* Medication+CoreDataClass.swift in Sources */,
 				C00D5FEE995F258E5957DAF3 /* Medication+Extensions.swift in Sources */,
 				2D49CAEEC5B0F96B2C0D696F /* MedicationDetailView.swift in Sources */,
@@ -599,9 +649,11 @@
 				22EE2C8CD64A1DBD581B3AAA /* PaywallView.swift in Sources */,
 				252DA2BBDFE91030C731389E /* PersistenceController.swift in Sources */,
 				BC56C6A9A93C59C8711F695F /* ReportGenerator.swift in Sources */,
+				71C3618EEB9801B8A92A5086 /* RootView.swift in Sources */,
 				FB10E263F64A40D6F09922AB /* Schedule+CoreDataClass.swift in Sources */,
 				5779CA573B4CF9E77729B6C5 /* Schedule+Extensions.swift in Sources */,
 				F31CD3B97CC2F0790CD8B8A1 /* ScheduleBuilderView.swift in Sources */,
+				1158F9B3D8437466D48B2052 /* Secrets.swift in Sources */,
 				6C986A2D0DFCBCC472B41B60 /* SettingsView.swift in Sources */,
 				2E3B16F548370D35434679C9 /* SubscriptionManager.swift in Sources */,
 				69A9CC9A6BCDF42A46280271 /* TodayView.swift in Sources */,
@@ -940,6 +992,43 @@
 			defaultConfigurationName = Debug;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		4AF27CC026B2093DD070D18A /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/supabase-community/supabase-swift";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.0.0;
+			};
+		};
+		5F6C96B8BB97ACA99B4A932C /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/google/GoogleSignIn-iOS";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 7.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		565A84AEE813DED51223FB82 /* Supabase */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 4AF27CC026B2093DD070D18A /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Supabase;
+		};
+		ABAACB239219E084D4E75FD2 /* GoogleSignIn */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 5F6C96B8BB97ACA99B4A932C /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignIn;
+		};
+		C24F0588AB31B9A4902090E6 /* GoogleSignInSwift */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 5F6C96B8BB97ACA99B4A932C /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignInSwift;
+		};
+/* End XCSwiftPackageProductDependency section */
 
 /* Begin XCVersionGroup section */
 		D4341C7F0E59FA9C0240094D /* DoseTrack.xcdatamodeld */ = {

@@ -7,6 +7,14 @@ options:
   groupSortPosition: top
   createIntermediateGroups: true
 
+packages:
+  Supabase:
+    url: https://github.com/supabase-community/supabase-swift
+    from: "2.0.0"
+  GoogleSignIn:
+    url: https://github.com/google/GoogleSignIn-iOS
+    from: "7.0.0"
+
 settings:
   base:
     SWIFT_VERSION: "5.9"
@@ -40,6 +48,12 @@ targets:
     dependencies:
       - target: DoseTrackWidgets
         embed: true
+      - package: Supabase
+        product: Supabase
+      - package: GoogleSignIn
+        product: GoogleSignIn
+      - package: GoogleSignIn
+        product: GoogleSignInSwift
 
   DoseTrackWidgets:
     type: app-extension

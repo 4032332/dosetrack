@@ -5,6 +5,7 @@ import CoreData
 struct SettingsView: View {
     @Environment(\.managedObjectContext) private var context
     @EnvironmentObject private var subscriptionManager: SubscriptionManager
+    @EnvironmentObject private var auth: AuthManager
     @AppStorage("patientName") private var patientName: String = ""
     @AppStorage("defaultSnoozeDuration") private var defaultSnoozeDuration: Int = 30
     @AppStorage("criticalAlertsEnabled") private var criticalAlertsEnabled: Bool = true
@@ -153,6 +154,20 @@ struct SettingsView: View {
                         showingDeleteConfirm = true
                     } label: {
                         Label("Delete All Data", systemImage: "trash.fill")
+                    }
+                }
+
+                // Account
+                Section("Account") {
+                    HStack {
+                        Label(auth.userEmail, systemImage: "person.circle.fill")
+                            .lineLimit(1)
+                        Spacer()
+                    }
+                    Button(role: .destructive) {
+                        Task { await auth.signOut() }
+                    } label: {
+                        Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
                     }
                 }
 

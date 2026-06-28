@@ -34,6 +34,16 @@
         <string>processing</string>
         <string>remote-notification</string>
     </array>
+    <key>CFBundleURLTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleURLSchemes</key>
+            <array>
+                <!-- Replace with your reversed Google Client ID, e.g. com.googleusercontent.apps.YOUR_CLIENT_ID -->
+                <string>com.googleusercontent.apps.REPLACE_WITH_REVERSED_CLIENT_ID</string>
+            </array>
+        </dict>
+    </array>
     <key>BGTaskSchedulerPermittedIdentifiers</key>
     <array>
         <string>com.robbrown.dosetrack.refresh</string>
