@@ -58,6 +58,11 @@ struct AddEditMedicationView: View {
                     }
                 }
 
+                // Contraceptive quick-setup
+                if !viewModel.isEditing {
+                    ContraceptiveSetupSection(viewModel: viewModel)
+                }
+
                 // Refill tracking
                 Section("Refill Tracking") {
                     Stepper(
@@ -138,6 +143,150 @@ struct AddEditMedicationView: View {
                     .disabled(!viewModel.isValid)
                 }
             }
+        }
+    }
+}
+
+// MARK: - Contraceptive Setup Section
+
+private struct ContraceptiveSetupSection: View {
+    @ObservedObject var viewModel: AddEditMedicationViewModel
+    @State private var showingPresetPicker = false
+
+    var body: some View {
+        Section {
+            if viewModel.isContraceptive {
+                // Preset already chosen — show summary + date picker
+                HStack {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundStyle(.green)
+                    Text(viewModel.selectedPreset?.commonName ?? viewModel.name)
+                        .font(.subheadline)
+                    Spacer()
+                    Button("Change") { showingPresetPicker = true }
+                        .font(.caption)
+                }
+
+                DatePicker(
+                    "Last administered",
+                    selection: $viewModel.lastAdministeredDate,
+                    in: ...Date(),
+                    displayedComponents: .date
+                )
+
+                if let preset = viewModel.selectedPreset {
+                    let nextDue = viewModel.lastAdministeredDate.addingTimeInterval(
+                        TimeInterval(preset.intervalDays * 86400)
+                    )
+                    let lead = Constants.Contraceptive.leadDays(for: preset.intervalDays)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Label(
+                            "Due: \(nextDue.formatted(date: .abbreviated, time: .omitted))",
+                            systemImage: "calendar"
+                        )
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        if lead > 0 {
+                            Label(
+                                "Reminder: \(lead) days before",
+                                systemImage: "bell.fill"
+                            )
+                            .font(.caption)
+                            .foregroundStyle(.orange)
+                        }
+                    }
+                    .padding(.vertical, 2)
+                }
+
+                Button("Remove contraceptive setup", role: .destructive) {
+                    viewModel.isContraceptive = false
+                    viewModel.selectedPreset = nil
+                    viewModel.unit = "pill"
+                    viewModel.schedules = [ScheduleDraft()]
+                }
+                .font(.caption)
+
+            } else {
+                // Entry point — button to activate the preset picker
+                Button {
+                    showingPresetPicker = true
+                } label: {
+                    HStack {
+                        Image(systemName: "calendar.badge.clock")
+                            .foregroundStyle(.purple)
+                        Text("Set up contraceptive reminder")
+                            .foregroundStyle(.primary)
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+        } header: {
+            Text("Contraceptive Tracking")
+        } footer: {
+            if !viewModel.isContraceptive {
+                Text("Tracks long-acting methods (IUDs, implants, injections) and sends advance reminders before they expire.")
+                    .font(.caption)
+            }
+        }
+        .sheet(isPresented: $showingPresetPicker) {
+            ContraceptivePresetPicker(viewModel: viewModel, isPresented: $showingPresetPicker)
+        }
+    }
+}
+
+private struct ContraceptivePresetPicker: View {
+    @ObservedObject var viewModel: AddEditMedicationViewModel
+    @Binding var isPresented: Bool
+
+    var body: some View {
+        NavigationStack {
+            List(Constants.Contraceptive.presets) { preset in
+                Button {
+                    viewModel.applyPreset(preset)
+                    isPresented = false
+                } label: {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(preset.name)
+                            .foregroundStyle(.primary)
+                            .fontWeight(.medium)
+                        HStack {
+                            Circle()
+                                .fill(Color(hex: preset.colorHex))
+                                .frame(width: 8, height: 8)
+                            Text(intervalLabel(preset.intervalDays))
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            if Constants.Contraceptive.leadDays(for: preset.intervalDays) > 0 {
+                                Text("·")
+                                    .foregroundStyle(.secondary)
+                                Text("\(Constants.Contraceptive.leadDays(for: preset.intervalDays))-day advance reminder")
+                                    .font(.caption)
+                                    .foregroundStyle(.orange)
+                            }
+                        }
+                    }
+                    .padding(.vertical, 2)
+                }
+            }
+            .navigationTitle("Choose Method")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { isPresented = false }
+                }
+            }
+        }
+    }
+
+    private func intervalLabel(_ days: Int) -> String {
+        switch days {
+        case 1..<14:   return "Every \(days) days"
+        case 14..<60:  return "Every \(days / 7) weeks"
+        case 60..<365: return "Every ~\(days / 30) months"
+        default:       return "Every \(days / 365) year\(days >= 730 ? "s" : "")"
         }
     }
 }

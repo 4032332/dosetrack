@@ -3,9 +3,9 @@
 <plist version="1.0">
 <dict>
     <key>CFBundleName</key>
-    <string>DoseTrackWidgets</string>
+    <string>DoseTrack</string>
     <key>CFBundleDisplayName</key>
-    <string>DoseTrack Widgets</string>
+    <string>DoseTrack</string>
     <key>CFBundleIdentifier</key>
     <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
     <key>CFBundleVersion</key>
@@ -13,13 +13,12 @@
     <key>CFBundleShortVersionString</key>
     <string>$(MARKETING_VERSION)</string>
     <key>CFBundlePackageType</key>
-    <string>XPC!</string>
+    <string>APPL</string>
     <key>CFBundleExecutable</key>
     <string>$(EXECUTABLE_NAME)</string>
-    <key>NSExtension</key>
-    <dict>
-        <key>NSExtensionPointIdentifier</key>
-        <string>com.apple.widgetkit-extension</string>
-    </dict>
+    <key>WKApplication</key>
+    <true/>
+    <key>WKCompanionAppBundleIdentifier</key>
+    <string>com.robbrown.dosetrack</string>
 </dict>
 </plist>

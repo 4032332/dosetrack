@@ -44,8 +44,14 @@ final class TodayViewModel: ObservableObject {
     }
 
     func snooze(_ entry: DoseEntry, minutes: Int = 30) {
-        // Snooze fires a new notification (Phase 3). No log written — user will see the
-        // rescheduled notification and can act on it then.
+        NotificationScheduler.shared.scheduleSnooze(
+            medicationId: entry.medication.id?.uuidString ?? "",
+            medicationName: entry.medication.wrappedName,
+            dosage: entry.medication.wrappedDosage,
+            scheduleId: entry.schedule.id?.uuidString ?? "",
+            scheduledAt: entry.scheduledAt,
+            minutes: minutes
+        )
     }
 
     // MARK: - Computed

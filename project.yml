@@ -37,6 +37,9 @@ targets:
           - CloudKit
         com.apple.developer.icloud-container-identifiers:
           - iCloud.com.robbrown.dosetrack
+    dependencies:
+      - target: DoseTrackWidgets
+        embed: true
 
   DoseTrackWidgets:
     type: app-extension
@@ -49,6 +52,32 @@ targets:
         INFOPLIST_FILE: DoseTrackWidgets/Info.plist
         PRODUCT_BUNDLE_IDENTIFIER: com.robbrown.dosetrack.widgets
         CODE_SIGN_ENTITLEMENTS: DoseTrackWidgets/DoseTrackWidgets.entitlements
+        APPLICATION_EXTENSION_API_ONLY: YES
+        INFOPLIST_OUTPUT_FORMAT: XML
+        APPINTENTS_DEPLOY_SWIFT_SUPPORT_RESOURCES: NO
+    entitlements:
+      path: DoseTrackWidgets/DoseTrackWidgets.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.robbrown.dosetrack
+
+  DoseTrackWatch:
+    type: application
+    platform: watchOS
+    deploymentTarget: "10.0"
+    sources:
+      - path: "DoseTrackWatch Watch App"
+    settings:
+      base:
+        INFOPLIST_FILE: "DoseTrackWatch Watch App/Info.plist"
+        PRODUCT_BUNDLE_IDENTIFIER: com.robbrown.dosetrack.watchkitapp
+        GENERATE_INFOPLIST_FILE: NO
+        WATCHOS_DEPLOYMENT_TARGET: "10.0"
+    entitlements:
+      path: "DoseTrackWatch Watch App/DoseTrackWatch.entitlements"
+      properties:
+        com.apple.security.application-groups:
+          - group.com.robbrown.dosetrack
 
   DoseTrackTests:
     type: bundle.unit-test

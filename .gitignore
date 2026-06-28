@@ -1,7 +1,35 @@
-.DS_Store
-*.xcuserstate
-xcuserdata/
+# Xcode
+*.xcworkspace/xcuserdata
+*.xcodeproj/xcuserdata
+*.xcodeproj/project.xcworkspace/xcuserdata
 DerivedData/
+build/
+*.moved-aside
+*.pbxuser
+!default.pbxuser
+*.mode1v3
+!default.mode1v3
+*.mode2v3
+!default.mode2v3
+*.perspectivev3
+!default.perspectivev3
+xcuserdata/
+*.xccheckout
+*.xcscmblueprint
+
+# Swift Package Manager
 .build/
-*.o
-*.d
+.swiftpm/
+
+# macOS
+.DS_Store
+**/.DS_Store
+
+# Secrets — NEVER commit these
+DoseTrack/Resources/Secrets.swift
+*.xcconfig.local
+
+# Simulators / device builds
+*.ipa
+*.dSYM.zip
+*.dSYM

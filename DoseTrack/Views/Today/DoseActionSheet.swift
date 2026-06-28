@@ -1,5 +1,6 @@
 // DoseTrack/Views/Today/DoseActionSheet.swift
 import SwiftUI
+import UIKit
 
 struct DoseActionSheet: View {
     let entry: DoseEntry
@@ -37,14 +38,18 @@ struct DoseActionSheet: View {
             Divider()
 
             actionButton(title: "Mark as Taken", icon: "checkmark.circle.fill", color: .green) {
+                haptic(.medium)
+                UINotificationFeedbackGenerator().notificationOccurred(.success)
                 onTaken(); dismiss()
             }
             Divider().padding(.leading)
             actionButton(title: "Skip This Dose", icon: "arrow.right.circle.fill", color: .orange) {
+                haptic(.light)
                 onSkipped(); dismiss()
             }
             Divider().padding(.leading)
             actionButton(title: "Snooze 30 Minutes", icon: "clock.fill", color: .blue) {
+                haptic(.light)
                 onSnooze(); dismiss()
             }
 
@@ -59,6 +64,10 @@ struct DoseActionSheet: View {
         .background(.background)
         .presentationDetents([.height(320)])
         .presentationDragIndicator(.hidden)
+    }
+
+    private func haptic(_ style: UIImpactFeedbackGenerator.FeedbackStyle) {
+        UIImpactFeedbackGenerator(style: style).impactOccurred()
     }
 
     private func actionButton(
