@@ -1,0 +1,514 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		0A20C2B5AEEBCA76A32C54AA /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBFCBCE0FBCEF7C83ABACD61 /* Constants.swift */; };
+		758648FC943D5E93E40B4D86 /* Placeholder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1334F53F193DF18162FD3082 /* Placeholder.swift */; };
+		76D9800A8F47390FB96F17C5 /* WidgetPlaceholder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DD12EC31C090F2859EF3CCC /* WidgetPlaceholder.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		AC31DAED931B9BB3D324DEB9 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 6315B9B4813F5F27900F9403 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 301788A43C79587C8847500D;
+			remoteInfo = DoseTrack;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		1334F53F193DF18162FD3082 /* Placeholder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Placeholder.swift; sourceTree = "<group>"; };
+		2DD12EC31C090F2859EF3CCC /* WidgetPlaceholder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetPlaceholder.swift; sourceTree = "<group>"; };
+		3833AC585BF70A401BF55B25 /* DoseTrack.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = DoseTrack.entitlements; sourceTree = "<group>"; };
+		A5E172956AA9F4089113D3E7 /* DoseTrackTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = DoseTrackTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		A68FE0D696E5C1C84C0E33C1 /* DoseTrackWidgets.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = DoseTrackWidgets.entitlements; sourceTree = "<group>"; };
+		BBFCBCE0FBCEF7C83ABACD61 /* Constants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Constants.swift; sourceTree = "<group>"; };
+		C984C953B3380BEBE5D370EA /* DoseTrack.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = DoseTrack.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		CD41BB94C55051360C9BC444 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		F15771DBF13A86D21DFD3720 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		F2C5A665408198A48126D5B9 /* DoseTrackWidgets.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = DoseTrackWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		46894BC8E5CCAB2BAC6D834D /* DoseTrack */ = {
+			isa = PBXGroup;
+			children = (
+				B08961C188C5FA72EB8A21CE /* Resources */,
+				A014992D42ABF467D8150491 /* Utilities */,
+				6823DF62CD72AABE20CA8CEC /* Views */,
+			);
+			path = DoseTrack;
+			sourceTree = "<group>";
+		};
+		6823DF62CD72AABE20CA8CEC /* Views */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		A014992D42ABF467D8150491 /* Utilities */ = {
+			isa = PBXGroup;
+			children = (
+				BBFCBCE0FBCEF7C83ABACD61 /* Constants.swift */,
+			);
+			path = Utilities;
+			sourceTree = "<group>";
+		};
+		B08961C188C5FA72EB8A21CE /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				3833AC585BF70A401BF55B25 /* DoseTrack.entitlements */,
+				F15771DBF13A86D21DFD3720 /* Info.plist */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		B4C74E21B63C636282DBF037 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				C984C953B3380BEBE5D370EA /* DoseTrack.app */,
+				A5E172956AA9F4089113D3E7 /* DoseTrackTests.xctest */,
+				F2C5A665408198A48126D5B9 /* DoseTrackWidgets.appex */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		CC055E304B321B386F61B6E5 /* DoseTrackTests */ = {
+			isa = PBXGroup;
+			children = (
+				1334F53F193DF18162FD3082 /* Placeholder.swift */,
+			);
+			path = DoseTrackTests;
+			sourceTree = "<group>";
+		};
+		DCD48C4B683E4AB04BA42F88 /* DoseTrackWidgets */ = {
+			isa = PBXGroup;
+			children = (
+				A68FE0D696E5C1C84C0E33C1 /* DoseTrackWidgets.entitlements */,
+				CD41BB94C55051360C9BC444 /* Info.plist */,
+				2DD12EC31C090F2859EF3CCC /* WidgetPlaceholder.swift */,
+			);
+			path = DoseTrackWidgets;
+			sourceTree = "<group>";
+		};
+		EB0C40386B630159CC5A9CC1 = {
+			isa = PBXGroup;
+			children = (
+				46894BC8E5CCAB2BAC6D834D /* DoseTrack */,
+				CC055E304B321B386F61B6E5 /* DoseTrackTests */,
+				DCD48C4B683E4AB04BA42F88 /* DoseTrackWidgets */,
+				B4C74E21B63C636282DBF037 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		09373D7122D167A2C557068F /* DoseTrackTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 5DFD377C19509DEC4D4B0EEA /* Build configuration list for PBXNativeTarget "DoseTrackTests" */;
+			buildPhases = (
+				A09C3720157F849CC42B791F /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				3129EE8CA9D284AAAA6F1E73 /* PBXTargetDependency */,
+			);
+			name = DoseTrackTests;
+			packageProductDependencies = (
+			);
+			productName = DoseTrackTests;
+			productReference = A5E172956AA9F4089113D3E7 /* DoseTrackTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		0FF49BA416B8F8951167A4F6 /* DoseTrackWidgets */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 00EFBCD24A06DE601939809D /* Build configuration list for PBXNativeTarget "DoseTrackWidgets" */;
+			buildPhases = (
+				A6CC94C4948ACE30ADA808C8 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = DoseTrackWidgets;
+			packageProductDependencies = (
+			);
+			productName = DoseTrackWidgets;
+			productReference = F2C5A665408198A48126D5B9 /* DoseTrackWidgets.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		301788A43C79587C8847500D /* DoseTrack */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 00C1243C4D39362B4D30D90F /* Build configuration list for PBXNativeTarget "DoseTrack" */;
+			buildPhases = (
+				E0C579F13CF90BA39CE097EF /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = DoseTrack;
+			packageProductDependencies = (
+			);
+			productName = DoseTrack;
+			productReference = C984C953B3380BEBE5D370EA /* DoseTrack.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		6315B9B4813F5F27900F9403 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+					09373D7122D167A2C557068F = {
+						DevelopmentTeam = "";
+					};
+					0FF49BA416B8F8951167A4F6 = {
+						DevelopmentTeam = "";
+					};
+					301788A43C79587C8847500D = {
+						DevelopmentTeam = "";
+					};
+				};
+			};
+			buildConfigurationList = 0F254ED5CF861D5EAD8C4C90 /* Build configuration list for PBXProject "DoseTrack" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = EB0C40386B630159CC5A9CC1;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = B4C74E21B63C636282DBF037 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				301788A43C79587C8847500D /* DoseTrack */,
+				09373D7122D167A2C557068F /* DoseTrackTests */,
+				0FF49BA416B8F8951167A4F6 /* DoseTrackWidgets */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		A09C3720157F849CC42B791F /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				758648FC943D5E93E40B4D86 /* Placeholder.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A6CC94C4948ACE30ADA808C8 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				76D9800A8F47390FB96F17C5 /* WidgetPlaceholder.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E0C579F13CF90BA39CE097EF /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0A20C2B5AEEBCA76A32C54AA /* Constants.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		3129EE8CA9D284AAAA6F1E73 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 301788A43C79587C8847500D /* DoseTrack */;
+			targetProxy = AC31DAED931B9BB3D324DEB9 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		1FBA596A28D7208D9708E024 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.robbrown.DoseTrackTests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/DoseTrack.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/DoseTrack";
+			};
+			name = Debug;
+		};
+		343E1661A3CD8F8424E839BA /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = DoseTrackWidgets/DoseTrackWidgets.entitlements;
+				INFOPLIST_FILE = DoseTrackWidgets/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.robbrown.dosetrack.widgets;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		415407B5EEACA7120C3D7F9F /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.0.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.9;
+			};
+			name = Debug;
+		};
+		58C5BEDD21DCF983D50477EB /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = DoseTrack/Resources/DoseTrack.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				INFOPLIST_FILE = DoseTrack/Resources/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.robbrown.dosetrack;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		68DADAEAD1B06B0E68256A7A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = "";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.0.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.9;
+			};
+			name = Release;
+		};
+		894D1A9E523A2CF58183E95B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.robbrown.DoseTrackTests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/DoseTrack.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/DoseTrack";
+			};
+			name = Release;
+		};
+		94C077ADB0E254417ACFDF23 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = DoseTrack/Resources/DoseTrack.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				INFOPLIST_FILE = DoseTrack/Resources/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.robbrown.dosetrack;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		B9FC2213140BE162EA826319 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = DoseTrackWidgets/DoseTrackWidgets.entitlements;
+				INFOPLIST_FILE = DoseTrackWidgets/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.robbrown.dosetrack.widgets;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		00C1243C4D39362B4D30D90F /* Build configuration list for PBXNativeTarget "DoseTrack" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				94C077ADB0E254417ACFDF23 /* Debug */,
+				58C5BEDD21DCF983D50477EB /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		00EFBCD24A06DE601939809D /* Build configuration list for PBXNativeTarget "DoseTrackWidgets" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B9FC2213140BE162EA826319 /* Debug */,
+				343E1661A3CD8F8424E839BA /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		0F254ED5CF861D5EAD8C4C90 /* Build configuration list for PBXProject "DoseTrack" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				415407B5EEACA7120C3D7F9F /* Debug */,
+				68DADAEAD1B06B0E68256A7A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		5DFD377C19509DEC4D4B0EEA /* Build configuration list for PBXNativeTarget "DoseTrackTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1FBA596A28D7208D9708E024 /* Debug */,
+				894D1A9E523A2CF58183E95B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 6315B9B4813F5F27900F9403 /* Project object */;
+}
