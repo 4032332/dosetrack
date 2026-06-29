@@ -16,9 +16,30 @@ struct SettingsView: View {
     @State private var exportItem: ExportActivityItem? = nil
     @State private var testNotificationSent = false
 
+    @State private var showingSignUp = false
+
     var body: some View {
         NavigationStack {
             List {
+                // MARK: Guest upgrade prompt
+                if auth.isGuest {
+                    Section {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Label("You're using a guest account", systemImage: "person.crop.circle.badge.exclamationmark")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(.orange)
+                            Text("Create a free account to keep your data if you reinstall the app or switch devices.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            Button("Create Account") { showingSignUp = true }
+                                .buttonStyle(.borderedProminent)
+                                .controlSize(.small)
+                                .padding(.top, 2)
+                        }
+                        .padding(.vertical, 4)
+                    }
+                }
+
                 // MARK: Account / Pro
                 Section("Subscription") {
                     if subscriptionManager.isProSubscriber {
@@ -184,6 +205,9 @@ struct SettingsView: View {
             .navigationTitle("Settings")
             .sheet(isPresented: $showingPaywall) {
                 PaywallView()
+            }
+            .sheet(isPresented: $showingSignUp) {
+                AuthView().environmentObject(auth)
             }
             .sheet(item: $exportItem) { item in
                 ShareSheetView(activityItems: [item.data as Any])

@@ -1,5 +1,4 @@
 // DoseTrack/Services/AuthManager.swift
-// Wraps Supabase Auth — handles email/password, Apple Sign In, and Google Sign In.
 import SwiftUI
 import Supabase
 import AuthenticationServices
@@ -10,7 +9,6 @@ final class AuthManager: ObservableObject {
 
     static let shared = AuthManager()
 
-    // Supabase client — shared across the app
     let client = SupabaseClient(
         supabaseURL: URL(string: Secrets.supabaseURL)!,
         supabaseKey: Secrets.supabaseAnonKey
@@ -21,6 +19,7 @@ final class AuthManager: ObservableObject {
     @Published var errorMessage: String? = nil
 
     var isSignedIn: Bool { session != nil }
+    var isGuest: Bool { session?.user.isAnonymous == true }
 
     private init() {
         Task { await refreshSession() }
@@ -38,7 +37,9 @@ final class AuthManager: ObservableObject {
 
     // MARK: - Email / Password
 
-    func signUp(email: String, password: String, fullName: String) async {
+    /// Returns `true` if the user needs to confirm their email before the session is active.
+    @discardableResult
+    func signUp(email: String, password: String, fullName: String) async -> Bool {
         isLoading = true; errorMessage = nil
         defer { isLoading = false }
         do {
@@ -47,9 +48,17 @@ final class AuthManager: ObservableObject {
                 password: password,
                 data: ["full_name": AnyJSON(stringLiteral: fullName)]
             )
-            session = response.session  // AuthResponse.session: Session?
+            if let s = response.session {
+                // Email confirmations disabled in Supabase — session granted immediately
+                session = s
+                return false
+            } else {
+                // Supabase returned no session — email confirmation required
+                return true
+            }
         } catch {
             errorMessage = friendlyError(error)
+            return false
         }
     }
 
@@ -68,9 +77,27 @@ final class AuthManager: ObservableObject {
         defer { isLoading = false }
         do {
             try await client.auth.resetPasswordForEmail(email)
-            errorMessage = nil
         } catch {
             errorMessage = friendlyError(error)
+        }
+    }
+
+    // MARK: - Guest / Anonymous
+
+    /// Signs in anonymously so the user can use the app without creating an account.
+    /// Their data is stored locally; they can upgrade to a full account later.
+    func continueAsGuest() async {
+        isLoading = true; errorMessage = nil
+        defer { isLoading = false }
+        do {
+            session = try await client.auth.signInAnonymously()
+        } catch {
+            // If anonymous auth is disabled in Supabase, fall back to a local-only flag
+            errorMessage = nil
+            UserDefaults.standard.set(true, forKey: "guestMode")
+            // Publish a synthetic signed-in state so RootView advances
+            session = nil
+            NotificationCenter.default.post(name: .guestModeActivated, object: nil)
         }
     }
 
@@ -84,17 +111,11 @@ final class AuthManager: ObservableObject {
             errorMessage = "Apple Sign In failed — missing token."
             return
         }
-
         isLoading = true; errorMessage = nil
         defer { isLoading = false }
-
         do {
             session = try await client.auth.signInWithIdToken(
-                credentials: .init(
-                    provider: .apple,
-                    idToken: token,
-                    nonce: nil
-                )
+                credentials: .init(provider: .apple, idToken: token, nonce: nil)
             )
         } catch {
             errorMessage = friendlyError(error)
@@ -104,19 +125,19 @@ final class AuthManager: ObservableObject {
     // MARK: - Google Sign In
 
     func signInWithGoogle(presenting viewController: UIViewController) async {
+        guard !Secrets.googleClientID.isEmpty else {
+            errorMessage = "Google Sign-In is not configured yet. Please use email to sign in."
+            return
+        }
         isLoading = true; errorMessage = nil
         defer { isLoading = false }
-
         do {
-            let config = GIDConfiguration(clientID: Secrets.googleClientID)
-            GIDSignIn.sharedInstance.configuration = config
-
+            GIDSignIn.sharedInstance.configuration = GIDConfiguration(clientID: Secrets.googleClientID)
             let result = try await GIDSignIn.sharedInstance.signIn(withPresenting: viewController)
             guard let idToken = result.user.idToken?.tokenString else {
                 errorMessage = "Google Sign In failed — missing ID token."
                 return
             }
-
             session = try await client.auth.signInWithIdToken(
                 credentials: .init(
                     provider: .google,
@@ -124,11 +145,8 @@ final class AuthManager: ObservableObject {
                     accessToken: result.user.accessToken.tokenString
                 )
             )
-        } catch GIDSignInError.canceled {
-            // User tapped Cancel — not an error worth showing
-        } catch {
-            errorMessage = friendlyError(error)
-        }
+        } catch GIDSignInError.canceled { /* user dismissed */ }
+        catch { errorMessage = friendlyError(error) }
     }
 
     // MARK: - Sign Out
@@ -136,27 +154,28 @@ final class AuthManager: ObservableObject {
     func signOut() async {
         isLoading = true
         defer { isLoading = false }
+        UserDefaults.standard.removeObject(forKey: "guestMode")
         do {
             try await client.auth.signOut()
-            session = nil
-        } catch {
-            errorMessage = friendlyError(error)
-        }
+        } catch { /* session cleared locally regardless */ }
+        session = nil
     }
 
     // MARK: - Profile
 
-    /// Returns the user's display name from metadata or email prefix.
     var displayName: String {
         let meta = session?.user.userMetadata
         if let name = meta?["full_name"]?.stringValue, !name.isEmpty { return name }
         if let name = meta?["name"]?.stringValue, !name.isEmpty { return name }
+        if isGuest { return "Guest" }
         return session?.user.email?.components(separatedBy: "@").first ?? "User"
     }
 
-    var userEmail: String { session?.user.email ?? "" }
+    var userEmail: String {
+        isGuest ? "Guest account" : (session?.user.email ?? "")
+    }
 
-    // MARK: - Helpers
+    // MARK: - Error strings
 
     private func friendlyError(_ error: Error) -> String {
         let msg = error.localizedDescription.lowercased()
@@ -164,11 +183,20 @@ final class AuthManager: ObservableObject {
             return "Incorrect email or password."
         }
         if msg.contains("already registered") || msg.contains("already exists") {
-            return "An account with that email already exists. Try signing in."
+            return "An account with that email already exists. Try signing in instead."
         }
-        if msg.contains("network") || msg.contains("offline") {
-            return "No internet connection. Please check your network and try again."
+        if msg.contains("email not confirmed") {
+            return "Please confirm your email first, then sign in."
+        }
+        if msg.contains("network") || msg.contains("offline") || msg.contains("connection") {
+            return "No internet connection. Check your network and try again."
         }
         return error.localizedDescription
     }
+}
+
+// MARK: - Notification for guest mode fallback
+
+extension Notification.Name {
+    static let guestModeActivated = Notification.Name("guestModeActivated")
 }
