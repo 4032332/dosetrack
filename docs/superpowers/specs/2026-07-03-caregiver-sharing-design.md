@@ -19,6 +19,7 @@ This is a Pro feature (per CLAUDE.md's original Family Sharing gating) and requi
 - Caregivers switch between their own account and any patient they oversee via an Instagram-style account switcher; the whole app (all tabs) reflects whichever account is active.
 - Caregivers get proactive push notifications when a patient misses a dose.
 - Solo (non-caregiving) users keep local-first data as today; only accounts that enter a caregiver relationship become server-backed for the entities that must be shared.
+- A patient's own on-device reminders and notifications continue to run locally via `UNCalendarNotificationTrigger` exactly as today regardless of whether a caregiver is linked — linking a caregiver adds server-backed data and a second (push-based) notification path to the caregiver, it does not make the patient's own reminders depend on Supabase or network connectivity.
 
 ## Non-goals
 
@@ -42,9 +43,14 @@ New table `caregiver_relationships`:
 | `activated_at` | timestamptz | nullable |
 | `revoked_at` | timestamptz | nullable |
 
-Constraint: at most one row with `status = active` per `patient_user_id`.
+Constraints:
+- A partial unique index enforces at most one row with `status IN ('pending', 'active')` per `patient_user_id` — a patient cannot generate a new invite while one is already pending or active; they must revoke/let it expire first. The "Invite a Caregiver" UI checks for an existing pending/active row and shows its state (e.g. "Invite pending — resend or cancel") instead of creating a duplicate.
+- A check constraint rejects `caregiver_user_id = patient_user_id` (a patient cannot accept their own invite).
+- The accept Edge Function performs the validate-and-activate as a single atomic UPDATE with a `WHERE status = 'pending' AND invite_code = $1 AND expires_at > now()` guard, using the update's affected-row-count as the source of truth (0 rows = already accepted/expired/invalid, race-safe under concurrent accept attempts — no separate read-then-write).
 
-Row Level Security: extend policies on `medications`, `schedules`, `dose_logs` so a request is authorized if `auth.uid() = owner_user_id` OR there exists an active `caregiver_relationships` row where `caregiver_user_id = auth.uid()` and `patient_user_id = owner_user_id`.
+Row Level Security: extend policies on `medications`, `schedules`, `dose_logs` so a request is authorized if `auth.uid() = owner_user_id` OR there exists an active `caregiver_relationships` row where `caregiver_user_id = auth.uid()` and `patient_user_id = owner_user_id`. Revocation (`status` leaving `active`) takes effect immediately for all subsequent requests since RLS is evaluated per-query, not cached.
+
+Account deletion: deleting either user's auth account cascades to delete all `caregiver_relationships` rows (both directions — as caregiver and as patient) and their `device_push_tokens` rows. This is a hard delete, not a soft-revoke, since the referenced auth user no longer exists.
 
 New table `device_push_tokens`: `user_id, apns_token, updated_at` — needed for the missed-dose notification job to reach the caregiver's device.
 
@@ -70,14 +76,17 @@ Edge cases: expired code (>24h) shown as "This invite has expired, ask them to s
 ## Missed-Dose Alerts
 
 - A scheduled Supabase Edge Function (cron, e.g. every 15 min) scans active relationships. For each patient, it finds schedules whose due time is 30-60+ minutes past and has no corresponding `dose_logs` entry, and where a notification for that occurrence hasn't already been sent.
+- Due times are evaluated in the patient's stored timezone preference (the same timezone their own on-device reminders use), not server UTC or the caregiver's timezone — this must be a field already available from the existing schedule/notification data, not a new concept introduced here.
+- To avoid false-positive alerts from sync lag (patient logged the dose on their device but it hasn't reached Supabase yet), the job only alerts on doses still unlogged **60+ minutes** after due (not 30) and skips the check entirely if the patient's device has synced within the last 10 minutes with no corresponding log — i.e. prefer a late alert over a wrong one.
 - For each qualifying miss, sends an APNs push to the caregiver's token(s) from `device_push_tokens`, e.g. "Mom missed her 8:00 AM Metformin dose."
-- Track sent-notification state (e.g. a `notified_at` column on dose occurrences, or a small dedup table) to avoid duplicate alerts on subsequent cron runs.
+- Track sent-notification state via a `notified_at` column on dose occurrences (or a small dedup table keyed by patient + schedule + scheduled date) to avoid duplicate alerts on subsequent cron runs. If a late dose log arrives after an alert was already sent, no retraction/follow-up message is sent in this version (acceptable false-positive-after-the-fact, noted as a known limitation).
 
 ## Revocation
 
 - Patient can remove their caregiver from Settings at any time → sets `status = revoked`, `revoked_at`. RLS immediately blocks further access.
 - Caregiver can remove themselves from a patient's list similarly.
 - If a caregiver is actively viewing a patient's account when access is revoked, the next data fetch fails auth and the app falls back to "My Account" with a message ("Your access to <name>'s account has ended").
+- To bound how long a caregiver could act on stale cached data while genuinely offline (no fetch attempted, so the auth failure above never triggers), the app re-validates the active relationship's status whenever it becomes active/foregrounded, not only on data fetch — an offline caregiver viewing cached data is a known, accepted limitation (no local data is fully trustworthy without connectivity), but returning from background is treated as a checkpoint to catch revocations promptly.
 
 ## Testing
 
