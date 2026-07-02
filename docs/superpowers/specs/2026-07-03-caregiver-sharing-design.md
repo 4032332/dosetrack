@@ -76,6 +76,8 @@ CoreData on the patient's own device remains the on-device source of truth, exac
 
 Edge cases: expired code (>24h) shown as "This invite has expired, ask them to send a new one"; code already used/revoked shown as "This invite is no longer valid"; offline acceptance queues the accept call and retries when connectivity returns.
 
+**Pre-launch placeholder:** the App Store is not live yet, so the "app not installed" fallback destination is a placeholder (e.g. the app's marketing/waitlist page, or a TestFlight link if one exists) rather than a real App Store listing. The universal link/QR mechanism itself doesn't depend on the App Store existing — only the fallback URL does. This should be a single configurable value (not hardcoded inline) so it can be swapped for the real App Store URL at launch without touching the invite/deep-link logic itself.
+
 ## Account Switcher UI
 
 - Visible only when the signed-in user has ≥1 linked account (as caregiver of someone, in this version — patients don't get a switcher since they only ever have one caregiver, not the reverse).
