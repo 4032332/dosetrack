@@ -8,14 +8,7 @@ struct ScheduleBuilderView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Label("Time", systemImage: "clock")
-                    .foregroundStyle(.secondary)
-                    .font(.subheadline)
-                Spacer()
-                DatePicker("", selection: timeBinding, displayedComponents: .hourAndMinute)
-                    .labelsHidden()
-            }
+            CollapsibleTimePicker(label: "Time", systemImage: "clock", date: timeBinding)
 
             Picker("Frequency", selection: $draft.frequency) {
                 Text("Daily").tag("daily")

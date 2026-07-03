@@ -47,46 +47,57 @@ struct MediumWidgetProvider: TimelineProvider {
 struct MediumWidgetView: View {
     var entry: MediumWidgetEntry
 
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            // Header
-            HStack {
-                Text("Today")
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(.secondary)
-                Spacer()
-                Text("\(entry.takenCount)/\(entry.totalCount)")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(entry.takenCount == entry.totalCount && entry.totalCount > 0 ? .green : .primary)
-            }
-            .padding(.bottom, 6)
+    private var completionFraction: Double {
+        guard entry.totalCount > 0 else { return 0 }
+        return min(Double(entry.takenCount) / Double(entry.totalCount), 1.0)
+    }
 
-            if entry.entries.isEmpty {
-                Spacer()
-                HStack {
-                    Spacer()
-                    VStack(spacing: 4) {
-                        Image(systemName: "checkmark.circle.fill")
-                            .font(.title3)
-                            .foregroundStyle(.green)
-                        Text("No doses today")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                    Spacer()
+    private var allDone: Bool { entry.takenCount == entry.totalCount && entry.totalCount > 0 }
+
+    var body: some View {
+        HStack(spacing: 12) {
+            // Milli progress column
+            VStack(spacing: 4) {
+                MilliProgressView(fraction: completionFraction)
+                    .frame(width: 56, height: 56)
+                if allDone {
+                    Text("Done! 🎉")
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundStyle(.green)
+                } else {
+                    Text("\(entry.takenCount) of \(entry.totalCount)")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(.primary)
                 }
-                Spacer()
-            } else {
-                ForEach(entry.entries, id: \.medicationId) { dose in
-                    MediumDoseRow(dose: dose)
-                    if dose.medicationId != entry.entries.last?.medicationId {
-                        Divider().padding(.vertical, 2)
+            }
+            .frame(width: 60)
+
+            // Dose list
+            VStack(alignment: .leading, spacing: 0) {
+                Text(allDone ? "All done today!" : "medications taken today")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .padding(.bottom, 4)
+
+                if entry.entries.isEmpty {
+                    Spacer()
+                    Text("No doses today")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                } else {
+                    ForEach(entry.entries, id: \.medicationId) { dose in
+                        MediumDoseRow(dose: dose)
+                        if dose.medicationId != entry.entries.last?.medicationId {
+                            Divider().padding(.vertical, 2)
+                        }
                     }
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(14)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .padding(12)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         .containerBackground(for: .widget) {
             Color(UIColor.systemBackground)
         }

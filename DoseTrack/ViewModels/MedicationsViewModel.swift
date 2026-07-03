@@ -1,6 +1,7 @@
 // DoseTrack/ViewModels/MedicationsViewModel.swift
 import CoreData
 import Combine
+import WidgetKit
 
 @MainActor
 final class MedicationsViewModel: ObservableObject {
@@ -67,6 +68,7 @@ final class MedicationsViewModel: ObservableObject {
         guard let med = medicationToDelete else { return }
         med.isActive = false
         try? context.save()
+        WidgetCenter.shared.reloadAllTimelines()
         fetchMedications()
         medicationToDelete = nil
         showingDeleteConfirm = false

@@ -45,6 +45,20 @@ extension Medication {
     var wrappedColorHex: String { colorHex ?? "#5B8AF0" }
     var wrappedNotes: String { notes ?? "" }
 
+    /// Estimated days of supply remaining based on current count and doses per day.
+    var daysOfSupply: Int {
+        let dpd = max(Int(totalDosesPerDay), 1)
+        return Int(currentCount) / dpd
+    }
+
+    /// Restock urgency colour.
+    var restockColor: Color {
+        if currentCount < 3 { return .red }
+        if daysOfSupply < 5  { return .orange }
+        if daysOfSupply < 7  { return .yellow }
+        return .green
+    }
+
     var schedulesArray: [Schedule] {
         (schedules as? Set<Schedule>)?.sorted { $0.hour < $1.hour } ?? []
     }

@@ -27,10 +27,18 @@ struct HistoryView: View {
                     .pickerStyle(.segmented)
 
                     if viewModel.rangeMode == .custom {
-                        DatePicker("From", selection: $viewModel.customStart,
-                                   in: ...viewModel.customEnd, displayedComponents: .date)
-                        DatePicker("To", selection: $viewModel.customEnd,
-                                   in: viewModel.customStart...Date(), displayedComponents: .date)
+                        CollapsibleDatePicker(
+                            label: "From",
+                            systemImage: "calendar",
+                            date: $viewModel.customStart,
+                            range: ...viewModel.customEnd
+                        )
+                        CollapsibleDatePicker(
+                            label: "To",
+                            systemImage: "calendar",
+                            date: $viewModel.customEnd,
+                            range: ...Date()
+                        )
                     }
                 }
 
@@ -98,6 +106,8 @@ struct HistoryView: View {
                         .foregroundStyle(.secondary)
                 }
             }
+            .scrollIndicators(.visible)
+            .contentMargins(.bottom, 32, for: .scrollContent)
             .navigationTitle("History")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {

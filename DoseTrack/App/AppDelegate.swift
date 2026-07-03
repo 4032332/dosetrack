@@ -3,7 +3,9 @@ import UIKit
 import UserNotifications
 import CoreData
 import BackgroundTasks
+import GoogleSignIn
 
+@objc(AppDelegate)
 class AppDelegate: NSObject, UIApplicationDelegate {
 
     func application(
@@ -16,6 +18,21 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         return true
     }
 
+    func application(
+        _ application: UIApplication,
+        configurationForConnecting connectingSceneSession: UISceneSession,
+        options: UIScene.ConnectionOptions
+    ) -> UISceneConfiguration {
+        let config = UISceneConfiguration(name: "Default Configuration", sessionRole: connectingSceneSession.role)
+        config.delegateClass = SceneDelegate.self
+        return config
+    }
+
+    func application(_ app: UIApplication, open url: URL,
+                     options: [UIApplication.OpenURLOptionsKey: Any] = [:]) -> Bool {
+        GIDSignIn.sharedInstance.handle(url)
+    }
+
     func applicationDidBecomeActive(_ application: UIApplication) {
         NotificationManager.shared.clearBadge()
         Task {
@@ -24,6 +41,7 @@ class AppDelegate: NSObject, UIApplicationDelegate {
                 context: PersistenceController.shared.viewContext
             )
         }
+        NotificationCenter.default.post(name: .appDidBecomeActive, object: nil)
     }
 
     // MARK: - Background Task Registration
@@ -39,13 +57,12 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 
     func scheduleBackgroundRefresh() {
         let request = BGAppRefreshTaskRequest(identifier: "com.robbrown.dosetrack.refresh")
-        request.earliestBeginDate = Date(timeIntervalSinceNow: 60 * 60) // 1 hour
+        request.earliestBeginDate = Date(timeIntervalSinceNow: 60 * 60)
         try? BGTaskScheduler.shared.submit(request)
     }
 
     private func handleNotificationRefresh(task: BGAppRefreshTask) {
-        scheduleBackgroundRefresh() // Reschedule for next time
-
+        scheduleBackgroundRefresh()
         let context = PersistenceController.shared.viewContext
         NotificationScheduler.shared.refreshAll(context: context)
         task.setTaskCompleted(success: true)
@@ -56,7 +73,6 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 
 extension AppDelegate: UNUserNotificationCenterDelegate {
 
-    /// Show notifications even when app is in foreground
     func userNotificationCenter(
         _ center: UNUserNotificationCenter,
         willPresent notification: UNNotification,
@@ -65,7 +81,6 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
         completionHandler([.banner, .sound, .badge])
     }
 
-    /// Handle action button taps (Taken / Skip / Snooze) without opening the app
     func userNotificationCenter(
         _ center: UNUserNotificationCenter,
         didReceive response: UNNotificationResponse,
@@ -78,96 +93,60 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
             let medIdStr = userInfo["medicationId"] as? String,
             let medId = UUID(uuidString: medIdStr),
             let scheduledAtTs = userInfo["scheduledAt"] as? TimeInterval
-        else {
-            completionHandler()
-            return
-        }
+        else { completionHandler(); return }
 
         let scheduledAt = Date(timeIntervalSince1970: scheduledAtTs)
 
         switch response.actionIdentifier {
         case Constants.Notification.actionTakeDose:
             logDose(medicationId: medId, scheduledAt: scheduledAt, status: "taken", context: context)
-
         case Constants.Notification.actionSkipDose:
             logDose(medicationId: medId, scheduledAt: scheduledAt, status: "skipped", context: context)
-
         case Constants.Notification.actionSnooze30:
             snooze(userInfo: userInfo, minutes: 30)
-
-        default:
-            break
+        default: break
         }
 
         completionHandler()
     }
 
-    // MARK: - Helpers
-
-    private func logDose(
-        medicationId: UUID,
-        scheduledAt: Date,
-        status: String,
-        context: NSManagedObjectContext
-    ) {
+    private func logDose(medicationId: UUID, scheduledAt: Date, status: String, context: NSManagedObjectContext) {
         context.perform {
-            let medRequest = NSFetchRequest<Medication>(entityName: "Medication")
-            medRequest.predicate = NSPredicate(format: "id == %@", medicationId as CVarArg)
-            medRequest.fetchLimit = 1
+            let req = NSFetchRequest<Medication>(entityName: "Medication")
+            req.predicate = NSPredicate(format: "id == %@", medicationId as CVarArg)
+            req.fetchLimit = 1
+            guard let medication = try? context.fetch(req).first else { return }
 
-            guard let medication = try? context.fetch(medRequest).first else { return }
+            let logReq = NSFetchRequest<DoseLog>(entityName: "DoseLog")
+            logReq.predicate = NSPredicate(format: "medication == %@ AND scheduledAt == %@",
+                                           medication, scheduledAt as NSDate)
+            logReq.fetchLimit = 1
 
-            // Check for an existing log for this scheduled slot to avoid duplicates
-            let logRequest = NSFetchRequest<DoseLog>(entityName: "DoseLog")
-            logRequest.predicate = NSPredicate(
-                format: "medication == %@ AND scheduledAt == %@",
-                medication,
-                scheduledAt as NSDate
-            )
-            logRequest.fetchLimit = 1
-
-            if let existing = try? context.fetch(logRequest).first {
-                existing.status = status
-                existing.loggedAt = Date()
+            if let existing = try? context.fetch(logReq).first {
+                existing.status = status; existing.loggedAt = Date()
             } else {
                 let log = DoseLog(context: context)
-                log.id = UUID()
-                log.medication = medication
-                log.scheduledAt = scheduledAt
-                log.loggedAt = Date()
-                log.status = status
+                log.id = UUID(); log.medication = medication
+                log.scheduledAt = scheduledAt; log.loggedAt = Date(); log.status = status
             }
-
             try? context.save()
         }
     }
 
     private func snooze(userInfo: [AnyHashable: Any], minutes: Int) {
-        guard
-            let medIdStr = userInfo["medicationId"] as? String,
-            let schIdStr = userInfo["scheduleId"] as? String,
-            let scheduledAtTs = userInfo["scheduledAt"] as? TimeInterval
-        else { return }
-
-        // Fetch medication name for the snooze notification content
+        guard let medIdStr = userInfo["medicationId"] as? String,
+              let schIdStr = userInfo["scheduleId"] as? String,
+              let ts = userInfo["scheduledAt"] as? TimeInterval else { return }
         let context = PersistenceController.shared.viewContext
         context.perform {
-            let request = NSFetchRequest<Medication>(entityName: "Medication")
-            request.predicate = NSPredicate(format: "id == %@", UUID(uuidString: medIdStr) as CVarArg? ?? NSNull())
-            request.fetchLimit = 1
-
-            let med = try? context.fetch(request).first
-            let name = med?.wrappedName ?? "Medication"
-            let dosage = med?.wrappedDosage ?? ""
-
+            let req = NSFetchRequest<Medication>(entityName: "Medication")
+            req.predicate = NSPredicate(format: "id == %@", UUID(uuidString: medIdStr) as CVarArg? ?? NSNull())
+            req.fetchLimit = 1
+            let med = try? context.fetch(req).first
             NotificationScheduler.shared.scheduleSnooze(
-                medicationId: medIdStr,
-                medicationName: name,
-                dosage: dosage,
-                scheduleId: schIdStr,
-                scheduledAt: Date(timeIntervalSince1970: scheduledAtTs),
-                minutes: minutes
-            )
+                medicationId: medIdStr, medicationName: med?.wrappedName ?? "Medication",
+                dosage: med?.wrappedDosage ?? "", scheduleId: schIdStr,
+                scheduledAt: Date(timeIntervalSince1970: ts), minutes: minutes)
         }
     }
 }

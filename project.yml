@@ -45,6 +45,8 @@ targets:
           - CloudKit
         com.apple.developer.icloud-container-identifiers:
           - iCloud.com.robbrown.dosetrack
+        com.apple.developer.healthkit: true
+        com.apple.developer.healthkit.access: []
     dependencies:
       - target: DoseTrackWidgets
         embed: true
@@ -54,6 +56,8 @@ targets:
         product: GoogleSignIn
       - package: GoogleSignIn
         product: GoogleSignInSwift
+      - sdk: HealthKit.framework
+      - sdk: Vision.framework
 
   DoseTrackWidgets:
     type: app-extension
@@ -61,6 +65,8 @@ targets:
     deploymentTarget: "17.0"
     sources:
       - DoseTrackWidgets
+      - path: DoseTrack/Resources/Assets.xcassets
+        type: resource
     settings:
       base:
         INFOPLIST_FILE: DoseTrackWidgets/Info.plist
@@ -87,6 +93,7 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.robbrown.dosetrack.watchkitapp
         GENERATE_INFOPLIST_FILE: NO
         WATCHOS_DEPLOYMENT_TARGET: "10.0"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
     entitlements:
       path: "DoseTrackWatch Watch App/DoseTrackWatch.entitlements"
       properties:

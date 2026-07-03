@@ -11,7 +11,7 @@
 **Platform:** iOS 17+ (minimum), watchOS 10+ (companion)  
 **Language:** Swift 5.9+ / SwiftUI  
 **Architecture:** MVVM  
-**Local path:** `/Users/robbrown/Desktop/CodingProjects/Apps/dosetrack-ios`  
+**Local path:** `/Users/robbrown/CodingProjects/Apps/dosetrack-ios`  
 **Bundle ID:** `com.robbrown.dosetrack`  
 **App Store category:** Health & Fitness  
 

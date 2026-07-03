@@ -10,7 +10,7 @@ struct DoseTrackWatchApp: App {
 
     var body: some Scene {
         WindowGroup {
-            TodayWatchView()
+            WatchRootView()
                 .environmentObject(connectivityManager)
         }
     }

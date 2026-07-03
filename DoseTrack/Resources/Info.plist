@@ -36,14 +36,85 @@
     </array>
     <key>CFBundleURLTypes</key>
     <array>
+        <!-- Google Sign-In callback: replace with reversed client ID once configured -->
         <dict>
             <key>CFBundleURLSchemes</key>
             <array>
-                <!-- Replace with your reversed Google Client ID, e.g. com.googleusercontent.apps.YOUR_CLIENT_ID -->
-                <string>com.googleusercontent.apps.REPLACE_WITH_REVERSED_CLIENT_ID</string>
+                <string>com.googleusercontent.apps.966032740426-c3q9ch2p73oempc80h83rlkekbrl6788</string>
+            </array>
+        </dict>
+        <!-- Supabase auth callback (email confirm, password reset, magic link) -->
+        <dict>
+            <key>CFBundleURLSchemes</key>
+            <array>
+                <string>com.robbrown.dosetrack</string>
             </array>
         </dict>
     </array>
+    <!-- Alternate app icons — image sets must be added to Assets.xcassets to activate -->
+    <key>CFBundleIcons</key>
+    <dict>
+        <key>CFBundlePrimaryIcon</key>
+        <dict>
+            <key>CFBundleIconFiles</key>
+            <array>
+                <string>AppIcon</string>
+            </array>
+        </dict>
+        <key>CFBundleAlternateIcons</key>
+        <dict>
+            <key>Midnight</key>
+            <dict>
+                <key>CFBundleIconFiles</key>
+                <array><string>AppIconMidnight</string></array>
+                <key>UIPrerenderedIcon</key>
+                <false/>
+            </dict>
+            <key>Coral</key>
+            <dict>
+                <key>CFBundleIconFiles</key>
+                <array><string>AppIconCoral</string></array>
+                <key>UIPrerenderedIcon</key>
+                <false/>
+            </dict>
+            <key>Forest</key>
+            <dict>
+                <key>CFBundleIconFiles</key>
+                <array><string>AppIconForest</string></array>
+                <key>UIPrerenderedIcon</key>
+                <false/>
+            </dict>
+            <key>Rose</key>
+            <dict>
+                <key>CFBundleIconFiles</key>
+                <array><string>AppIconRose</string></array>
+                <key>UIPrerenderedIcon</key>
+                <false/>
+            </dict>
+        </dict>
+    </dict>
+
+    <key>UILaunchScreen</key>
+    <dict/>
+    <key>UIRequiresFullScreen</key>
+    <true/>
+    <key>UIApplicationSceneManifest</key>
+    <dict>
+        <key>UIApplicationSupportsMultipleScenes</key>
+        <false/>
+        <key>UISceneConfigurations</key>
+        <dict>
+            <key>UIWindowSceneSessionRoleApplication</key>
+            <array>
+                <dict>
+                    <key>UISceneConfigurationName</key>
+                    <string>Default Configuration</string>
+                    <key>UISceneDelegateClassName</key>
+                    <string>SceneDelegate</string>
+                </dict>
+            </array>
+        </dict>
+    </dict>
     <key>BGTaskSchedulerPermittedIdentifiers</key>
     <array>
         <string>com.robbrown.dosetrack.refresh</string>

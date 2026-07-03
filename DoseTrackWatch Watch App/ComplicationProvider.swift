@@ -102,28 +102,61 @@ class ComplicationDataSource: NSObject, CLKComplicationDataSource {
 }
 
 // MARK: - Graphic Circular Complication View
+// Shows Milli image transitioning from greyscale to full colour as doses are completed.
 
 struct ComplicationCircularView: View {
     let nextDose: WatchMedication?
 
+    private var takenCount: Int {
+        WatchConnectivityReceiver.shared.medications.filter(\.isTaken).count
+    }
+    private var totalCount: Int {
+        WatchConnectivityReceiver.shared.medications.count
+    }
+    private var completionFraction: Double {
+        guard totalCount > 0 else { return 0 }
+        return min(Double(takenCount) / Double(totalCount), 1.0)
+    }
+
     var body: some View {
         ZStack {
-            if let dose = nextDose {
-                Circle()
-                    .stroke(Color.accentColor.opacity(0.3), lineWidth: 2)
-                VStack(spacing: 0) {
-                    Image(systemName: "pills.fill")
-                        .font(.system(size: 10))
-                    Text(dose.scheduledAt, style: .time)
-                        .font(.system(size: 8))
-                        .minimumScaleFactor(0.6)
+            // Progress ring
+            Circle()
+                .stroke(Color.primary.opacity(0.15), lineWidth: 2.5)
+            Circle()
+                .trim(from: 0, to: completionFraction)
+                .stroke(
+                    completionFraction >= 1 ? Color.green : Color.accentColor,
+                    style: StrokeStyle(lineWidth: 2.5, lineCap: .round)
+                )
+                .rotationEffect(.degrees(-90))
+                .animation(.easeInOut, value: completionFraction)
+
+            // Milli mascot — greyscale base with coloured overlay
+            if let img = UIImage(named: "OnboardingWelcome") {
+                ZStack {
+                    Image(uiImage: img)
+                        .resizable().scaledToFit()
+                        .grayscale(1.0)
+                        .opacity(0.5)
+                        .padding(6)
+
+                    if completionFraction > 0 {
+                        Image(uiImage: img)
+                            .resizable().scaledToFit()
+                            .padding(6)
+                            .mask(alignment: .bottom) {
+                                GeometryReader { geo in
+                                    Rectangle()
+                                        .frame(height: geo.size.height * completionFraction)
+                                        .frame(maxHeight: .infinity, alignment: .bottom)
+                                }
+                            }
+                    }
                 }
             } else {
-                Circle()
-                    .stroke(Color.green.opacity(0.5), lineWidth: 2)
-                Image(systemName: "checkmark")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(.green)
+                Text(completionFraction >= 1 ? "✓" : "💊")
+                    .font(.system(size: 14))
             }
         }
     }

@@ -8,11 +8,13 @@ struct OnboardingView: View {
     @State private var showingAddMedication = false
     @Environment(\.managedObjectContext) private var context
 
+    private let totalPages = 4
+
     var body: some View {
         VStack(spacing: 0) {
             // Page indicator
             HStack(spacing: 8) {
-                ForEach(0..<3) { i in
+                ForEach(0..<totalPages) { i in
                     Capsule()
                         .fill(i == page ? Color.accentColor : Color.secondary.opacity(0.3))
                         .frame(width: i == page ? 20 : 8, height: 8)
@@ -25,7 +27,8 @@ struct OnboardingView: View {
             TabView(selection: $page) {
                 WelcomePage().tag(0)
                 NotificationsPage(authRequested: $notificationAuthRequested).tag(1)
-                AddFirstMedPage(showingAdd: $showingAddMedication).tag(2)
+                ProfileSetupPage().tag(2)
+                AddFirstMedPage(showingAdd: $showingAddMedication).tag(3)
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
             .animation(.easeInOut, value: page)
@@ -36,7 +39,12 @@ struct OnboardingView: View {
         .sheet(isPresented: $showingAddMedication) {
             AddEditMedicationView(
                 viewModel: AddEditMedicationViewModel(context: context),
-                onSave: { _ in showingAddMedication = false }
+                onSave: { _ in
+                    showingAddMedication = false
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        hasCompletedOnboarding = true
+                    }
+                }
             )
         }
     }
@@ -44,7 +52,7 @@ struct OnboardingView: View {
     private var bottomControls: some View {
         HStack(spacing: 16) {
             if page > 0 {
-                Button("Back") { page -= 1 }
+                Button("Back") { withAnimation { page -= 1 } }
                     .foregroundStyle(.secondary)
                     .frame(minWidth: 60)
             } else {
@@ -53,8 +61,8 @@ struct OnboardingView: View {
 
             Spacer()
 
-            if page < 2 {
-                Button("Next") {
+            if page < totalPages - 1 {
+                Button(page == 2 ? "Continue" : "Next") {
                     if page == 1 && !notificationAuthRequested {
                         requestNotifications()
                     } else {
@@ -96,17 +104,26 @@ private struct WelcomePage: View {
             VStack(spacing: 28) {
                 Spacer().frame(height: 24)
 
-                Image(systemName: "pills.fill")
-                    .font(.system(size: 80))
-                    .foregroundStyle(.blue.gradient)
+                Image("OnboardingWelcome")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 200, height: 200)
                     .padding(.bottom, 4)
 
-                VStack(spacing: 8) {
+                VStack(spacing: 6) {
+                    Text("Meet Milli! 💊")
+                        .font(.title2.bold())
+                        .foregroundStyle(.blue)
                     Text("DoseTrack")
                         .font(.largeTitle.bold())
                     Text("Never miss a dose.")
                         .font(.title3)
                         .foregroundStyle(.secondary)
+                    Text("Your friendly pill bottle pal, here to keep you on track.")
+                        .font(.footnote)
+                        .foregroundStyle(.tertiary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 8)
                 }
 
                 VStack(alignment: .leading, spacing: 20) {
@@ -141,9 +158,10 @@ private struct NotificationsPage: View {
             VStack(spacing: 28) {
                 Spacer().frame(height: 24)
 
-                Image(systemName: "bell.badge.fill")
-                    .font(.system(size: 80))
-                    .foregroundStyle(.orange.gradient)
+                Image("OnboardingNotification")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 180, height: 180)
                     .padding(.bottom, 4)
 
                 VStack(spacing: 8) {
@@ -182,20 +200,123 @@ private struct NotificationsPage: View {
     }
 }
 
-// MARK: - Page 3: Add First Med
+// MARK: - Page 3: Profile Setup
 
-private struct AddFirstMedPage: View {
-    @Binding var showingAdd: Bool
+private struct ProfileSetupPage: View {
+    @AppStorage("patientName")   private var patientName: String = ""
+    @AppStorage("patientGender") private var patientGender: String = ""
+    @EnvironmentObject private var auth: AuthManager
+
+    private let genders = ["Female", "Male", "Non-binary", "Other", "Prefer not to say"]
 
     var body: some View {
         ScrollView {
             VStack(spacing: 28) {
                 Spacer().frame(height: 24)
 
-                Image(systemName: "plus.circle.fill")
-                    .font(.system(size: 80))
-                    .foregroundStyle(.green.gradient)
-                    .padding(.bottom, 4)
+                ZStack {
+                    Circle()
+                        .fill(Color.accentColor.opacity(0.12))
+                        .frame(width: 100, height: 100)
+                    Image(systemName: "person.fill")
+                        .font(.system(size: 48))
+                        .foregroundStyle(Color.accentColor)
+                }
+
+                VStack(spacing: 8) {
+                    Text("Tell Us About You")
+                        .font(.largeTitle.bold())
+                    Text("This helps us personalise your experience. You can update it anytime in Settings.")
+                        .font(.body)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 28)
+                }
+
+                VStack(spacing: 14) {
+                    // Name
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Your name")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                            .padding(.horizontal, 4)
+                        TextField("First name or nickname", text: $patientName)
+                            .textContentType(.givenName)
+                            .autocorrectionDisabled()
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 13)
+                            .background(Color(.secondarySystemBackground))
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                    }
+
+                    // Gender
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Gender (optional)")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                            .padding(.horizontal, 4)
+                        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+                            ForEach(genders, id: \.self) { g in
+                                Button {
+                                    patientGender = patientGender == g ? "" : g
+                                } label: {
+                                    Text(g)
+                                        .font(.subheadline)
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, 10)
+                                        .background(
+                                            patientGender == g
+                                                ? Color.accentColor
+                                                : Color(.secondarySystemBackground),
+                                            in: RoundedRectangle(cornerRadius: 10)
+                                        )
+                                        .foregroundStyle(patientGender == g ? .white : .primary)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                    }
+                }
+                .padding(.horizontal, 28)
+
+                Text("You can skip this step — tap Continue below.")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+                    .multilineTextAlignment(.center)
+
+                Spacer().frame(height: 8)
+            }
+        }
+        .onAppear {
+            // Pre-fill name from auth if available
+            if patientName.isEmpty {
+                patientName = auth.displayName == "Guest" ? "" : auth.displayName
+            }
+        }
+    }
+}
+
+// MARK: - Page 4: Add First Med
+
+private struct AddFirstMedPage: View {
+    @Binding var showingAdd: Bool
+    @AppStorage("patientGender") private var patientGender: String = ""
+    @AppStorage("contraceptiveMethod") private var contraceptiveMethod: String = ""
+
+    private var showContraceptivePrompt: Bool {
+        ["Female", "Other", "Prefer not to say"].contains(patientGender)
+        && contraceptiveMethod.isEmpty
+    }
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 24) {
+                Spacer().frame(height: 24)
+
+                Image("OnboardingWelcome")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 160, height: 160)
 
                 VStack(spacing: 8) {
                     Text("Add Your First\nMedication")
@@ -218,6 +339,31 @@ private struct AddFirstMedPage: View {
                 .buttonStyle(.borderedProminent)
                 .controlSize(.large)
                 .padding(.horizontal, 40)
+
+                if showContraceptivePrompt {
+                    NavigationLink(destination: ContraceptiveTrackerView()) {
+                        HStack(spacing: 10) {
+                            Image(systemName: "calendar.badge.clock")
+                                .foregroundStyle(.purple)
+                                .font(.title3)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Add a birth control reminder")
+                                    .font(.subheadline.weight(.medium))
+                                    .foregroundStyle(.primary)
+                                Text("Track implants, IUDs, pills & more")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        .padding(14)
+                        .background(.purple.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
+                    }
+                    .padding(.horizontal, 28)
+                }
 
                 Text("You can always add more from the Medications tab.")
                     .font(.caption)

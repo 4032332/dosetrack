@@ -6,16 +6,19 @@ struct SettingsView: View {
     @Environment(\.managedObjectContext) private var context
     @EnvironmentObject private var subscriptionManager: SubscriptionManager
     @EnvironmentObject private var auth: AuthManager
-    @AppStorage("patientName") private var patientName: String = ""
+
+    @AppStorage("patientName")           private var patientName: String = ""
+    @AppStorage("selectedAvatar")           private var selectedAvatar: String = "milli"
+    @AppStorage("customAvatarData")         private var customAvatarDataBase64: String = ""
+    private var customPhotoData: Data? {
+        customAvatarDataBase64.isEmpty ? nil : Data(base64Encoded: customAvatarDataBase64)
+    }
     @AppStorage("defaultSnoozeDuration") private var defaultSnoozeDuration: Int = 30
     @AppStorage("criticalAlertsEnabled") private var criticalAlertsEnabled: Bool = true
 
     @State private var showingPaywall = false
     @State private var showingDeleteConfirm = false
-    @State private var showingExportSheet = false
-    @State private var exportItem: ExportActivityItem? = nil
     @State private var testNotificationSent = false
-
     @State private var showingSignUp = false
 
     var body: some View {
@@ -28,7 +31,7 @@ struct SettingsView: View {
                             Label("You're using a guest account", systemImage: "person.crop.circle.badge.exclamationmark")
                                 .font(.subheadline.weight(.semibold))
                                 .foregroundStyle(.orange)
-                            Text("Create a free account to keep your data if you reinstall the app or switch devices.")
+                            Text("Create a free account to keep your data if you reinstall or switch devices.")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                             Button("Create Account") { showingSignUp = true }
@@ -40,23 +43,60 @@ struct SettingsView: View {
                     }
                 }
 
-                // MARK: Account / Pro
+                // MARK: Profile & Account (merged)
+                Section("Profile") {
+                    NavigationLink {
+                        ProfileView()
+                            .environmentObject(auth)
+                    } label: {
+                        HStack(spacing: 12) {
+                            AvatarBadge(avatarKey: selectedAvatar,
+                                        isPro: subscriptionManager.isProSubscriber,
+                                        size: 44,
+                                        customImageData: customPhotoData)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(patientName.isEmpty ? "Set up your profile" : patientName)
+                                    .font(.body.weight(patientName.isEmpty ? .regular : .medium))
+                                    .foregroundStyle(patientName.isEmpty ? .secondary : .primary)
+                                if subscriptionManager.isProSubscriber {
+                                    Text("Milli Pro ✦")
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(.yellow)
+                                } else {
+                                    Text(auth.userEmail.isEmpty ? "Guest account" : auth.userEmail)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                        .lineLimit(1)
+                                }
+                            }
+                        }
+                        .padding(.vertical, 4)
+                    }
+                }
+
+                // MARK: Subscription
                 Section("Subscription") {
                     if subscriptionManager.isProSubscriber {
                         HStack {
-                            Label("DoseTrack Pro", systemImage: "star.fill")
+                            Label("Milli Pro", systemImage: "star.fill")
                                 .foregroundStyle(.yellow)
                             Spacer()
-                            Text("Active")
+                            Text("Active ✦")
                                 .foregroundStyle(.secondary)
                                 .font(.subheadline)
+                        }
+                        Button {
+                            Task { await subscriptionManager.restorePurchases() }
+                        } label: {
+                            Label("Restore Purchases", systemImage: "arrow.clockwise")
+                                .foregroundStyle(.primary)
                         }
                     } else {
                         Button {
                             showingPaywall = true
                         } label: {
                             HStack {
-                                Label("Upgrade to Pro", systemImage: "star.fill")
+                                Label("Upgrade to Milli Pro", systemImage: "star.fill")
                                     .foregroundStyle(.yellow)
                                 Spacer()
                                 Image(systemName: "chevron.right")
@@ -66,44 +106,72 @@ struct SettingsView: View {
                         }
                         .foregroundStyle(.primary)
 
-                        Text("5 medications free forever. Pro unlocks unlimited medications, iCloud sync, PDF reports, and family sharing.")
+                        Text("5 medications free forever. Milli Pro unlocks unlimited medications, iCloud sync, PDF reports, and family sharing.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
                 }
 
-                // MARK: Profile
-                Section("Profile") {
-                    HStack {
-                        Label("Your Name", systemImage: "person.fill")
-                        Spacer()
-                        TextField("Optional", text: $patientName)
-                            .multilineTextAlignment(.trailing)
-                            .foregroundStyle(.secondary)
-                            .accessibilityLabel("Your name for doctor reports")
-                    }
-                }
-
                 // MARK: Notifications
-                Section("Notifications") {
+                Section {
+                    // Authorization status banner
+                    let status = NotificationManager.shared.authorizationStatus
+                    if status == .denied {
+                        HStack(spacing: 10) {
+                            Image(systemName: "bell.slash.fill")
+                                .foregroundStyle(.red)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Notifications are disabled")
+                                    .font(.subheadline.weight(.medium))
+                                    .foregroundStyle(.red)
+                                Text("Tap below to enable them in iOS Settings.")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        .padding(.vertical, 4)
+                    } else if status == .notDetermined {
+                        Button {
+                            Task {
+                                await NotificationManager.shared.requestAuthorization()
+                                NotificationScheduler.shared.refreshAll(context: context)
+                            }
+                        } label: {
+                            HStack {
+                                Label("Enable Notifications", systemImage: "bell.badge.fill")
+                                    .foregroundStyle(Color.accentColor)
+                                Spacer()
+                            }
+                        }
+                    } else {
+                        HStack(spacing: 10) {
+                            Image(systemName: "bell.fill")
+                                .foregroundStyle(.green)
+                            Text("Notifications enabled")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
+                        .padding(.vertical, 2)
+                    }
+
                     Button {
                         sendTestNotification()
                     } label: {
                         HStack {
                             Label(
-                                testNotificationSent ? "Test Sent ✓" : "Send Test Notification",
+                                testNotificationSent ? "Test Sent ✓ (background the app)" : "Send Test Notification",
                                 systemImage: "bell.fill"
                             )
                             .foregroundStyle(testNotificationSent ? .green : .primary)
                             Spacer()
                         }
                     }
+                    .disabled(status == .denied)
 
                     Toggle(isOn: $criticalAlertsEnabled) {
                         Label("Critical Alerts", systemImage: "exclamationmark.triangle.fill")
                     }
                     .onChange(of: criticalAlertsEnabled) { _, _ in
-                        // NotificationScheduler will pick this up on next refresh
                         NotificationScheduler.shared.refreshAll(context: context)
                     }
 
@@ -118,17 +186,36 @@ struct SettingsView: View {
                         }
                         .pickerStyle(.menu)
                     }
-                }
 
-                // MARK: Data
-                Section("Data & Privacy") {
+                    // Link to iOS notification settings for full control
                     Button {
-                        exportCSV()
+                        if let url = URL(string: UIApplication.openNotificationSettingsURLString) {
+                            UIApplication.shared.open(url)
+                        }
                     } label: {
-                        Label("Export to CSV", systemImage: "square.and.arrow.up")
+                        Label("iOS Notification Settings", systemImage: "gear.badge")
                             .foregroundStyle(.primary)
                     }
+                } header: {
+                    Text("Notifications")
+                } footer: {
+                    if NotificationManager.shared.authorizationStatus == .authorized {
+                        Text("Test notifications appear when the app is in the background.")
+                            .font(.caption)
+                    }
+                }
 
+                // MARK: Preferences
+                Section("Preferences") {
+                    NavigationLink {
+                        AppPreferencesView()
+                    } label: {
+                        Label("App Preferences", systemImage: "slider.horizontal.3")
+                    }
+                }
+
+                // MARK: Data & Privacy
+                Section("Data & Privacy") {
                     if subscriptionManager.isProSubscriber {
                         NavigationLink {
                             FamilySharingView()
@@ -140,7 +227,12 @@ struct SettingsView: View {
                             Label("iCloud Sync", systemImage: "icloud.fill")
                         }
                         .disabled(true)
-                        // CloudKit sync toggle — full implementation after Apple Team ID set up
+                    }
+
+                    NavigationLink {
+                        DisclaimerView()
+                    } label: {
+                        Label("Privacy & Disclaimer", systemImage: "hand.raised.fill")
                     }
                 }
 
@@ -153,12 +245,6 @@ struct SettingsView: View {
                             .foregroundStyle(.secondary)
                     }
 
-                    NavigationLink {
-                        DisclaimerView()
-                    } label: {
-                        Label("Privacy & Disclaimer", systemImage: "hand.raised.fill")
-                    }
-
                     Button {
                         if let url = URL(string: "https://apps.apple.com/") {
                             UIApplication.shared.open(url)
@@ -166,6 +252,12 @@ struct SettingsView: View {
                     } label: {
                         Label("Rate DoseTrack", systemImage: "star.bubble.fill")
                             .foregroundStyle(.primary)
+                    }
+
+                    Button(role: .destructive) {
+                        Task { await auth.signOut() }
+                    } label: {
+                        Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
                     }
                 }
 
@@ -178,21 +270,6 @@ struct SettingsView: View {
                     }
                 }
 
-                // Account
-                Section("Account") {
-                    HStack {
-                        Label(auth.userEmail, systemImage: "person.circle.fill")
-                            .lineLimit(1)
-                        Spacer()
-                    }
-                    Button(role: .destructive) {
-                        Task { await auth.signOut() }
-                    } label: {
-                        Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
-                    }
-                }
-
-                // Disclaimer footer
                 Section {
                     Text("DoseTrack is a reminder tool, not medical advice. Always follow your healthcare provider's instructions.")
                         .font(.caption)
@@ -202,24 +279,17 @@ struct SettingsView: View {
                         .listRowBackground(Color.clear)
                 }
             }
+            .scrollIndicators(.visible)
+            .contentMargins(.bottom, 32, for: .scrollContent)
             .navigationTitle("Settings")
-            .sheet(isPresented: $showingPaywall) {
-                PaywallView()
-            }
-            .sheet(isPresented: $showingSignUp) {
-                AuthView().environmentObject(auth)
-            }
-            .sheet(item: $exportItem) { item in
-                ShareSheetView(activityItems: [item.data as Any])
-            }
+            .sheet(isPresented: $showingPaywall) { PaywallView() }
+            .sheet(isPresented: $showingSignUp) { AuthView().environmentObject(auth) }
             .confirmationDialog(
                 "Delete All Data?",
                 isPresented: $showingDeleteConfirm,
                 titleVisibility: .visible
             ) {
-                Button("Delete Everything", role: .destructive) {
-                    deleteAllData()
-                }
+                Button("Delete Everything", role: .destructive) { deleteAllData() }
                 Button("Cancel", role: .cancel) {}
             } message: {
                 Text("This will permanently delete all medications, schedules, and dose history. This cannot be undone.")
@@ -227,7 +297,7 @@ struct SettingsView: View {
         }
     }
 
-    // MARK: - Actions
+    // MARK: - Helpers
 
     private func sendTestNotification() {
         Task {
@@ -238,20 +308,10 @@ struct SettingsView: View {
         }
     }
 
-    private func exportCSV() {
-        let manager = ExportManager.shared
-        let range = DateInterval(start: .distantPast, end: Date())
-        let allLogs = manager.fetchAllLogs(context: context, in: range)
-        let data = manager.generateCSV(from: allLogs, dateRange: range)
-        exportItem = ExportActivityItem(data: data)
-    }
-
     private func deleteAllData() {
-        let entities = ["DoseLog", "Schedule", "Medication"]
-        for entity in entities {
+        for entity in ["DoseLog", "Schedule", "Medication"] {
             let req: NSFetchRequest<NSFetchRequestResult> = NSFetchRequest(entityName: entity)
-            let deleteReq = NSBatchDeleteRequest(fetchRequest: req)
-            try? context.execute(deleteReq)
+            try? context.execute(NSBatchDeleteRequest(fetchRequest: req))
         }
         try? context.save()
     }
@@ -259,12 +319,7 @@ struct SettingsView: View {
 
 // MARK: - Supporting Types
 
-private struct ExportActivityItem: Identifiable {
-    let id = UUID()
-    let data: Data
-}
-
-private struct ShareSheetView: UIViewControllerRepresentable {
+struct ShareSheetView: UIViewControllerRepresentable {
     let activityItems: [Any]
     func makeUIViewController(context: Context) -> UIActivityViewController {
         UIActivityViewController(activityItems: activityItems, applicationActivities: nil)
@@ -297,18 +352,11 @@ struct DisclaimerView: View {
             VStack(alignment: .leading, spacing: 16) {
                 Text("Medical Disclaimer")
                     .font(.title2.bold())
-
                 Text("DoseTrack is a reminder tool only. It does not provide medical advice, diagnosis, or treatment. Always follow your healthcare provider's instructions regarding medications.")
-                    .font(.body)
-
                 Text("Data Privacy")
                     .font(.title2.bold())
-
-                Text("All medication data is stored locally on your device. No personal health information is sent to external servers without your explicit consent. iCloud sync (Pro feature) uses your private iCloud account, not our servers.")
-                    .font(.body)
-
+                Text("All medication data is stored locally on your device. No personal health information is sent to external servers without your explicit consent. iCloud sync (Milli Pro feature) uses your private iCloud account, not our servers.")
                 Text("If you have questions about your medications, consult your pharmacist or doctor.")
-                    .font(.body)
                     .foregroundStyle(.secondary)
             }
             .padding()
@@ -332,4 +380,5 @@ private extension Bundle {
     SettingsView()
         .environment(\.managedObjectContext, PersistenceController.preview.viewContext)
         .environmentObject(SubscriptionManager())
+        .environmentObject(AuthManager.shared)
 }

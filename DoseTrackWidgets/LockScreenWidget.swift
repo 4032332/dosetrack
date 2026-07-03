@@ -6,16 +6,28 @@ import SwiftUI
 
 struct LockScreenWidgetProvider: TimelineProvider {
     func placeholder(in context: Context) -> SmallWidgetEntry {
-        SmallWidgetEntry(date: Date(), nextDose: nil)
+        SmallWidgetEntry(date: Date(), takenCount: 0, totalCount: 0, nextDose: nil)
     }
 
     func getSnapshot(in context: Context, completion: @escaping (SmallWidgetEntry) -> Void) {
-        completion(SmallWidgetEntry(date: Date(), nextDose: WidgetDataProvider.shared.nextDose()))
+        let entries = WidgetDataProvider.shared.todayEntries()
+        completion(SmallWidgetEntry(
+            date: Date(),
+            takenCount: entries.filter(\.isTaken).count,
+            totalCount: entries.count,
+            nextDose: WidgetDataProvider.shared.nextDose()
+        ))
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<SmallWidgetEntry>) -> Void) {
+        let entries = WidgetDataProvider.shared.todayEntries()
         let nextDose = WidgetDataProvider.shared.nextDose()
-        let entry = SmallWidgetEntry(date: Date(), nextDose: nextDose)
+        let entry = SmallWidgetEntry(
+            date: Date(),
+            takenCount: entries.filter(\.isTaken).count,
+            totalCount: entries.count,
+            nextDose: nextDose
+        )
         let reloadDate = nextDose?.scheduledAt ?? Date(timeIntervalSinceNow: 3600)
         completion(Timeline(entries: [entry], policy: .after(reloadDate)))
     }

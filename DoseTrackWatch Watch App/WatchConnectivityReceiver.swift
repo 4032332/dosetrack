@@ -23,18 +23,64 @@ final class WatchConnectivityReceiver: NSObject, ObservableObject {
     @Published var medications: [WatchMedication] = []
     @Published var lastUpdated: Date? = nil
     @Published var isPhoneReachable: Bool = false
+    /// Pulses true→false when the last dose for the day is confirmed.
+    @Published var celebrateNow: Bool = false
 
     private override init() {
         super.init()
+        #if DEBUG
+        loadMockDataIfNeeded()
+        #endif
         if WCSession.isSupported() {
             WCSession.default.delegate = self
             WCSession.default.activate()
         }
     }
 
+    #if DEBUG
+    private func loadMockDataIfNeeded() {
+        let cal = Calendar.current
+        let today = Date()
+        func time(_ h: Int, _ m: Int) -> Date {
+            cal.date(bySettingHour: h, minute: m, second: 0, of: today) ?? today
+        }
+        medications = [
+            WatchMedication(id: UUID().uuidString, name: "Metformin",
+                            dosage: "500mg", colorHex: "4A90D9",
+                            scheduledAt: time(8, 0), isTaken: false, scheduleId: UUID().uuidString),
+            WatchMedication(id: UUID().uuidString, name: "Lisinopril",
+                            dosage: "10mg", colorHex: "E74C3C",
+                            scheduledAt: time(8, 0), isTaken: false, scheduleId: UUID().uuidString),
+            WatchMedication(id: UUID().uuidString, name: "Vitamin D",
+                            dosage: "1000IU", colorHex: "F39C12",
+                            scheduledAt: time(12, 0), isTaken: false, scheduleId: UUID().uuidString),
+            WatchMedication(id: UUID().uuidString, name: "Omega-3",
+                            dosage: "1000mg", colorHex: "27AE60",
+                            scheduledAt: time(18, 0), isTaken: false, scheduleId: UUID().uuidString),
+            WatchMedication(id: UUID().uuidString, name: "Metformin",
+                            dosage: "500mg", colorHex: "4A90D9",
+                            scheduledAt: time(20, 0), isTaken: false, scheduleId: UUID().uuidString),
+        ]
+        lastUpdated = Date()
+    }
+    #endif
+
     // MARK: - Send dose confirmation to iPhone
 
     func confirmDose(medicationId: String, scheduleId: String, scheduledAt: Date, status: String) {
+        #if DEBUG
+        if let idx = medications.firstIndex(where: { $0.id == medicationId }) {
+            medications[idx].isTaken = (status == "taken")
+        }
+        // Only celebrate when the last dose is marked taken (not untaken)
+        if status == "taken" && medications.allSatisfy({ $0.isTaken }) && !medications.isEmpty {
+            celebrateNow = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+                self?.celebrateNow = false
+            }
+        }
+        return
+        #endif
         guard WCSession.default.isReachable else {
             // Store locally for next sync opportunity
             queueConfirmation(medicationId: medicationId, scheduleId: scheduleId,
@@ -57,6 +103,13 @@ final class WatchConnectivityReceiver: NSObject, ObservableObject {
         // Optimistic update in Watch UI
         if let idx = medications.firstIndex(where: { $0.id == medicationId }) {
             medications[idx].isTaken = (status == "taken")
+        }
+        // Celebrate only when marking taken and all doses are now done
+        if status == "taken" && medications.allSatisfy({ $0.isTaken }) && !medications.isEmpty {
+            celebrateNow = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+                self?.celebrateNow = false
+            }
         }
     }
 

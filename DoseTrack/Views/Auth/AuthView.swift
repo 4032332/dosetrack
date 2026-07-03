@@ -22,19 +22,25 @@ struct AuthView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
-
-                // MARK: Logo — compact, no wasted padding
+                // MARK: Hero character — Milli the pill bottle
                 VStack(spacing: 6) {
-                    Image(systemName: "pills.fill")
-                        .font(.system(size: 44))
-                        .foregroundStyle(.blue.gradient)
-                    Text("DoseTrack")
-                        .font(.title.bold())
-                    Text("Never miss a dose.")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                    Image("OnboardingWelcome")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 160, height: 160)
+
+                    VStack(spacing: 2) {
+                        Text("DoseTrack")
+                            .font(.title.bold())
+                        Text("Never miss a dose.")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                        Text("with Milli 💊")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                    }
                 }
-                .padding(.top, 32)
+                .padding(.top, 24)
 
                 // MARK: Mode toggle
                 Picker("", selection: $mode) {
@@ -184,7 +190,10 @@ struct AuthView: View {
             }
             .padding(.horizontal, 24)
         }
+        .scrollIndicators(.visible)
         .scrollDismissesKeyboard(.interactively)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color(.systemBackground))
         .sheet(isPresented: $showingReset) {
             PasswordResetView().environmentObject(auth)
         }

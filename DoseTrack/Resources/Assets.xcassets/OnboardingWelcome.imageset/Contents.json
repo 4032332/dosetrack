@@ -1,0 +1,8 @@
+{
+  "images": [
+    { "idiom": "universal", "scale": "1x", "filename": "OnboardingWelcome@1x.png" },
+    { "idiom": "universal", "scale": "2x", "filename": "OnboardingWelcome@2x.png" },
+    { "idiom": "universal", "scale": "3x", "filename": "OnboardingWelcome@3x.png" }
+  ],
+  "info": { "author": "xcode", "version": 1 }
+}

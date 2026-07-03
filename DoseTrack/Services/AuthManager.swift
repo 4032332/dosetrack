@@ -67,6 +67,8 @@ final class AuthManager: ObservableObject {
         defer { isLoading = false }
         do {
             session = try await client.auth.signIn(email: email, password: password)
+            // Returning user — skip onboarding
+            UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
         } catch {
             errorMessage = friendlyError(error)
         }
@@ -117,6 +119,7 @@ final class AuthManager: ObservableObject {
             session = try await client.auth.signInWithIdToken(
                 credentials: .init(provider: .apple, idToken: token, nonce: nil)
             )
+            UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
         } catch {
             errorMessage = friendlyError(error)
         }
@@ -145,6 +148,7 @@ final class AuthManager: ObservableObject {
                     accessToken: result.user.accessToken.tokenString
                 )
             )
+            UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
         } catch GIDSignInError.canceled { /* user dismissed */ }
         catch { errorMessage = friendlyError(error) }
     }
@@ -199,4 +203,5 @@ final class AuthManager: ObservableObject {
 
 extension Notification.Name {
     static let guestModeActivated = Notification.Name("guestModeActivated")
+    static let appDidBecomeActive = Notification.Name("appDidBecomeActive")
 }

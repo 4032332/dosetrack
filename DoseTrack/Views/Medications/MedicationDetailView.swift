@@ -88,6 +88,7 @@ struct MedicationDetailView: View {
                     .foregroundStyle(.secondary)
             }
         }
+        .scrollIndicators(.visible)
         .navigationTitle(medication.wrappedName)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {

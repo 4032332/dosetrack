@@ -8,6 +8,18 @@ struct MedicationsView: View {
         context: PersistenceController.shared.viewContext
     )
 
+    @AppStorage("patientGender")                private var patientGender: String = ""
+    @AppStorage("contraceptiveStartInterval")   private var contraceptiveStartInterval: Double = 0
+    @AppStorage("contraceptiveMethod")          private var contraceptiveMethod: String = ""
+
+    @State private var isEditMode: EditMode = .inactive
+
+    private var shouldShowContraceptiveHint: Bool {
+        let eligibleGenders = ["Female", "Other", "Prefer not to say"]
+        guard eligibleGenders.contains(patientGender) else { return false }
+        return contraceptiveStartInterval == 0 || contraceptiveMethod.isEmpty
+    }
+
     var body: some View {
         NavigationStack {
             Group {
@@ -27,7 +39,13 @@ struct MedicationsView: View {
                             .accessibilityLabel("Add medication")
                     }
                 }
+                if !viewModel.medications.isEmpty {
+                    ToolbarItem(placement: .topBarLeading) {
+                        EditButton()
+                    }
+                }
             }
+            .environment(\.editMode, $isEditMode)
             .navigationDestination(for: Medication.self) { med in
                 MedicationDetailView(medication: med)
             }
@@ -63,16 +81,18 @@ struct MedicationsView: View {
     private var medicationsList: some View {
         List {
             ForEach(viewModel.medications) { med in
-                NavigationLink(value: med) {
+                Button {
+                    viewModel.requestEdit(med)
+                } label: {
                     MedicationRowView(medication: med)
                 }
+                .foregroundStyle(.primary)
                 .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                     Button(role: .destructive) {
                         viewModel.requestDelete(med)
                     } label: {
                         Label("Delete", systemImage: "trash")
                     }
-
                     Button {
                         viewModel.requestEdit(med)
                     } label: {
@@ -82,6 +102,26 @@ struct MedicationsView: View {
                 }
             }
             .onMove { viewModel.moveItems(from: $0, to: $1) }
+
+            if shouldShowContraceptiveHint {
+                Section {
+                    NavigationLink(destination: ContraceptiveTrackerView()) {
+                        HStack(spacing: 12) {
+                            Image(systemName: "calendar.badge.clock")
+                                .foregroundStyle(.purple)
+                                .font(.body)
+                                .frame(width: 28)
+                            Text("Add a long term birth control reminder")
+                                .font(.subheadline)
+                                .foregroundStyle(.purple)
+                                .multilineTextAlignment(.center)
+                                .frame(maxWidth: .infinity)
+                        }
+                        .padding(.vertical, 4)
+                    }
+                }
+                .listRowBackground(Color.purple.opacity(0.08))
+            }
 
             if !subscriptionManager.isProSubscriber {
                 Section {
@@ -100,7 +140,7 @@ struct MedicationsView: View {
                 }
             }
         }
-        .environment(\.editMode, .constant(.active))
+        .scrollIndicators(.visible)
     }
 
     private var emptyState: some View {

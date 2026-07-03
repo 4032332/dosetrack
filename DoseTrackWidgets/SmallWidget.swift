@@ -6,6 +6,8 @@ import SwiftUI
 
 struct SmallWidgetEntry: TimelineEntry {
     let date: Date
+    let takenCount: Int
+    let totalCount: Int
     let nextDose: WidgetDoseEntry?
 }
 
@@ -13,80 +15,127 @@ struct SmallWidgetEntry: TimelineEntry {
 
 struct SmallWidgetProvider: TimelineProvider {
     func placeholder(in context: Context) -> SmallWidgetEntry {
-        SmallWidgetEntry(date: Date(), nextDose: nil)
+        SmallWidgetEntry(date: Date(), takenCount: 2, totalCount: 5, nextDose: nil)
     }
 
     func getSnapshot(in context: Context, completion: @escaping (SmallWidgetEntry) -> Void) {
-        completion(SmallWidgetEntry(date: Date(), nextDose: WidgetDataProvider.shared.nextDose()))
+        let entries = WidgetDataProvider.shared.todayEntries()
+        completion(SmallWidgetEntry(
+            date: Date(),
+            takenCount: entries.filter(\.isTaken).count,
+            totalCount: entries.count,
+            nextDose: WidgetDataProvider.shared.nextDose()
+        ))
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<SmallWidgetEntry>) -> Void) {
-        let nextDose = WidgetDataProvider.shared.nextDose()
-        let entry = SmallWidgetEntry(date: Date(), nextDose: nextDose)
-
-        // Reload exactly when the next dose is due (or in 1 hour if nothing pending)
-        let reloadDate = nextDose?.scheduledAt ?? Date(timeIntervalSinceNow: 3600)
-        let timeline = Timeline(entries: [entry], policy: .after(reloadDate))
-        completion(timeline)
+        let entries = WidgetDataProvider.shared.todayEntries()
+        let entry = SmallWidgetEntry(
+            date: Date(),
+            takenCount: entries.filter(\.isTaken).count,
+            totalCount: entries.count,
+            nextDose: WidgetDataProvider.shared.nextDose()
+        )
+        let reloadDate = entry.nextDose?.scheduledAt ?? Date(timeIntervalSinceNow: 3600)
+        completion(Timeline(entries: [entry], policy: .after(reloadDate)))
     }
 }
 
-// MARK: - View
+// MARK: - Milli Progress View
+
+/// Shows the Milli mascot image transitioning from greyscale to full colour
+/// as a proportion of today's doses are completed.
+struct MilliProgressView: View {
+    let fraction: Double   // 0.0 → 1.0
+
+    var body: some View {
+        ZStack {
+            // Greyscale base layer (always full image)
+            if let img = UIImage(named: "OnboardingWelcome") {
+                Image(uiImage: img)
+                    .resizable()
+                    .scaledToFit()
+                    .grayscale(1.0)
+                    .opacity(0.55)
+            } else {
+                milliPlaceholder
+            }
+
+            // Coloured overlay — revealed from bottom up based on completion fraction
+            if fraction > 0 {
+                if let img = UIImage(named: "OnboardingWelcome") {
+                    Image(uiImage: img)
+                        .resizable()
+                        .scaledToFit()
+                        .mask(alignment: .bottom) {
+                            GeometryReader { geo in
+                                Rectangle()
+                                    .frame(height: geo.size.height * fraction)
+                                    .frame(maxHeight: .infinity, alignment: .bottom)
+                            }
+                        }
+                } else {
+                    milliPlaceholder
+                        .mask(alignment: .bottom) {
+                            GeometryReader { geo in
+                                Rectangle()
+                                    .frame(height: geo.size.height * fraction)
+                                    .frame(maxHeight: .infinity, alignment: .bottom)
+                            }
+                        }
+                }
+            }
+        }
+    }
+
+    private var milliPlaceholder: some View {
+        ZStack {
+            Circle().fill(Color(red: 0.95, green: 0.96, blue: 1.0))
+            Text("💊").font(.system(size: 32))
+        }
+    }
+}
+
+// MARK: - Widget View
 
 struct SmallWidgetView: View {
     var entry: SmallWidgetEntry
 
+    private var completionFraction: Double {
+        guard entry.totalCount > 0 else { return 0 }
+        return min(Double(entry.takenCount) / Double(entry.totalCount), 1.0)
+    }
+
+    private var allDone: Bool { entry.takenCount == entry.totalCount && entry.totalCount > 0 }
+
     var body: some View {
-        if let dose = entry.nextDose {
-            VStack(alignment: .leading, spacing: 6) {
-                HStack(spacing: 6) {
-                    Circle()
-                        .fill(Color(hex: dose.colorHex))
-                        .frame(width: 10, height: 10)
-                    Text("Next Dose")
-                        .font(.caption2.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                }
+        VStack(spacing: 4) {
+            MilliProgressView(fraction: completionFraction)
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, 8)
+                .padding(.top, 8)
 
-                Spacer()
-
-                Text(dose.medicationName)
-                    .font(.subheadline.weight(.bold))
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.8)
-
-                Text(dose.dosage)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-
-                Spacer()
-
-                Text(dose.scheduledAt, style: .relative)
-                    .font(.caption2.weight(.medium))
-                    .foregroundStyle(Color.accentColor)
-            }
-            .padding(12)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-            .containerBackground(for: .widget) {
-                Color(UIColor.systemBackground)
-            }
-        } else {
-            VStack(spacing: 8) {
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.title2)
+            if allDone {
+                Text("All done! 🎉")
+                    .font(.caption2.weight(.semibold))
                     .foregroundStyle(.green)
-                Text("All done!")
-                    .font(.caption.weight(.semibold))
-                Text("No more doses today")
+            } else if entry.totalCount > 0 {
+                Text("\(entry.takenCount)/\(entry.totalCount)")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(.primary)
+                +
+                Text(" today")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
+            } else {
+                Text("No doses")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
             }
-            .padding()
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .containerBackground(for: .widget) {
-                Color(UIColor.systemBackground)
-            }
+        }
+        .padding(.bottom, 8)
+        .containerBackground(for: .widget) {
+            Color(UIColor.systemBackground)
         }
     }
 }
@@ -100,8 +149,8 @@ struct SmallWidget: Widget {
         StaticConfiguration(kind: kind, provider: SmallWidgetProvider()) { entry in
             SmallWidgetView(entry: entry)
         }
-        .configurationDisplayName("Next Dose")
-        .description("Shows your next upcoming dose with a countdown timer.")
+        .configurationDisplayName("Milli Progress")
+        .description("Shows Milli gaining colour as you take your medications.")
         .supportedFamilies([.systemSmall])
     }
 }

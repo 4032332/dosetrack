@@ -1,6 +1,7 @@
 // DoseTrack/ViewModels/AddEditMedicationViewModel.swift
 import CoreData
 import SwiftUI
+import WidgetKit
 
 struct ScheduleDraft: Identifiable {
     var id = UUID()
@@ -9,7 +10,7 @@ struct ScheduleDraft: Identifiable {
     var frequency: String = "daily"
     var daysOfWeek: [Int] = []
     var isEnabled: Bool = true
-    var intervalDays: Int = 1  // Used when frequency == "custom" (e.g. contraceptives)
+    var intervalDays: Int = 1
 }
 
 @MainActor
@@ -18,38 +19,45 @@ final class AddEditMedicationViewModel: ObservableObject {
     // MARK: - Form state
 
     @Published var name: String = ""
-    @Published var dosage: String = ""
-    @Published var unit: String = "pill"
+    /// Numeric part of the dose, e.g. "500"
+    @Published var doseAmount: String = ""
+    /// Strength unit, e.g. "mg"
+    @Published var doseUnit: String = "mg"
+    /// How many units per dose, e.g. 1
+    @Published var quantityAmount: Int = 1
+    /// Form factor, e.g. "tablet"
+    @Published var quantityUnit: String = "tablet"
     @Published var colorHex: String = "#5B8AF0"
     @Published var notes: String = ""
     @Published var currentCount: Int = 0
     @Published var refillThreshold: Int = 7
     @Published var schedules: [ScheduleDraft] = [ScheduleDraft()]
     @Published var photoData: Data? = nil
+    @Published var escriptData: Data? = nil
 
     // MARK: - Contraceptive tracking
-
     @Published var isContraceptive: Bool = false
     @Published var selectedPreset: Constants.Contraceptive.Preset? = nil
     @Published var lastAdministeredDate: Date = Date()
 
     // MARK: - Validation
-
     @Published var nameError: String? = nil
-    @Published var dosageError: String? = nil
+    @Published var doseError: String? = nil
 
     var isValid: Bool {
         !name.trimmingCharacters(in: .whitespaces).isEmpty &&
-        !dosage.trimmingCharacters(in: .whitespaces).isEmpty
+        !doseAmount.trimmingCharacters(in: .whitespaces).isEmpty
     }
 
     // MARK: - Metadata
-
     let isEditing: Bool
     private let medication: Medication?
     private let context: NSManagedObjectContext
 
-    static let unitOptions = ["pill", "ml", "mg", "injection", "supplement", "drop", "spray", "contraceptive"]
+    // Dose strength units (what's in each unit)
+    static let doseUnitOptions = ["mg", "ml", "IU", "mcg", "g", "µg", "%", "mmol", "mEq"]
+    // Form factor (how it's taken)
+    static let quantityUnitOptions = ["tablet", "capsule", "pill", "injection", "spray", "patch", "drop", "sachet", "suppository", "lozenge"]
     static let colorOptions = [
         "#5B8AF0", "#FF6B6B", "#4ECDC4", "#45B7D1",
         "#96CEB4", "#FFEAA7", "#DDA0DD", "#98D8C8"
@@ -64,13 +72,19 @@ final class AddEditMedicationViewModel: ObservableObject {
 
         if let med = medication {
             name = med.wrappedName
-            dosage = med.wrappedDosage
-            unit = med.wrappedUnit
             colorHex = med.wrappedColorHex
             notes = med.wrappedNotes
             currentCount = Int(med.currentCount)
             refillThreshold = Int(med.refillThreshold)
             photoData = med.photoData
+            escriptData = med.escriptData
+            quantityUnit = med.wrappedUnit
+
+            // Parse dosage string like "500mg" or "10ml" into amount + unit
+            let (amount, unit) = Self.parseDosage(med.wrappedDosage)
+            doseAmount = amount
+            doseUnit = unit
+
             isContraceptive = med.wrappedUnit == "contraceptive"
             schedules = med.schedulesArray.map { s in
                 ScheduleDraft(
@@ -85,35 +99,28 @@ final class AddEditMedicationViewModel: ObservableObject {
             }
             if schedules.isEmpty { schedules = [ScheduleDraft()] }
 
-            // Restore last-administered date from most recent taken log
             if isContraceptive, let lastLog = med.doseLogsArray.last {
                 lastAdministeredDate = lastLog.loggedAt ?? Date()
             }
         }
     }
 
-    // MARK: - Contraceptive preset application
+    // MARK: - Contraceptive preset
 
     func applyPreset(_ preset: Constants.Contraceptive.Preset) {
         selectedPreset = preset
         name = preset.name
-        dosage = nextDueDescription(intervalDays: preset.intervalDays)
-        unit = "contraceptive"
+        doseAmount = "1"
+        doseUnit = "dose"
+        quantityUnit = "injection"
         colorHex = preset.colorHex
         isContraceptive = true
-        schedules = [ScheduleDraft(
-            hour: 9,
-            minute: 0,
-            frequency: "custom",
-            intervalDays: preset.intervalDays
-        )]
+        schedules = [ScheduleDraft(hour: 9, minute: 0, frequency: "custom", intervalDays: preset.intervalDays)]
     }
 
     // MARK: - Actions
 
-    func addSchedule() {
-        schedules.append(ScheduleDraft())
-    }
+    func addSchedule() { schedules.append(ScheduleDraft()) }
 
     func removeSchedule(at offsets: IndexSet) {
         schedules.remove(atOffsets: offsets)
@@ -122,8 +129,8 @@ final class AddEditMedicationViewModel: ObservableObject {
 
     func validate() -> Bool {
         nameError = name.trimmingCharacters(in: .whitespaces).isEmpty ? "Name is required" : nil
-        dosageError = dosage.trimmingCharacters(in: .whitespaces).isEmpty ? "Dosage is required" : nil
-        return nameError == nil && dosageError == nil
+        doseError = doseAmount.trimmingCharacters(in: .whitespaces).isEmpty ? "Dose amount is required" : nil
+        return nameError == nil && doseError == nil
     }
 
     @discardableResult
@@ -141,19 +148,18 @@ final class AddEditMedicationViewModel: ObservableObject {
         }
 
         med.name = name.trimmingCharacters(in: .whitespaces)
-        med.dosage = dosage.trimmingCharacters(in: .whitespaces)
-        med.unit = unit
+        // Build dosage string: "500mg"
+        med.dosage = "\(doseAmount.trimmingCharacters(in: .whitespaces))\(doseUnit)"
+        med.unit = isContraceptive ? "contraceptive" : quantityUnit
         med.colorHex = colorHex
         med.notes = notes.trimmingCharacters(in: .whitespaces)
         med.currentCount = Int32(currentCount)
         med.refillThreshold = Int32(refillThreshold)
         med.photoData = photoData
+        med.escriptData = escriptData
         med.totalDosesPerDay = Int32(isContraceptive ? 0 : schedules.filter { $0.isEnabled }.count)
 
-        // Rebuild schedules — delete all existing, create fresh from drafts
-        for old in med.schedulesArray {
-            context.delete(old)
-        }
+        for old in med.schedulesArray { context.delete(old) }
         for draft in schedules {
             let s = Schedule(context: context)
             s.id = UUID()
@@ -166,8 +172,6 @@ final class AddEditMedicationViewModel: ObservableObject {
             s.medication = med
         }
 
-        // For contraceptives: record the last-administered date as a DoseLog
-        // so the scheduler can compute next-due from real data.
         if isContraceptive && !isEditing {
             let log = DoseLog(context: context)
             log.id = UUID()
@@ -178,17 +182,50 @@ final class AddEditMedicationViewModel: ObservableObject {
         }
 
         try? context.save()
+        WidgetCenter.shared.reloadAllTimelines()
+        // Push to Supabase — photos uploaded separately if present
+        let medCopy = med
+        Task {
+            await SupabaseSyncManager.shared.pushMedication(medCopy)
+            // Upload photos to storage if they exist
+            if let photoData = medCopy.photoData, let medId = medCopy.id,
+               let path = await SupabaseSyncManager.shared.uploadPhoto(
+                   photoData, forMedicationId: medId, type: .bottle) {
+                // Store path on row (fire-and-forget; not critical path)
+                _ = path
+            }
+            if let escriptData = medCopy.escriptData, let medId = medCopy.id,
+               let path = await SupabaseSyncManager.shared.uploadPhoto(
+                   escriptData, forMedicationId: medId, type: .escript) {
+                _ = path
+            }
+        }
         return med
     }
 
     // MARK: - Helpers
 
-    /// Human-readable string describing how often this contraceptive is administered.
+    /// Splits "500mg" → ("500", "mg"). Falls back gracefully.
+    static func parseDosage(_ dosage: String) -> (amount: String, unit: String) {
+        let str = dosage.trimmingCharacters(in: .whitespaces)
+        // Find first non-digit, non-dot character
+        var idx = str.startIndex
+        while idx < str.endIndex {
+            let ch = str[idx]
+            if !ch.isNumber && ch != "." { break }
+            idx = str.index(after: idx)
+        }
+        let amount = String(str[str.startIndex..<idx])
+        let unit = String(str[idx...]).trimmingCharacters(in: .whitespaces)
+        if amount.isEmpty { return (str, "mg") }
+        return (amount, unit.isEmpty ? "mg" : unit)
+    }
+
     private func nextDueDescription(intervalDays: Int) -> String {
         switch intervalDays {
         case 1..<14:   return "Every \(intervalDays) days"
         case 14..<60:  return "Every \(intervalDays / 7) weeks"
-        case 60..<365: return "Every \(intervalDays / 30) months"
+        case 60..<365: return "Every ~\(intervalDays / 30) months"
         default:       return "Every \(intervalDays / 365) year\(intervalDays >= 730 ? "s" : "")"
         }
     }
