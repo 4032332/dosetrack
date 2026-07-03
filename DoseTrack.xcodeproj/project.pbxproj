@@ -22,6 +22,7 @@
 		2E3B16F548370D35434679C9 /* SubscriptionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = EBAFC4266E63CAD4933926A5 /* SubscriptionManager.swift */; };
 		2F4666001E67FF1A940B4CB1 /* DoseLog+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABE8C1BB6ADF181C91D7B1B5 /* DoseLog+Extensions.swift */; };
 		335912EEB4077A23F3E0700A /* CaregiverInviteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74716822DA208FC0B80FAC07 /* CaregiverInviteView.swift */; };
+		33962C7BDA120E5FC8E3CC75 /* MissedDoseDetectorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0642B52A4FE3BAEB0C80CDEC /* MissedDoseDetectorTests.swift */; };
 		37BC34AB00889BC038C55C6E /* MediumWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = A177488B7127CD2F5DCABCEB /* MediumWidget.swift */; };
 		3AC02CB59E3F208940FCC564 /* AdherenceChartView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15FB0D0175781373455B3A93 /* AdherenceChartView.swift */; };
 		4187CF3941EE18972034E4E7 /* MarkDoseTakenIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59C94278F5723E542529E8BA /* MarkDoseTakenIntent.swift */; };
@@ -95,6 +96,7 @@
 		CC32A8FABA8182BE6986EDB8 /* SubscriptionManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FA89388364D687BFC710600 /* SubscriptionManagerTests.swift */; };
 		CF78CFEB0883C456B2A70708 /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1BE89FDB7E4F9D9923C173E /* HistoryView.swift */; };
 		D76707027834FD6DCC843135 /* Products.storekit in Resources */ = {isa = PBXBuildFile; fileRef = 2F9FC8A28D3514A8AF3C2784 /* Products.storekit */; };
+		DB0B6E9160C204F15B1E8EED /* MissedDoseDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6EDB9C9C80FC6420898A0E4 /* MissedDoseDetector.swift */; };
 		E1AF540A4687709CDA4F7AD6 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B436BDA5B0D210B8FED41FF /* main.swift */; };
 		E35266DAD547CD4379234877 /* ActiveAccountContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BC70C3842D9D6DF14B3CEDE /* ActiveAccountContext.swift */; };
 		E35828430637B5AA74FFD6B9 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 9B6C3AC9FF53C48EE22EB94C /* Assets.xcassets */; };
@@ -143,6 +145,7 @@
 		0092AEE5F32DECE392F1FBC5 /* PaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallView.swift; sourceTree = "<group>"; };
 		0115A9385AA49A9D72B70082 /* Vision.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Vision.framework; path = System/Library/Frameworks/Vision.framework; sourceTree = SDKROOT; };
 		020BE8E8783CD63DD6223C2A /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		0642B52A4FE3BAEB0C80CDEC /* MissedDoseDetectorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MissedDoseDetectorTests.swift; sourceTree = "<group>"; };
 		0D35D9FC76F2B59C118BB1DA /* WatchRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchRootView.swift; sourceTree = "<group>"; };
 		11A7EC4C5C94FE23E59262D0 /* TabNavigator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabNavigator.swift; sourceTree = "<group>"; };
 		1334F53F193DF18162FD3082 /* Placeholder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Placeholder.swift; sourceTree = "<group>"; };
@@ -231,6 +234,7 @@
 		DDD5DD43921C6555BF1DFC38 /* TodayWatchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayWatchView.swift; sourceTree = "<group>"; };
 		DFA3D671FBA09F78CAF744E2 /* NotificationScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationScheduler.swift; sourceTree = "<group>"; };
 		E5A6AD6DF22AA6DA14A40CE1 /* AppIconPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppIconPickerView.swift; sourceTree = "<group>"; };
+		E6EDB9C9C80FC6420898A0E4 /* MissedDoseDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MissedDoseDetector.swift; sourceTree = "<group>"; };
 		E717CD7D819338EACA8690F6 /* CaregiverManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaregiverManagerTests.swift; sourceTree = "<group>"; };
 		E9BC6878833AE5C45FC5BA65 /* ContraceptiveTrackerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContraceptiveTrackerView.swift; sourceTree = "<group>"; };
 		EBAFC4266E63CAD4933926A5 /* SubscriptionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionManager.swift; sourceTree = "<group>"; };
@@ -401,6 +405,7 @@
 				DDCC6A63AA218E60F89B87AA /* CaregiverManager.swift */,
 				49E70FC6E1596E9EFC428455 /* ExportManager.swift */,
 				D82F270A9ABC17C8C589C112 /* HealthKitManager.swift */,
+				E6EDB9C9C80FC6420898A0E4 /* MissedDoseDetector.swift */,
 				8CEB631C97363324CCE1380C /* NotificationManager.swift */,
 				DFA3D671FBA09F78CAF744E2 /* NotificationScheduler.swift */,
 				BB4EAC2257487A3F340D6310 /* ReportGenerator.swift */,
@@ -511,6 +516,7 @@
 				8DF9733C237D4FC1AC12A310 /* CoreDataTests.swift */,
 				326537A1EABFA4A5B04DE7DA /* ExportManagerTests.swift */,
 				14894400AD92BDDA5EEA2A18 /* MedicationsViewModelTests.swift */,
+				0642B52A4FE3BAEB0C80CDEC /* MissedDoseDetectorTests.swift */,
 				BA1090D2A5C494DAAB7160DC /* NotificationSchedulerTests.swift */,
 				1334F53F193DF18162FD3082 /* Placeholder.swift */,
 				1FA89388364D687BFC710600 /* SubscriptionManagerTests.swift */,
@@ -733,6 +739,7 @@
 				C946DC2FCC34233F54D48A3B /* CoreDataTests.swift in Sources */,
 				F8AD1AB23B97957617500CC6 /* ExportManagerTests.swift in Sources */,
 				7C00E007E2353BCE3881C073 /* MedicationsViewModelTests.swift in Sources */,
+				33962C7BDA120E5FC8E3CC75 /* MissedDoseDetectorTests.swift in Sources */,
 				6F0BF41105812A2D4130060F /* NotificationSchedulerTests.swift in Sources */,
 				758648FC943D5E93E40B4D86 /* Placeholder.swift in Sources */,
 				CC32A8FABA8182BE6986EDB8 /* SubscriptionManagerTests.swift in Sources */,
@@ -798,6 +805,7 @@
 				98A2FC5717EFE25EFC8B4F89 /* MedicationScannerView.swift in Sources */,
 				9E616B26A43CE714DF125AE8 /* MedicationsView.swift in Sources */,
 				805EF89ABB7B15F3A56A6F88 /* MedicationsViewModel.swift in Sources */,
+				DB0B6E9160C204F15B1E8EED /* MissedDoseDetector.swift in Sources */,
 				F0A7B2D87E92A1DAA3DBB899 /* NotificationManager.swift in Sources */,
 				81FB7687797B34816A18D3FD /* NotificationScheduler.swift in Sources */,
 				1E6D95CE6D459A3E57CC30D7 /* OnboardingView.swift in Sources */,
