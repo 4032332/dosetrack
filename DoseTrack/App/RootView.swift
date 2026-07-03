@@ -13,6 +13,8 @@ struct RootView: View {
     @State private var showSplash: Bool = true
     @State private var pendingInviteCode: String?
     @State private var activeAccount: ActiveAccountContext?
+    @State private var revocationMessage: String?
+    @ObservedObject private var caregiverManager = CaregiverManager.shared
 
     private var canProceed: Bool { auth.isSignedIn || guestMode }
 
@@ -146,9 +148,30 @@ struct RootView: View {
                 dismissSplash()
             }
         }
+        .onChange(of: scenePhase) { _, newPhase in
+            // Re-validate caregiver access whenever the app comes to the foreground. If we're
+            // currently viewing a patient's account and that relationship has since been revoked
+            // (no longer present in `overseenPatients`), fall back to the caregiver's own account
+            // and surface a message — rather than silently continuing to show stale patient data.
+            if newPhase == .active {
+                Task {
+                    await caregiverManager.refresh()
+                    if let activeAccount, activeAccount.isViewingOtherAccount,
+                       !caregiverManager.overseenPatients.contains(where: { $0.patientUserId == activeAccount.activeUserId }) {
+                        activeAccount.switchToOwnAccount()
+                        revocationMessage = "Your access to that account has ended."
+                    }
+                }
+            }
+        }
         .sheet(item: $pendingInviteCode.mappedToIdentifiable()) { wrapped in
             AcceptCaregiverInviteView(code: wrapped.value)
                 .environmentObject(CaregiverManager.shared)
+        }
+        .alert("Access Ended", isPresented: Binding(get: { revocationMessage != nil }, set: { if !$0 { revocationMessage = nil } })) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(revocationMessage ?? "")
         }
     }
 }
