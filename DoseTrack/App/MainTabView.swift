@@ -3,8 +3,11 @@ import SwiftUI
 
 struct MainTabView: View {
     @StateObject private var navigator = TabNavigator.shared
+    @EnvironmentObject private var activeAccount: ActiveAccountContext
+    @EnvironmentObject private var caregiverManager: CaregiverManager
     @AppStorage("colorTheme") private var colorTheme: String = AppColorTheme.oceanBlue.rawValue
     @AppStorage("appearanceOverride") private var appearanceOverride: String = "system"
+    @State private var showingAccountSwitcher = false
 
     private var activeTheme: AppColorTheme {
         AppColorTheme(rawValue: colorTheme) ?? .oceanBlue
@@ -42,6 +45,32 @@ struct MainTabView: View {
             appearanceOverride == "light" ? .light :
             appearanceOverride == "dark"  ? .dark  : nil
         )
+        .safeAreaInset(edge: .top) {
+            if !caregiverManager.overseenPatients.isEmpty {
+                Button {
+                    showingAccountSwitcher = true
+                } label: {
+                    HStack(spacing: 6) {
+                        Text(activeAccount.activeDisplayName)
+                            .font(.subheadline.weight(.semibold))
+                        Image(systemName: "chevron.up.chevron.down")
+                            .font(.caption)
+                    }
+                    .foregroundStyle(.primary)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(.thinMaterial, in: Capsule())
+                }
+                .padding(.top, 4)
+                .frame(maxWidth: .infinity)
+                .background(.bar)
+            }
+        }
+        .sheet(isPresented: $showingAccountSwitcher) {
+            AccountSwitcherView()
+                .environmentObject(activeAccount)
+                .environmentObject(caregiverManager)
+        }
     }
 }
 
@@ -50,4 +79,6 @@ struct MainTabView: View {
         .environment(\.managedObjectContext, PersistenceController.preview.viewContext)
         .environmentObject(SubscriptionManager())
         .environmentObject(AuthManager.shared)
+        .environmentObject(ActiveAccountContext(ownUserId: UUID(), ownDisplayName: "Preview User"))
+        .environmentObject(CaregiverManager.shared)
 }

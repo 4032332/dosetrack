@@ -18,6 +18,7 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
             .environmentObject(SubscriptionManager.shared)
             .environmentObject(WatchConnectivityManager.shared)
             .environmentObject(AuthManager.shared)
+            .environmentObject(CaregiverManager.shared)
 
         let hosting = UIHostingController(rootView: rootView)
         hosting.sizingOptions = []

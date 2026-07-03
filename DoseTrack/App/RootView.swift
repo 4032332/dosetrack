@@ -11,8 +11,24 @@ struct RootView: View {
 
     @State private var showSplash: Bool = true
     @State private var pendingInviteCode: String?
+    @State private var activeAccount: ActiveAccountContext?
 
     private var canProceed: Bool { auth.isSignedIn || guestMode }
+
+    /// Builds (or rebuilds) the active-account context from the current session.
+    /// Runs after sign-in completes since `ActiveAccountContext` requires a non-optional
+    /// user id — guest sessions and signed-out states simply leave this nil, and the
+    /// account-switcher UI (which requires `ActiveAccountContext`) is only ever shown
+    /// once `overseenPatients` is non-empty, which itself requires a signed-in caregiver.
+    private func refreshActiveAccount() {
+        guard let userId = auth.session?.user.id else {
+            activeAccount = nil
+            return
+        }
+        if activeAccount?.ownUserId != userId {
+            activeAccount = ActiveAccountContext(ownUserId: userId, ownDisplayName: auth.displayName)
+        }
+    }
 
     private func dismissSplash() {
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.6) {
@@ -30,8 +46,9 @@ struct RootView: View {
             } else if !hasCompletedOnboarding {
                 OnboardingView()
                     .transition(.opacity)
-            } else {
+            } else if let activeAccount {
                 MainTabView()
+                    .environmentObject(activeAccount)
                     .transition(.opacity)
                     .onAppear {
                         watchManager.syncTodayMedications(context: context)
@@ -56,7 +73,13 @@ struct RootView: View {
             guard let code = notification.object as? String else { return }
             pendingInviteCode = code
         }
-        .onAppear { dismissSplash() }
+        .onAppear {
+            dismissSplash()
+            refreshActiveAccount()
+        }
+        .onChange(of: auth.session?.user.id) { _, _ in
+            refreshActiveAccount()
+        }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active && !showSplash {
                 showSplash = true
