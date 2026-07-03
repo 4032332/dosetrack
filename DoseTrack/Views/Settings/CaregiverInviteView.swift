@@ -33,8 +33,13 @@ struct CaregiverInviteView: View {
                         .font(.subheadline).foregroundStyle(.secondary)
                     if let invite {
                         qrCode(for: invite.link)
-                        ShareLink(item: URL(string: invite.link)!) {
-                            Label("Share Invite Link", systemImage: "square.and.arrow.up")
+                        if let url = URL(string: invite.link) {
+                            ShareLink(item: url) {
+                                Label("Share Invite Link", systemImage: "square.and.arrow.up")
+                            }
+                        } else {
+                            Text("Couldn't create a shareable link. Please try generating a new invite.")
+                                .font(.caption).foregroundStyle(.red)
                         }
                     } else {
                         Button {
