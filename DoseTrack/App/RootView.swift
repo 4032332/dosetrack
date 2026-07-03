@@ -15,14 +15,47 @@ struct RootView: View {
 
     private var canProceed: Bool { auth.isSignedIn || guestMode }
 
+    /// Key used to persist a stable local identifier for guest-mode users whose
+    /// Supabase session is nil (anonymous auth disabled/failed fallback — see
+    /// `AuthManager.continueAsGuest()`). Generated once and reused across launches
+    /// so `ActiveAccountContext.ownUserId` stays consistent for a given guest.
+    private static let localGuestIdKey = "localGuestAccountId"
+
+    /// Returns a stable local-only UUID for a session-less guest, generating and
+    /// persisting one on first use.
+    private func localGuestId() -> UUID {
+        if let stored = UserDefaults.standard.string(forKey: Self.localGuestIdKey),
+           let uuid = UUID(uuidString: stored) {
+            return uuid
+        }
+        let newId = UUID()
+        UserDefaults.standard.set(newId.uuidString, forKey: Self.localGuestIdKey)
+        return newId
+    }
+
     /// Builds (or rebuilds) the active-account context from the current session.
-    /// Runs after sign-in completes since `ActiveAccountContext` requires a non-optional
-    /// user id — guest sessions and signed-out states simply leave this nil, and the
-    /// account-switcher UI (which requires `ActiveAccountContext`) is only ever shown
-    /// once `overseenPatients` is non-empty, which itself requires a signed-in caregiver.
+    ///
+    /// Two cases produce a real, signed-in `ActiveAccountContext`:
+    ///  - a full account session (`auth.session != nil`)
+    ///  - guest mode where anonymous Supabase sign-in succeeded (session set, `isGuest == true`)
+    ///
+    /// A third case — `AuthManager.continueAsGuest()`'s fallback path, where anonymous auth is
+    /// disabled/fails and only `UserDefaults["guestMode"]` is set with `session` staying nil —
+    /// has no Supabase user id at all. Without a fallback here, `activeAccount` would stay
+    /// permanently nil and the user would be stuck past onboarding with no way to reach
+    /// `MainTabView` (regression from commit 2123217). We synthesize a stable local-only id
+    /// for that case; the guest has no caregiver relationships, so the account-switcher UI
+    /// (gated on `overseenPatients` being non-empty) never appears for them regardless.
     private func refreshActiveAccount() {
         guard let userId = auth.session?.user.id else {
-            activeAccount = nil
+            if guestMode {
+                let guestId = localGuestId()
+                if activeAccount?.ownUserId != guestId {
+                    activeAccount = ActiveAccountContext(ownUserId: guestId, ownDisplayName: "You")
+                }
+            } else {
+                activeAccount = nil
+            }
             return
         }
         if activeAccount?.ownUserId != userId {
@@ -68,7 +101,12 @@ struct RootView: View {
 
         .animation(.easeInOut(duration: 0.35), value: hasCompletedOnboarding)
         .animation(.easeInOut(duration: 0.5), value: showSplash)
-        .onReceive(NotificationCenter.default.publisher(for: .guestModeActivated)) { _ in }
+        .onReceive(NotificationCenter.default.publisher(for: .guestModeActivated)) { _ in
+            // Guest fallback path (anonymous Supabase auth disabled/failed): session stays nil,
+            // so `onChange(of: auth.session?.user.id)` never fires. Refresh explicitly here so
+            // `activeAccount` gets a synthetic local id and the user can reach MainTabView.
+            refreshActiveAccount()
+        }
         .onReceive(NotificationCenter.default.publisher(for: .caregiverInviteReceived)) { notification in
             guard let code = notification.object as? String else { return }
             pendingInviteCode = code
