@@ -218,15 +218,10 @@ struct SettingsView: View {
                 Section("Data & Privacy") {
                     if subscriptionManager.isProSubscriber {
                         NavigationLink {
-                            FamilySharingView()
+                            CaregiverInviteView()
                         } label: {
-                            Label("Family Sharing", systemImage: "person.2.fill")
+                            Label("Caregiver", systemImage: "person.2.fill")
                         }
-
-                        Toggle(isOn: .constant(false)) {
-                            Label("iCloud Sync", systemImage: "icloud.fill")
-                        }
-                        .disabled(true)
                     }
 
                     NavigationLink {
@@ -325,23 +320,6 @@ struct ShareSheetView: UIViewControllerRepresentable {
         UIActivityViewController(activityItems: activityItems, applicationActivities: nil)
     }
     func updateUIViewController(_ vc: UIActivityViewController, context: Context) {}
-}
-
-// MARK: - Family Sharing Stub
-
-struct FamilySharingView: View {
-    var body: some View {
-        List {
-            Section {
-                Text("Family sharing lets caregivers monitor medication adherence for family members.")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                Label("Coming Soon", systemImage: "clock.fill")
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .navigationTitle("Family Sharing")
-    }
 }
 
 // MARK: - Disclaimer View

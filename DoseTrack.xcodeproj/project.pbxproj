@@ -21,6 +21,7 @@
 		2D49CAEEC5B0F96B2C0D696F /* MedicationDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F171A7EC3E2D466D5BF55CC /* MedicationDetailView.swift */; };
 		2E3B16F548370D35434679C9 /* SubscriptionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = EBAFC4266E63CAD4933926A5 /* SubscriptionManager.swift */; };
 		2F4666001E67FF1A940B4CB1 /* DoseLog+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABE8C1BB6ADF181C91D7B1B5 /* DoseLog+Extensions.swift */; };
+		335912EEB4077A23F3E0700A /* CaregiverInviteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74716822DA208FC0B80FAC07 /* CaregiverInviteView.swift */; };
 		37BC34AB00889BC038C55C6E /* MediumWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = A177488B7127CD2F5DCABCEB /* MediumWidget.swift */; };
 		3AC02CB59E3F208940FCC564 /* AdherenceChartView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15FB0D0175781373455B3A93 /* AdherenceChartView.swift */; };
 		4187CF3941EE18972034E4E7 /* MarkDoseTakenIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59C94278F5723E542529E8BA /* MarkDoseTakenIntent.swift */; };
@@ -168,6 +169,7 @@
 		6D930F0954890B9A4E797A28 /* DoseTrack.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = DoseTrack.xcdatamodel; sourceTree = "<group>"; };
 		71760DE73620AFD90CB106C5 /* RestockView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RestockView.swift; sourceTree = "<group>"; };
 		73C68DD81F8003DB39C9A4E5 /* DoseTrackWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DoseTrackWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		74716822DA208FC0B80FAC07 /* CaregiverInviteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaregiverInviteView.swift; sourceTree = "<group>"; };
 		783256424249ECF294A3B6D3 /* PersistenceController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersistenceController.swift; sourceTree = "<group>"; };
 		7A9188EED915483498FCA7AC /* ComplicationProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComplicationProvider.swift; sourceTree = "<group>"; };
 		7AFD860AD438BA066A78EAAE /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
@@ -437,6 +439,7 @@
 				E5A6AD6DF22AA6DA14A40CE1 /* AppIconPickerView.swift */,
 				464D0595D1B5467B84401EE6 /* AppPreferencesView.swift */,
 				F94A8FE73284D8CC6C89EC51 /* AvatarPickerView.swift */,
+				74716822DA208FC0B80FAC07 /* CaregiverInviteView.swift */,
 				E9BC6878833AE5C45FC5BA65 /* ContraceptiveTrackerView.swift */,
 				A1A152E48F7A10E094FB3B37 /* ProfileView.swift */,
 				020BE8E8783CD63DD6223C2A /* SettingsView.swift */,
@@ -753,6 +756,7 @@
 				F24737D9C6039DF5252A4B6C /* AuthView.swift in Sources */,
 				5A7538647F5CCCB06CAB664F /* AvatarPickerView.swift in Sources */,
 				625A5FD00337A7B9592D47AB /* CalendarView.swift in Sources */,
+				335912EEB4077A23F3E0700A /* CaregiverInviteView.swift in Sources */,
 				8B48DF3CE85DB538565ECD06 /* CaregiverManager.swift in Sources */,
 				AAFD22374BC98407BFF8AA1A /* CaregiverRelationshipRow.swift in Sources */,
 				A281A80A50F5524437F5AD94 /* CollapsiblePickers.swift in Sources */,
