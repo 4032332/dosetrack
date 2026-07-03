@@ -40,8 +40,33 @@ class AppDelegate: NSObject, UIApplicationDelegate {
             NotificationScheduler.shared.refreshAll(
                 context: PersistenceController.shared.viewContext
             )
+            // Local reminder authorization already succeeded if we get an
+            // .authorized status here. Registering for remote notifications is
+            // a separate, additive step needed for caregiver push alerts —
+            // it does not affect local medication reminders.
+            if NotificationManager.shared.authorizationStatus == .authorized {
+                UIApplication.shared.registerForRemoteNotifications()
+            }
         }
         NotificationCenter.default.post(name: .appDidBecomeActive, object: nil)
+    }
+
+    // MARK: - Remote (APNs) Push Registration
+
+    func application(
+        _ application: UIApplication,
+        didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
+    ) {
+        Task {
+            await PushTokenManager.shared.uploadToken(deviceToken: deviceToken)
+        }
+    }
+
+    func application(
+        _ application: UIApplication,
+        didFailToRegisterForRemoteNotificationsWithError error: Error
+    ) {
+        print("Failed to register for remote notifications: \(error)")
     }
 
     // MARK: - Background Task Registration

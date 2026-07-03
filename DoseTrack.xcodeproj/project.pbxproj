@@ -56,6 +56,7 @@
 		78FAE557FEF7921B969432DD /* WidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = D281D1F2A82F1A73F9F256A5 /* WidgetBundle.swift */; };
 		7C00E007E2353BCE3881C073 /* MedicationsViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14894400AD92BDDA5EEA2A18 /* MedicationsViewModelTests.swift */; };
 		7DE4589978C2550373CAD8E8 /* ActiveAccountContextTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACABF038925D50BED3918261 /* ActiveAccountContextTests.swift */; };
+		7F5377E26E907D675E2182C0 /* PushTokenManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A56A87A1C5B6E9F4E003903F /* PushTokenManager.swift */; };
 		805EF89ABB7B15F3A56A6F88 /* MedicationsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C08ADCFD6A3E049DEBD7438 /* MedicationsViewModel.swift */; };
 		80773C22C0B7D6FC5CCF3537 /* AcceptCaregiverInviteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9ECD54ED0D8136C78ECBDDF8 /* AcceptCaregiverInviteView.swift */; };
 		81FB7687797B34816A18D3FD /* NotificationScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = DFA3D671FBA09F78CAF744E2 /* NotificationScheduler.swift */; };
@@ -203,6 +204,7 @@
 		A1A152E48F7A10E094FB3B37 /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
 		A3C137AE71909B05AA99C229 /* AdherenceCalculatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdherenceCalculatorTests.swift; sourceTree = "<group>"; };
 		A50BE4785E63F56B342BE48B /* NotificationController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationController.swift; sourceTree = "<group>"; };
+		A56A87A1C5B6E9F4E003903F /* PushTokenManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushTokenManager.swift; sourceTree = "<group>"; };
 		A5E172956AA9F4089113D3E7 /* DoseTrackTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = DoseTrackTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		A68FE0D696E5C1C84C0E33C1 /* DoseTrackWidgets.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = DoseTrackWidgets.entitlements; sourceTree = "<group>"; };
 		A6EC0ECE28E942CC99534F64 /* SmallWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmallWidget.swift; sourceTree = "<group>"; };
@@ -408,6 +410,7 @@
 				E6EDB9C9C80FC6420898A0E4 /* MissedDoseDetector.swift */,
 				8CEB631C97363324CCE1380C /* NotificationManager.swift */,
 				DFA3D671FBA09F78CAF744E2 /* NotificationScheduler.swift */,
+				A56A87A1C5B6E9F4E003903F /* PushTokenManager.swift */,
 				BB4EAC2257487A3F340D6310 /* ReportGenerator.swift */,
 				EBAFC4266E63CAD4933926A5 /* SubscriptionManager.swift */,
 				D8F0A5CF3936D62E1ED5B2EF /* SupabaseSyncManager.swift */,
@@ -812,6 +815,7 @@
 				22EE2C8CD64A1DBD581B3AAA /* PaywallView.swift in Sources */,
 				252DA2BBDFE91030C731389E /* PersistenceController.swift in Sources */,
 				73945632B68C64A9BCCE9D2F /* ProfileView.swift in Sources */,
+				7F5377E26E907D675E2182C0 /* PushTokenManager.swift in Sources */,
 				BC56C6A9A93C59C8711F695F /* ReportGenerator.swift in Sources */,
 				BA89B46643B897C978D12388 /* RestockView.swift in Sources */,
 				71C3618EEB9801B8A92A5086 /* RootView.swift in Sources */,
