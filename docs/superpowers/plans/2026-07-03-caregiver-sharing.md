@@ -28,18 +28,26 @@ Run `list_tables` (Supabase MCP tool) and note the exact column naming style use
 
 Use `apply_migration` with name `create_caregiver_relationships` and SQL:
 
+Before writing this migration, confirm `gen_random_uuid()` is available (it requires the `pgcrypto` extension, which Supabase enables by default — verify with the `list_extensions` MCP tool rather than assuming).
+
+**Note:** `caregiver_user_id` is nullable below (not `not null`) because a freshly-created invite has no caregiver yet — it's only filled in when someone accepts. This is the final, correct schema; there is no separate later migration to make it nullable (an earlier draft of this plan had that as a two-step fix — it's now folded in here directly so Task 4 doesn't need to work around a `not null` constraint).
+
+**Display names:** this app has no `profiles` table — display name lives in Supabase auth `user_metadata` (`full_name`, per `ProfileView.swift:239`), which clients can't join against directly under RLS, and calling the admin API from the client isn't an option. Rather than adding an admin-API round trip, this table **denormalizes both parties' display names as a snapshot at the time they're known** (patient's name when the invite is created, caregiver's name when they accept). This is simple, avoids new privileged endpoints, and is fine for this feature since a caregiver's UI name doesn't need to live-update if the patient later renames themselves (it's a label for the switcher, not an identity check — access control is entirely enforced by `user_id` via RLS, never by the name string).
+
 ```sql
 create table caregiver_relationships (
   id uuid primary key default gen_random_uuid(),
-  caregiver_user_id uuid not null references auth.users(id) on delete cascade,
+  caregiver_user_id uuid references auth.users(id) on delete cascade,
   patient_user_id uuid not null references auth.users(id) on delete cascade,
+  patient_display_name text not null,
+  caregiver_display_name text,
   status text not null check (status in ('pending', 'active', 'revoked')) default 'pending',
   invite_code text not null unique,
   created_at timestamptz not null default now(),
   expires_at timestamptz not null default (now() + interval '24 hours'),
   activated_at timestamptz,
   revoked_at timestamptz,
-  constraint no_self_invite check (caregiver_user_id <> patient_user_id)
+  constraint no_self_invite check (caregiver_user_id is null or caregiver_user_id <> patient_user_id)
 );
 
 -- At most one pending/active relationship per patient
@@ -132,10 +140,56 @@ create policy "medications_select_own" on medications for select
         and cr.patient_user_id = medications.user_id
     )
   );
--- Repeat the same OR-clause shape for the insert/update/delete policies on this table.
+
+drop policy if exists "medications_insert_own" on medications;
+create policy "medications_insert_own" on medications for insert
+  with check (
+    auth.uid() = user_id
+    or exists (
+      select 1 from caregiver_relationships cr
+      where cr.status = 'active'
+        and cr.caregiver_user_id = auth.uid()
+        and cr.patient_user_id = medications.user_id
+    )
+  );
+
+drop policy if exists "medications_update_own" on medications;
+create policy "medications_update_own" on medications for update
+  using (
+    auth.uid() = user_id
+    or exists (
+      select 1 from caregiver_relationships cr
+      where cr.status = 'active'
+        and cr.caregiver_user_id = auth.uid()
+        and cr.patient_user_id = medications.user_id
+    )
+  )
+  with check (
+    auth.uid() = user_id
+    or exists (
+      select 1 from caregiver_relationships cr
+      where cr.status = 'active'
+        and cr.caregiver_user_id = auth.uid()
+        and cr.patient_user_id = medications.user_id
+    )
+  );
+
+drop policy if exists "medications_delete_own" on medications;
+create policy "medications_delete_own" on medications for delete
+  using (
+    auth.uid() = user_id
+    or exists (
+      select 1 from caregiver_relationships cr
+      where cr.status = 'active'
+        and cr.caregiver_user_id = auth.uid()
+        and cr.patient_user_id = medications.user_id
+    )
+  );
 ```
 
-Repeat the same pattern for `schedules` and `dose_logs`, and for every existing CRUD policy on each (not just select) — a caregiver needs full read/write per the spec's "full co-management" decision.
+Note the asymmetry: `select`/`delete` policies only need `using(...)`; `insert` only needs `with check(...)`; `update` needs **both** (`using` gates which existing rows are visible to update, `with check` gates what the row can be changed to) — don't copy a single clause shape into all four blindly.
+
+Repeat this same four-policy pattern for `schedules` and `dose_logs`, substituting the table name in the `exists(...)` subquery's `medications.user_id` reference for that table's actual owner column (confirm the exact column name from Step 1's `pg_policies` dump — it may not be called `user_id` on every table).
 
 - [ ] **Step 3: Verify with a manual query test**
 
@@ -154,6 +208,8 @@ Confirm the caregiver `exists(...)` clause appears in the output.
 
 - [ ] **Step 1: Write the function**
 
+`caregiver_user_id` is left `null` at insert time (per Task 1's schema, which already allows this) — it's only set when someone accepts the invite in Task 5.
+
 ```typescript
 // create-caregiver-invite/index.ts
 import { createClient } from 'jsr:@supabase/supabase-js@2'
@@ -170,19 +226,18 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ error: 'unauthorized' }), { status: 401 })
   }
 
+  const patientDisplayName = (user.user_metadata?.full_name as string | undefined)?.trim() || 'A DoseTrack user'
   const code = crypto.randomUUID().slice(0, 8).toUpperCase()
   const { data, error } = await supabase
     .from('caregiver_relationships')
-    .insert({ patient_user_id: user.id, caregiver_user_id: user.id, invite_code: code, status: 'pending' })
+    .insert({
+      patient_user_id: user.id,
+      patient_display_name: patientDisplayName,
+      invite_code: code,
+      status: 'pending',
+    })
     .select()
     .single()
-
-  // caregiver_user_id is a placeholder (self) until accept swaps it in — see accept function.
-  // The no_self_invite check constraint would reject this; instead insert caregiver_user_id
-  // as NULL-able at insert time. Adjust the table: caregiver_user_id must be nullable until
-  // accepted. Revisit Task 1 Step 2 to make caregiver_user_id nullable, and move the
-  // no_self_invite check to apply only when caregiver_user_id is not null:
-  //   constraint no_self_invite check (caregiver_user_id is null or caregiver_user_id <> patient_user_id)
 
   if (error) {
     return new Response(JSON.stringify({ error: error.message }), { status: 400 })
@@ -194,20 +249,9 @@ Deno.serve(async (req) => {
 })
 ```
 
-**Before implementing this step**, go back and amend Task 1's migration: `caregiver_user_id` must be nullable (a pending invite has no caregiver yet), and the `no_self_invite` check must allow null. Apply a follow-up migration via `apply_migration` (name `make_caregiver_user_id_nullable`):
-
-```sql
-alter table caregiver_relationships alter column caregiver_user_id drop not null;
-alter table caregiver_relationships drop constraint no_self_invite;
-alter table caregiver_relationships add constraint no_self_invite
-  check (caregiver_user_id is null or caregiver_user_id <> patient_user_id);
-```
-
-Then the insert in the function above should omit `caregiver_user_id` entirely (leave it null) rather than setting it to `user.id`.
-
 - [ ] **Step 2: Deploy**
 
-Use `deploy_edge_function` with the corrected source (insert omits `caregiver_user_id`).
+Use `deploy_edge_function` with the source above.
 
 - [ ] **Step 3: Manual verification**
 
@@ -237,10 +281,17 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ error: 'unauthorized' }), { status: 401 })
   }
 
+  const caregiverDisplayName = (user.user_metadata?.full_name as string | undefined)?.trim() || 'A DoseTrack user'
+
   // Atomic validate-and-activate: 0 affected rows means invalid/expired/already-used.
   const { data, error } = await supabase
     .from('caregiver_relationships')
-    .update({ caregiver_user_id: user.id, status: 'active', activated_at: new Date().toISOString() })
+    .update({
+      caregiver_user_id: user.id,
+      caregiver_display_name: caregiverDisplayName,
+      status: 'active',
+      activated_at: new Date().toISOString(),
+    })
     .eq('invite_code', code)
     .eq('status', 'pending')
     .gt('expires_at', new Date().toISOString())
@@ -265,24 +316,30 @@ Note: this relies on RLS's update policy (`caregiver_relationships_update_own`) 
 
 Create an invite (Task 4), then call `accept-caregiver-invite` with a different user's JWT and the code. Confirm 200 + `patientUserId`. Call again with the same code — confirm 409 `invalid_or_expired` (proves the atomic guard works). Call with the *same* user who created the invite (patient accepting their own) — confirm rejection (either 400 from the check constraint or the explicit `.neq` filter returning 0 rows).
 
+**Known accepted limitation, not addressed by this task:** the 8-character invite code (~32 bits of entropy) has no rate-limiting on guess attempts within its 24h validity window, so a determined attacker with API access could brute-force a code before it expires. Given this requires knowing a target exists and expires within 24h, this is deferred rather than blocking — if it matters later, add a per-IP/per-user attempt throttle (e.g. via Supabase's built-in rate limiting or a simple attempts counter column) as a follow-up, not part of this plan.
+
 ### Task 6: Missed-dose alert dedup table
 
 **Files:** none (Supabase migration via MCP tool)
 
 - [ ] **Step 1: Apply migration**
 
+Confirm the exact PK column/type on `schedules` via the `information_schema.columns` query (same one used in Task 15) before writing this — the FK below assumes it's `schedules(id)` matching the `uuid` type used elsewhere in this schema.
+
 ```sql
 create table missed_dose_alerts (
   id uuid primary key default gen_random_uuid(),
   patient_user_id uuid not null references auth.users(id) on delete cascade,
-  schedule_id uuid not null,
+  schedule_id uuid not null references schedules(id) on delete cascade,
   scheduled_date date not null,
   sent_at timestamptz not null default now(),
   unique (schedule_id, scheduled_date)
 );
+
+create index on missed_dose_alerts (patient_user_id);
 ```
 
-This table has no RLS policy for direct client access — it's only touched by the Edge Function (Chunk 3, Task 12) via the service-role key, so leave RLS disabled or enabled-with-no-policies (default-deny) rather than adding a client-facing policy.
+This table has no RLS policy for direct client access — it's only touched by the `missed-dose-alerts` Edge Function (Chunk 3, Task 15) via the service-role key, so leave RLS disabled or enabled-with-no-policies (default-deny) rather than adding a client-facing policy.
 
 - [ ] **Step 2: Run `get_advisors`** and confirm the "RLS disabled" warning (if any) is expected/acceptable here since this table is service-role-only — note this explicitly rather than silently ignoring an advisor warning.
 
@@ -393,57 +450,67 @@ git commit -m "feat: add ActiveAccountContext for caregiver account switching"
 - Modify: `DoseTrack/Services/SupabaseSyncManager.swift:22,43,56,63,111-123,127-204`
 - Test: `DoseTrackTests/SupabaseSyncManagerTests.swift` (create if it doesn't already cover this)
 
-This is the change flagged as understated risk during spec review — read `DoseTrack/Services/SupabaseSyncManager.swift` in full first (395 lines) before touching it, since every fetch/push function currently reads `AuthManager.shared.session?.user.id` internally.
+This is the change flagged as understated risk during spec review — read `DoseTrack/Services/SupabaseSyncManager.swift` in full first (395 lines) before touching it. Here is the **exact current shape** of the relevant functions (confirmed against the real file, not paraphrased):
 
-- [ ] **Step 1: Write failing tests for the new signatures**
+- `pullAll(context:)` — no user parameter, reads `AuthManager.shared.session?.user.id` only implicitly (via the private fetch helpers relying on RLS).
+- `pushMedication(_:)` — reads `AuthManager.shared.session?.user.id` directly, then calls `pushSchedule(schedule, medicationId:userId:)` passing that resolved id through.
+- `pushSchedule(_:medicationId:userId:)` — **already takes a required, non-optional `userId: UUID`** parameter with no `AuthManager` lookup of its own. It has nothing to change; it already does the right thing as long as its caller passes the correct target id.
+- `pushDoseLog(_:)` — reads `AuthManager.shared.session?.user.id` directly, no existing user parameter.
+- `fetchRemoteMedications()`, `fetchRemoteSchedules()`, `fetchRemoteDoseLogs()`, `fetchRemoteSettings()` — all private, no parameters, `select()` with **no `.eq` filter at all**, relying entirely on RLS to scope rows to the caller's session.
+- `applySettings(_:)` — writes directly into `UserDefaults.standard` (colorTheme, patientName, etc.). **This is a real hazard for this feature**: if a caregiver's device calls `pullAll` for a linked patient, `applySettings` would overwrite the *caregiver's own device* UserDefaults with the *patient's* settings (their name, theme, snooze duration...). This must be skipped entirely when syncing on behalf of someone other than the signed-in user — see Step 3.
 
-Since these functions do real network I/O against Supabase, write tests against the *query construction*, not live network calls — check current test file conventions first:
+**Cross-reference:** this task only threads a target user id through the *network* layer (which Supabase rows get fetched/written). It deliberately does **not** decide which local `NSManagedObjectContext`/CoreData store the merged data lands in — that's Task 13's job (separate per-patient CoreData stores). Do not attempt to solve context-scoping here; `mergeMedications`/`mergeSchedules`/`mergeDoseLogs` keep taking whatever `context` is passed in, unchanged.
 
-```bash
-grep -n "class\|func test" DoseTrackTests/*.swift | grep -i supabase
-```
+- [ ] **Step 1: Write failing tests**
 
-If no existing pattern for testing this file exists (likely, since it's a thin wrapper over network calls), write a narrower unit test for the pure logic extracted in Step 3 below (a `targetUserId(for:)` resolver), rather than trying to mock the Supabase client — that keeps this task's test honest about what's actually being verified.
+Full network-call mocking isn't practical against the real `SupabaseClient` in a unit test, so this task tests the one thing that's actually verifiable without network I/O and that directly targets the real risk: **does the row model tag data with the explicitly-passed target user id, not whatever `AuthManager`'s current session happens to be?** This is stronger than testing a trivial identity-passthrough resolver — it exercises the actual code path that determines which Supabase row a caregiver's write lands on.
 
 ```swift
 import XCTest
 @testable import DoseTrack
 
 final class SupabaseSyncManagerTargetUserTests: XCTestCase {
-    func test_targetUserId_defaultsToNilMeaningCurrentSession() {
-        // No explicit target passed → resolver returns nil, signaling "use current session's own id"
-        XCTAssertNil(SupabaseSyncManager.resolveTargetUserId(explicit: nil))
+    func test_medicationRow_tagsExplicitTargetUserId_notSessionUser() {
+        let context = PersistenceController(inMemory: true).container.viewContext
+        let med = Medication(context: context)
+        med.id = UUID()
+        med.name = "Metformin"
+
+        let targetUserId = UUID() // deliberately NOT AuthManager.shared.session?.user.id
+        let row = MedicationRow(medication: med, userId: targetUserId)
+
+        XCTAssertEqual(row.userId, targetUserId.uuidString)
     }
 
-    func test_targetUserId_usesExplicitValueWhenProvided() {
-        let id = UUID()
-        XCTAssertEqual(SupabaseSyncManager.resolveTargetUserId(explicit: id), id)
+    func test_doseLogRow_tagsExplicitTargetUserId_notSessionUser() {
+        let context = PersistenceController(inMemory: true).container.viewContext
+        let log = DoseLog(context: context)
+        log.id = UUID()
+        log.status = "taken"
+
+        let targetUserId = UUID()
+        let row = DoseLogRow(log: log, userId: targetUserId)
+
+        XCTAssertEqual(row.userId, targetUserId.uuidString)
     }
 }
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+These pass against the *current* code already (the `init(medication:userId:)` initializers already take an explicit `userId` — that part isn't broken today). Their purpose is to pin this behavior down as a regression guard before Step 3's refactor touches the call sites that decide *what* gets passed as that `userId`.
+
+- [ ] **Step 2: Run test to verify it passes already (baseline), then proceed**
 
 Run: `xcodebuild test -project DoseTrack.xcodeproj -scheme DoseTrack -sdk iphonesimulator -only-testing:DoseTrackTests/SupabaseSyncManagerTargetUserTests 2>&1 | tail -30`
-Expected: FAIL — `resolveTargetUserId` not defined.
+Expected: PASS already — this confirms the row-tagging primitive works before you change anything upstream of it. (Unlike most tasks in this plan, this step is a baseline check, not a red-test-first step, because the thing being fixed is *which value flows into* an already-correct function, not the function itself.)
 
-- [ ] **Step 3: Add the resolver and parameterize the public functions**
+- [ ] **Step 3: Add `forUserId` parameters at the call-site level**
 
-Add near the top of `SupabaseSyncManager`:
-
-```swift
-static func resolveTargetUserId(explicit: UUID?) -> UUID? {
-    explicit
-}
-```
-
-Change each function signature to accept an optional `forUserId: UUID? = nil` defaulting to today's behavior (own session) when nil:
+Add an optional `forUserId: UUID? = nil` parameter to exactly these three functions — `pullAll`, `pushMedication`, `pushDoseLog` — resolving to the signed-in user when `nil` (preserving all existing solo-user call sites unchanged). Do **not** add a `forUserId` parameter to `pushSchedule` — it already receives the correct id as an argument from its caller; changing its signature would be redundant and risks a second, inconsistent source of truth for the same value.
 
 ```swift
 func pullAll(context: NSManagedObjectContext, forUserId: UUID? = nil) async {
     guard AuthManager.shared.isSignedIn, !AuthManager.shared.isGuest else { return }
-    let targetUserId = Self.resolveTargetUserId(explicit: forUserId) ?? AuthManager.shared.session?.user.id
-    guard let targetUserId else { return }
+    guard let targetUserId = forUserId ?? AuthManager.shared.session?.user.id else { return }
     do {
         async let meds    = fetchRemoteMedications(userId: targetUserId)
         async let scheds  = fetchRemoteSchedules(userId: targetUserId)
@@ -453,7 +520,10 @@ func pullAll(context: NSManagedObjectContext, forUserId: UUID? = nil) async {
         mergeMedications(m, context: context)
         mergeSchedules(s, context: context)
         mergeDoseLogs(l, context: context)
-        if let st { applySettings(st) }
+        // Only apply settings when syncing the signed-in user's own account — applying a
+        // linked patient's UserDefaults onto the caregiver's own device would silently
+        // overwrite the caregiver's theme/name/preferences. See risk note above.
+        if forUserId == nil, let st { applySettings(st) }
         try? context.save()
         WidgetCenter.shared.reloadAllTimelines()
     } catch {
@@ -463,9 +533,8 @@ func pullAll(context: NSManagedObjectContext, forUserId: UUID? = nil) async {
 
 func pushMedication(_ med: Medication, forUserId: UUID? = nil) async {
     guard AuthManager.shared.isSignedIn, !AuthManager.shared.isGuest,
-          let id = med.id else { return }
-    let targetUserId = Self.resolveTargetUserId(explicit: forUserId) ?? AuthManager.shared.session?.user.id
-    guard let targetUserId else { return }
+          let id = med.id,
+          let targetUserId = forUserId ?? AuthManager.shared.session?.user.id else { return }
     let row = MedicationRow(medication: med, userId: targetUserId)
     do {
         try await client.from("medications").upsert(row).execute()
@@ -474,23 +543,50 @@ func pushMedication(_ med: Medication, forUserId: UUID? = nil) async {
         }
     } catch { print("pushMedication error: \(error)") }
 }
+
+func pushDoseLog(_ log: DoseLog, forUserId: UUID? = nil) async {
+    guard AuthManager.shared.isSignedIn, !AuthManager.shared.isGuest,
+          let targetUserId = forUserId ?? AuthManager.shared.session?.user.id else { return }
+    let row = DoseLogRow(log: log, userId: targetUserId)
+    do {
+        try await client.from("dose_logs").upsert(row).execute()
+    } catch { print("pushDoseLog error: \(error)") }
+}
 ```
 
-Apply the same `forUserId: UUID? = nil` pattern to `pushSchedule`, `pushDoseLog`, and the four private `fetchRemote*` functions (add a `userId: UUID` parameter to each and filter the Supabase query by it — check the exact `.eq(...)` call needed by reading how `fetchRemoteMedications()` currently queries, since it likely relies on RLS alone with no explicit filter; add an explicit `.eq("user_id", userId.uuidString)` filter so behavior is correct even before RLS changes propagate, not just correct-by-accident via RLS).
+- [ ] **Step 4: Parameterize the four private `fetchRemote*` functions with an explicit filter**
 
-Call sites that invoke these functions without a target (existing solo-user flows) don't need to change — the default `nil` preserves current behavior exactly.
+Change each from taking no arguments to taking `userId: UUID`, and add an explicit `.eq(...)` filter rather than relying on RLS alone (defense in depth — correct even if an RLS policy migration hasn't propagated yet):
 
-- [ ] **Step 4: Run test to verify it passes**
+```swift
+private func fetchRemoteMedications(userId: UUID) async throws -> [MedicationRow] {
+    try await client.from("medications").select().eq("user_id", value: userId.uuidString).execute().value
+}
+private func fetchRemoteSchedules(userId: UUID) async throws -> [ScheduleRow] {
+    try await client.from("schedules").select().eq("user_id", value: userId.uuidString).execute().value
+}
+private func fetchRemoteDoseLogs(userId: UUID) async throws -> [DoseLogRow] {
+    try await client.from("dose_logs").select().eq("user_id", value: userId.uuidString).execute().value
+}
+private func fetchRemoteSettings(userId: UUID) async throws -> UserSettingsRow? {
+    let rows: [UserSettingsRow] = try await client.from("user_settings").select().eq("user_id", value: userId.uuidString).execute().value
+    return rows.first
+}
+```
+
+Call sites that invoke `pullAll`/`pushMedication`/`pushDoseLog` without `forUserId` (all existing solo-user flows) don't need to change — the default `nil` preserves current behavior exactly.
+
+- [ ] **Step 5: Run tests to verify nothing broke**
 
 Run: `xcodebuild test -project DoseTrack.xcodeproj -scheme DoseTrack -sdk iphonesimulator -only-testing:DoseTrackTests/SupabaseSyncManagerTargetUserTests 2>&1 | tail -30`
 Expected: PASS
 
-- [ ] **Step 5: Build the whole app to confirm no call-site breakage**
+- [ ] **Step 6: Build the whole app to confirm no call-site breakage**
 
 Run: `xcodebuild -project DoseTrack.xcodeproj -scheme DoseTrack -sdk iphonesimulator build 2>&1 | tail -40`
 Expected: `** BUILD SUCCEEDED **`
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
 git add DoseTrack/Services/SupabaseSyncManager.swift DoseTrackTests/SupabaseSyncManagerTargetUserTests.swift
@@ -514,6 +610,7 @@ final class CaregiverManagerTests: XCTestCase {
     func test_relationshipDisplaysAsPendingBeforeActivation() {
         let row = CaregiverRelationshipRow(
             id: UUID(), caregiverUserId: nil, patientUserId: UUID(),
+            patientDisplayName: "Mom", caregiverDisplayName: nil,
             status: "pending", inviteCode: "ABC123", createdAt: Date(),
             expiresAt: Date().addingTimeInterval(86_400), activatedAt: nil, revokedAt: nil
         )
@@ -525,6 +622,7 @@ final class CaregiverManagerTests: XCTestCase {
     func test_relationshipIsExpiredPastExpiresAt() {
         let row = CaregiverRelationshipRow(
             id: UUID(), caregiverUserId: nil, patientUserId: UUID(),
+            patientDisplayName: "Mom", caregiverDisplayName: nil,
             status: "pending", inviteCode: "ABC123", createdAt: Date().addingTimeInterval(-90_000),
             expiresAt: Date().addingTimeInterval(-3_600), activatedAt: nil, revokedAt: nil
         )
@@ -540,6 +638,8 @@ Expected: FAIL — `CaregiverRelationshipRow` not defined.
 
 - [ ] **Step 3: Implement the model**
 
+`patientDisplayName`/`caregiverDisplayName` are the denormalized snapshot fields added to the table in Task 1 — see that task's note on why this app has no queryable `profiles` table to join against instead.
+
 ```swift
 // DoseTrack/Models/CaregiverRelationshipRow.swift
 import Foundation
@@ -548,6 +648,8 @@ struct CaregiverRelationshipRow: Codable, Identifiable {
     let id: UUID
     let caregiverUserId: UUID?
     let patientUserId: UUID
+    let patientDisplayName: String
+    let caregiverDisplayName: String?
     let status: String
     let inviteCode: String
     let createdAt: Date
@@ -556,10 +658,11 @@ struct CaregiverRelationshipRow: Codable, Identifiable {
     let revokedAt: Date?
 
     enum CodingKeys: String, CodingKey {
-        case id
+        case id, status
         case caregiverUserId = "caregiver_user_id"
         case patientUserId = "patient_user_id"
-        case status, status2 = "status"
+        case patientDisplayName = "patient_display_name"
+        case caregiverDisplayName = "caregiver_display_name"
         case inviteCode = "invite_code"
         case createdAt = "created_at"
         case expiresAt = "expires_at"
@@ -573,8 +676,6 @@ struct CaregiverRelationshipRow: Codable, Identifiable {
     var isExpired: Bool { expiresAt < Date() }
 }
 ```
-
-(Remove the accidental duplicate `status2` case above when writing the real file — it's a typo in this plan, not intended for the shipped code. The real enum should have exactly one `status` case.)
 
 - [ ] **Step 4: Run test to verify it passes**
 
@@ -931,11 +1032,11 @@ struct AccountSwitcherView: View {
             }
             ForEach(caregiverManager.overseenPatients) { relationship in
                 Button {
-                    activeAccount.switchTo(userId: relationship.patientUserId, displayName: relationship.patientDisplayName ?? "Account")
+                    activeAccount.switchTo(userId: relationship.patientUserId, displayName: relationship.patientDisplayName)
                     dismiss()
                 } label: {
                     HStack {
-                        Text(relationship.patientDisplayName ?? "Account")
+                        Text(relationship.patientDisplayName)
                         Spacer()
                         if activeAccount.activeUserId == relationship.patientUserId {
                             Image(systemName: "checkmark").foregroundStyle(.blue)
@@ -956,7 +1057,7 @@ struct AccountSwitcherView: View {
 }
 ```
 
-Note: `relationship.patientDisplayName` doesn't exist yet on `CaregiverRelationshipRow` — the row as designed in Task 9 only has user ids, not display names. **Fix before implementing:** either (a) join against a `profiles`/`user_settings` table when fetching in `CaregiverManager.refresh()` and add a `patientDisplayName: String?` field populated client-side after a follow-up profile fetch, or (b) have the Supabase select in `refresh()` use a foreign-table select if `profiles` is `public` and joinable. Check whether the codebase already has a `profiles` table (`grep -rn "profiles" DoseTrack/Services/*.swift`) before deciding — reuse whatever pattern already fetches a user's display name elsewhere (e.g. `ProfileView.swift`).
+`relationship.patientDisplayName` is the non-optional `String` field added to `CaregiverRelationshipRow` in Task 9 (the denormalized snapshot from `caregiver_relationships.patient_display_name`) — no join or extra fetch is needed here, resolving the ambiguity an earlier draft of this plan left open.
 
 - [ ] **Step 3: Add the switcher trigger to `MainTabView`**
 
@@ -988,7 +1089,9 @@ Since caregiver data is synced into a **separate local CoreData store per patien
 
 - [ ] **Step 2: Add a per-patient CoreData store manager**
 
-Add a method to `PersistenceController` (or a small new helper) that returns a distinct `NSManagedObjectContext` keyed by patient `userId`, backed by a separate SQLite file (e.g. `DoseTrack-caregiver-<userId>.sqlite` in the app group container). Reuse `PersistenceController.makeContainer`'s pattern (seen in `PersistenceController.swift:57-94`) but parameterize the store filename instead of hardcoding `"DoseTrack.sqlite"`.
+Add a method to `PersistenceController` (or a small new helper) that returns a distinct `NSManagedObjectContext` keyed by patient `userId`, backed by a separate SQLite file (e.g. `DoseTrack-caregiver-<userId>.sqlite` in the app group container). Reuse `PersistenceController.makeContainer`'s pattern (seen in `PersistenceController.swift:57-94`) but parameterize **only the store filename** — do not thread this through the existing `isPro` parameter or branch on it in any way.
+
+**Important, forward-looking constraint (this avoids a conflict with Task 18):** `makeContainer`'s current signature takes `isPro: Bool` to decide `NSPersistentContainer` vs. `NSPersistentCloudKitContainer`. Task 18 later deletes that `isPro`/CloudKit branching entirely, collapsing `makeContainer` down to always using `NSPersistentContainer`. To avoid Task 18 having to disentangle a new per-patient parameter from the old `isPro` one, add the per-patient store filename as a **separate, orthogonal parameter** now, e.g. `makeContainer(storeFilename: String = "DoseTrack.sqlite")`, and have the *existing* `isPro`-driven call sites keep passing `"DoseTrack.sqlite"` unchanged for now. This way, Task 18 only has to delete the `isPro` parameter and its CloudKit branch — the `storeFilename` parameter and per-patient call sites this task introduces are untouched by that later cleanup.
 
 - [ ] **Step 3: Wire `MainTabView` to inject the right context**
 
@@ -1087,17 +1190,30 @@ git commit -m "feat: add pure missed-dose detection logic with unit tests"
 
 **Files:** none (Supabase Edge Function + cron schedule, via MCP tools)
 
-- [ ] **Step 1: Write the function**, mirroring `MissedDoseDetector`'s logic and the spec's sync-lag safety rule (60+ min threshold, skip if patient device synced within last 10 min with no log):
+- [ ] **Step 1: Confirm exact column names before writing any query logic**
+
+Run `execute_sql`:
+```sql
+select column_name, data_type from information_schema.columns where table_name = 'schedules';
+select column_name, data_type from information_schema.columns where table_name = 'dose_logs';
+```
+The code below assumes the columns match `ScheduleRow`/`DoseLogRow` in `SupabaseSyncManager.swift` (`hour`, `minute`, `frequency`, `days_of_week`, `interval_days`, `is_enabled` on schedules; `scheduled_at`, `logged_at`, `status` on dose_logs) — adjust names if the query output differs.
+
+- [ ] **Step 2: Write the function**, mirroring `MissedDoseDetector`'s logic (Task 14) and the spec's sync-lag safety rule (60+ min threshold, skip if the patient device has synced within the last 10 minutes with no corresponding log):
 
 ```typescript
 // missed-dose-alerts/index.ts
 import { createClient } from 'jsr:@supabase/supabase-js@2'
+
+const OVERDUE_THRESHOLD_MS = 60 * 60 * 1000
+const RECENT_SYNC_GRACE_MS = 10 * 60 * 1000
 
 Deno.serve(async () => {
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL')!,
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
   )
+  const now = new Date()
 
   const { data: relationships } = await supabase
     .from('caregiver_relationships')
@@ -1105,30 +1221,89 @@ Deno.serve(async () => {
     .eq('status', 'active')
 
   for (const rel of relationships ?? []) {
-    // Fetch this patient's schedules + recent dose_logs, compute overdue occurrences
-    // using the same >=60min-since-due rule as MissedDoseDetector.overdueOccurrences.
-    // For each overdue occurrence not already present in missed_dose_alerts
-    // (unique on schedule_id+scheduled_date), insert a row and send an APNs push
-    // to every device_push_tokens row for rel.caregiver_user_id.
-    // (Full query/push implementation deferred to actual coding time — this
-    // plan step's job is the schema/wiring; write the query against the real
-    // schedules/dose_logs column names, which should be confirmed via
-    // `execute_sql` describe queries before writing this function for real.)
+    const { data: schedules } = await supabase
+      .from('schedules')
+      .select('id, hour, minute, is_enabled, medication_id')
+      .eq('user_id', rel.patient_user_id)
+      .eq('is_enabled', true)
+
+    // Only "today's occurrence" is checked per run — this cron runs every 15
+    // minutes (Step 3), so a dose due earlier today that's now 60+ min overdue
+    // will be caught on the run shortly after it crosses the threshold.
+    const today = now.toISOString().slice(0, 10) // yyyy-mm-dd, UTC-based date key
+
+    for (const schedule of schedules ?? []) {
+      const scheduledAt = new Date(`${today}T00:00:00Z`)
+      scheduledAt.setUTCHours(schedule.hour, schedule.minute, 0, 0)
+      const msSinceDue = now.getTime() - scheduledAt.getTime()
+      if (msSinceDue < OVERDUE_THRESHOLD_MS) continue // not due long enough ago yet
+
+      const { data: logs } = await supabase
+        .from('dose_logs')
+        .select('id, logged_at')
+        .eq('medication_id', schedule.medication_id)
+        .gte('scheduled_at', scheduledAt.toISOString())
+        .lt('scheduled_at', new Date(scheduledAt.getTime() + 60 * 1000).toISOString())
+
+      if (logs && logs.length > 0) continue // dose was logged, not missed
+
+      // Sync-lag safety: if the patient's most recent settings/sync activity is
+      // very recent with still no log, prefer waiting one more cron cycle over
+      // risking a false-positive alert from a client that hasn't pushed yet.
+      const { data: recentPush } = await supabase
+        .from('dose_logs')
+        .select('logged_at')
+        .eq('medication_id', schedule.medication_id)
+        .order('logged_at', { ascending: false })
+        .limit(1)
+      const lastActivityMs = recentPush?.[0]?.logged_at
+        ? new Date(recentPush[0].logged_at).getTime()
+        : 0
+      if (now.getTime() - lastActivityMs < RECENT_SYNC_GRACE_MS) continue
+
+      // Dedup: insert-or-noop via the unique(schedule_id, scheduled_date) constraint.
+      const { error: insertError } = await supabase
+        .from('missed_dose_alerts')
+        .insert({
+          patient_user_id: rel.patient_user_id,
+          schedule_id: schedule.id,
+          scheduled_date: today,
+        })
+      if (insertError) continue // unique violation = already alerted for this occurrence
+
+      const { data: tokens } = await supabase
+        .from('device_push_tokens')
+        .select('apns_token')
+        .eq('user_id', rel.caregiver_user_id)
+
+      for (const { apns_token } of tokens ?? []) {
+        // Sending the actual APNs HTTP/2 request (with an .p8 auth key) is a
+        // separate, provider-specific concern — call whatever push-sending
+        // helper/library the project settles on here. Not written out fully
+        // in this plan since it depends on which APNs credential setup is used.
+        await sendApnsPush(apns_token, 'Missed dose', `A scheduled dose is overdue.`)
+      }
+    }
   }
 
   return new Response('ok')
 })
+
+async function sendApnsPush(token: string, title: string, body: string) {
+  // Placeholder call site — implement against the project's chosen APNs
+  // provider (e.g. a `node-apn`-equivalent for Deno, or Supabase's own push
+  // integration if one exists by the time this is built).
+  console.log(`push -> ${token}: ${title} / ${body}`)
+}
 ```
 
-Before writing the real query logic, run `execute_sql` with `select column_name, data_type from information_schema.columns where table_name = 'schedules'` (and same for `dose_logs`) to get exact column names — do not guess them.
+- [ ] **Step 3: Deploy** via `deploy_edge_function`.
 
-- [ ] **Step 2: Deploy** via `deploy_edge_function`.
-
-- [ ] **Step 3: Schedule the cron trigger**
+- [ ] **Step 4: Schedule the cron trigger**
 
 Supabase Edge Functions are triggered via `pg_cron` calling `net.http_post` against the function URL, or via the dashboard's Cron Jobs UI — use `apply_migration` to set up a `pg_cron` schedule (every 15 minutes) if the project has the `pg_cron` extension enabled (check via `list_extensions` MCP tool first).
 
-- [ ] **Step 4: Manual verification**
+- [ ] **Step 5: Manual verification**
 
 Create a test caregiver relationship + an overdue schedule with no dose log, manually invoke the function (via its URL or the dashboard), and confirm a row appears in `missed_dose_alerts` and (if a real device token is registered) a push arrives.
 
@@ -1248,7 +1423,16 @@ Expected: all tests pass, including every new test added in Tasks 7, 8, 9, 14.
 5. Switch to the patient's account; add a medication as the caregiver; confirm it appears when signed in as the patient directly (or via a second simulator).
 6. Revoke access from the patient side; confirm the caregiver is kicked back to "My Account" on next foreground per Task 17.
 
-- [ ] **Step 3: Final commit**
+- [ ] **Step 3: Verify the RLS security boundary directly** — this is the single highest-risk path in the spec (an unauthorized caregiver reading a patient they're not linked to) and isn't exercised by the happy-path smoke test above.
+
+Using a **third** test account with no relationship to the patient at all, get that third account's JWT and call, e.g.:
+```bash
+curl -H "Authorization: Bearer <third-account-jwt>" -H "apikey: <anon-key>" \
+  "https://<project>.supabase.co/rest/v1/medications?user_id=eq.<patient-user-id>"
+```
+Expected: an empty result set (`[]`), proving RLS blocks an unlinked user from reading the patient's rows even with a valid, unrelated JWT — not just that the app's UI doesn't happen to show them the option. Also confirm a `POST`/`PATCH` from the same unlinked account against the patient's `medications` row is rejected (RLS violation error, not silently ignored).
+
+- [ ] **Step 4: Final commit**
 
 ```bash
 git add -A
