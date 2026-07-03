@@ -1,10 +1,8 @@
 // DoseTrack/App/PersistenceController.swift
 import CoreData
-import CloudKit
 
-/// Central CoreData stack. Uses NSPersistentCloudKitContainer for Pro subscribers,
-/// NSPersistentContainer for free tier. Call `reconfigure(isPro:)` when subscription
-/// status changes — this tears down and rebuilds the stack.
+/// Central CoreData stack. A single `NSPersistentContainer` backs the app's local store;
+/// cross-device/caregiver sync is handled separately by `SupabaseSyncManager`, not CloudKit.
 final class PersistenceController: ObservableObject {
 
     static let shared = PersistenceController()
@@ -20,18 +18,7 @@ final class PersistenceController: ObservableObject {
     // MARK: - Init
 
     init(inMemory: Bool = false) {
-        let isPro = UserDefaults.standard.bool(forKey: Constants.UserDefaultsKeys.isProSubscriber)
-        container = Self.makeContainer(isPro: isPro, inMemory: inMemory)
-        container.viewContext.automaticallyMergesChangesFromParent = true
-        container.viewContext.mergePolicy = NSMergeByPropertyObjectTrumpMergePolicy
-    }
-
-    // MARK: - Container switching
-
-    /// Call after subscription status changes. Saves any pending changes first.
-    func reconfigure(isPro: Bool) {
-        try? container.viewContext.save()
-        container = Self.makeContainer(isPro: isPro, inMemory: false)
+        container = Self.makeContainer(inMemory: inMemory)
         container.viewContext.automaticallyMergesChangesFromParent = true
         container.viewContext.mergePolicy = NSMergeByPropertyObjectTrumpMergePolicy
     }
@@ -61,7 +48,7 @@ final class PersistenceController: ObservableObject {
     /// Returns (creating and caching if necessary) the managed object context backing the
     /// separate local store for the given caregiver-overseen patient.
     ///
-    /// This is orthogonal to the CloudKit/`isPro` branching in `makeContainer` above — a
+    /// This is a separate container from the main store created in `makeContainer` above — a
     /// patient store is always a plain `NSPersistentContainer` against its own SQLite file
     /// (`DoseTrack-caregiver-<userId>.sqlite`) in the app group container. It does not
     /// participate in CloudKit sync; patient data arrives via `SupabaseSyncManager.pullAll`.
@@ -109,16 +96,11 @@ final class PersistenceController: ObservableObject {
         return (groupURL ?? URL.documentsDirectory).appendingPathComponent(filename)
     }
 
-    private static func makeContainer(isPro: Bool, inMemory: Bool) -> NSPersistentContainer {
+    private static func makeContainer(inMemory: Bool) -> NSPersistentContainer {
         let modelURL = Bundle.main.url(forResource: "DoseTrack", withExtension: "momd")!
         let model = NSManagedObjectModel(contentsOf: modelURL)!
 
-        let container: NSPersistentContainer
-        if isPro {
-            container = NSPersistentCloudKitContainer(name: "DoseTrack", managedObjectModel: model)
-        } else {
-            container = NSPersistentContainer(name: "DoseTrack", managedObjectModel: model)
-        }
+        let container = NSPersistentContainer(name: "DoseTrack", managedObjectModel: model)
 
         let storeURL: URL
         if inMemory {
@@ -130,11 +112,6 @@ final class PersistenceController: ObservableObject {
         let description = NSPersistentStoreDescription(url: storeURL)
         description.shouldMigrateStoreAutomatically = true
         description.shouldInferMappingModelAutomatically = true
-
-        if isPro {
-            description.cloudKitContainerOptions =
-                NSPersistentCloudKitContainerOptions(containerIdentifier: "iCloud.com.robbrown.dosetrack")
-        }
 
         container.persistentStoreDescriptions = [description]
         container.loadPersistentStores { _, error in

@@ -106,7 +106,7 @@ struct SettingsView: View {
                         }
                         .foregroundStyle(.primary)
 
-                        Text("5 medications free forever. Milli Pro unlocks unlimited medications, iCloud sync, PDF reports, and family sharing.")
+                        Text("5 medications free forever. Milli Pro unlocks unlimited medications, PDF reports, and family sharing.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -333,7 +333,7 @@ struct DisclaimerView: View {
                 Text("DoseTrack is a reminder tool only. It does not provide medical advice, diagnosis, or treatment. Always follow your healthcare provider's instructions regarding medications.")
                 Text("Data Privacy")
                     .font(.title2.bold())
-                Text("All medication data is stored locally on your device. No personal health information is sent to external servers without your explicit consent. iCloud sync (Milli Pro feature) uses your private iCloud account, not our servers.")
+                Text("All medication data is stored locally on your device. No personal health information is sent to external servers without your explicit consent. Family sharing (Milli Pro feature) syncs data only with caregivers you explicitly invite.")
                 Text("If you have questions about your medications, consult your pharmacist or doctor.")
                     .foregroundStyle(.secondary)
             }

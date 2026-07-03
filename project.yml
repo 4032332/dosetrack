@@ -41,10 +41,6 @@ targets:
         com.apple.developer.usernotifications.critical-alerts: true
         com.apple.security.application-groups:
           - group.com.robbrown.dosetrack
-        com.apple.developer.icloud-services:
-          - CloudKit
-        com.apple.developer.icloud-container-identifiers:
-          - iCloud.com.robbrown.dosetrack
         com.apple.developer.healthkit: true
         com.apple.developer.healthkit.access: []
     dependencies:
