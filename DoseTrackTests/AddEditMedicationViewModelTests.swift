@@ -19,7 +19,8 @@ final class AddEditMedicationViewModelTests: XCTestCase {
     func testSave_createsNewMedication() throws {
         let vm = AddEditMedicationViewModel(context: context)
         vm.name = "Lisinopril"
-        vm.dosage = "10mg"
+        vm.doseAmount = "10"
+        vm.doseUnit = "mg"
 
         let result = vm.save()
 
@@ -32,7 +33,8 @@ final class AddEditMedicationViewModelTests: XCTestCase {
     func testSave_createsSchedules() throws {
         let vm = AddEditMedicationViewModel(context: context)
         vm.name = "Metformin"
-        vm.dosage = "500mg"
+        vm.doseAmount = "500"
+        vm.doseUnit = "mg"
         vm.schedules = [
             ScheduleDraft(hour: 8, minute: 0),
             ScheduleDraft(hour: 20, minute: 0)
@@ -47,7 +49,8 @@ final class AddEditMedicationViewModelTests: XCTestCase {
     func testSave_failsWithEmptyName() {
         let vm = AddEditMedicationViewModel(context: context)
         vm.name = "   "
-        vm.dosage = "10mg"
+        vm.doseAmount = "10"
+        vm.doseUnit = "mg"
 
         let result = vm.save()
 
@@ -58,18 +61,19 @@ final class AddEditMedicationViewModelTests: XCTestCase {
     func testSave_failsWithEmptyDosage() {
         let vm = AddEditMedicationViewModel(context: context)
         vm.name = "Aspirin"
-        vm.dosage = ""
+        vm.doseAmount = ""
 
         let result = vm.save()
 
         XCTAssertNil(result)
-        XCTAssertNotNil(vm.dosageError)
+        XCTAssertNotNil(vm.doseError)
     }
 
     func testSave_trimsWhitespace() throws {
         let vm = AddEditMedicationViewModel(context: context)
         vm.name = "  Aspirin  "
-        vm.dosage = "  81mg  "
+        vm.doseAmount = "  81  "
+        vm.doseUnit = "mg"
 
         vm.save()
 
@@ -84,7 +88,8 @@ final class AddEditMedicationViewModelTests: XCTestCase {
 
         let vm = AddEditMedicationViewModel(context: context, medication: med)
         vm.name = "New Name"
-        vm.dosage = "10mg"
+        vm.doseAmount = "10"
+        vm.doseUnit = "mg"
         vm.save()
 
         XCTAssertEqual(med.name, "New Name")
@@ -145,8 +150,9 @@ final class AddEditMedicationViewModelTests: XCTestCase {
         let vm = AddEditMedicationViewModel(context: context, medication: med)
 
         XCTAssertEqual(vm.name, "Atorvastatin")
-        XCTAssertEqual(vm.dosage, "20mg")
-        XCTAssertEqual(vm.unit, "pill")
+        XCTAssertEqual(vm.doseAmount, "20")
+        XCTAssertEqual(vm.doseUnit, "mg")
+        XCTAssertEqual(vm.quantityUnit, "pill")
         XCTAssertEqual(vm.colorHex, "#FF6B6B")
         XCTAssertEqual(vm.notes, "Take at night")
         XCTAssertEqual(vm.currentCount, 30)
