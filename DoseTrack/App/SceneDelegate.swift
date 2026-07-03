@@ -75,6 +75,14 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     }
 
     private func handleIncomingURL(_ url: URL) {
+        // Caregiver invite universal link: https://dosetrack.app/invite/<code>
+        if let host = url.host, host == "dosetrack.app",
+           url.pathComponents.count >= 3, url.pathComponents[1] == "invite" {
+            let code = url.pathComponents[2]
+            NotificationCenter.default.post(name: .caregiverInviteReceived, object: code)
+            return
+        }
+
         // Google Sign-In callback
         if GIDSignIn.sharedInstance.handle(url) { return }
 

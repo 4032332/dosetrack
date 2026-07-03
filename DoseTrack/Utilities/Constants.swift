@@ -21,6 +21,11 @@ enum Constants {
         static let maxMedications = 5
     }
 
+    enum ExternalLinks {
+        /// Pre-launch placeholder — swap for the real App Store listing URL once live.
+        static let appStoreFallback = URL(string: "https://dosetrack.app/get-the-app")!
+    }
+
     enum Notification {
         static let categoryMedicationDue = "MEDICATION_DUE"
         static let actionTakeDose = "TAKE_DOSE"

@@ -204,4 +204,7 @@ final class AuthManager: ObservableObject {
 extension Notification.Name {
     static let guestModeActivated = Notification.Name("guestModeActivated")
     static let appDidBecomeActive = Notification.Name("appDidBecomeActive")
+    /// Posted by SceneDelegate when a `https://dosetrack.app/invite/<code>` universal link
+    /// (or matching custom-scheme link) is opened. `object` is the invite code `String`.
+    static let caregiverInviteReceived = Notification.Name("caregiverInviteReceived")
 }

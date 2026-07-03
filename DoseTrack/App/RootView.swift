@@ -10,6 +10,7 @@ struct RootView: View {
     @AppStorage("guestMode") private var guestMode: Bool = false
 
     @State private var showSplash: Bool = true
+    @State private var pendingInviteCode: String?
 
     private var canProceed: Bool { auth.isSignedIn || guestMode }
 
@@ -51,6 +52,10 @@ struct RootView: View {
         .animation(.easeInOut(duration: 0.35), value: hasCompletedOnboarding)
         .animation(.easeInOut(duration: 0.5), value: showSplash)
         .onReceive(NotificationCenter.default.publisher(for: .guestModeActivated)) { _ in }
+        .onReceive(NotificationCenter.default.publisher(for: .caregiverInviteReceived)) { notification in
+            guard let code = notification.object as? String else { return }
+            pendingInviteCode = code
+        }
         .onAppear { dismissSplash() }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active && !showSplash {
@@ -58,6 +63,28 @@ struct RootView: View {
                 dismissSplash()
             }
         }
+        .sheet(item: $pendingInviteCode.mappedToIdentifiable()) { wrapped in
+            AcceptCaregiverInviteView(code: wrapped.value)
+                .environmentObject(CaregiverManager.shared)
+        }
+    }
+}
+
+// MARK: - Optional String -> Identifiable helper for .sheet(item:)
+
+private struct IdentifiableString: Identifiable {
+    let value: String
+    var id: String { value }
+}
+
+private extension Binding where Value == String? {
+    /// Wraps an optional `String` binding as a `Binding<IdentifiableString?>` so it can be used
+    /// with `.sheet(item:)`, which requires an `Identifiable` payload.
+    func mappedToIdentifiable() -> Binding<IdentifiableString?> {
+        Binding<IdentifiableString?>(
+            get: { self.wrappedValue.map(IdentifiableString.init) },
+            set: { self.wrappedValue = $0?.value }
+        )
     }
 }
 
