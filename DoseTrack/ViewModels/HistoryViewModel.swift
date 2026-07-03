@@ -64,7 +64,7 @@ final class HistoryViewModel: ObservableObject {
     @Published var startDate: Date = Date()
     @Published var endDate: Date = Date()
 
-    private let context: NSManagedObjectContext
+    private var context: NSManagedObjectContext
 
     init(context: NSManagedObjectContext) {
         self.context = context
@@ -73,6 +73,15 @@ final class HistoryViewModel: ObservableObject {
     }
 
     // MARK: - Public
+
+    /// Swaps the underlying store this view model reads against (e.g. when a caregiver
+    /// switches between their own account and an overseen patient's separate local store) and
+    /// refreshes immediately so the UI reflects the new store's data.
+    func updateContext(_ newContext: NSManagedObjectContext) {
+        guard newContext !== context else { return }
+        context = newContext
+        refresh()
+    }
 
     func refresh() {
         let interval = effectiveDateInterval()

@@ -75,7 +75,13 @@ struct MedicationsView: View {
                 Text("This removes the medication from your active list. History is preserved.")
             }
         }
-        .onAppear { viewModel.fetchMedications() }
+        .onAppear {
+            viewModel.updateContext(context)
+            viewModel.fetchMedications()
+        }
+        .onChange(of: context) { _, newContext in
+            viewModel.updateContext(newContext)
+        }
     }
 
     private var medicationsList: some View {

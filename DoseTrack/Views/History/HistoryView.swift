@@ -143,6 +143,12 @@ struct HistoryView: View {
                 viewModel.refresh()
             }
         }
+        .onAppear {
+            viewModel.updateContext(context)
+        }
+        .onChange(of: context) { _, newContext in
+            viewModel.updateContext(newContext)
+        }
     }
 
     // MARK: - Export

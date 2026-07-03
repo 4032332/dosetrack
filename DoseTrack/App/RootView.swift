@@ -1,5 +1,6 @@
 // DoseTrack/App/RootView.swift
 import SwiftUI
+import CoreData
 
 struct RootView: View {
     @EnvironmentObject private var auth: AuthManager
@@ -63,6 +64,17 @@ struct RootView: View {
         }
     }
 
+    /// Resolves which `NSManagedObjectContext` the main app UI should read/write against for
+    /// the currently active account: the caregiver's own context (injected by SceneDelegate,
+    /// captured in `context` above) when viewing themselves, or a distinct per-patient context
+    /// (backed by its own SQLite file — see `PersistenceController.context(forPatient:)`) when
+    /// a caregiver has switched to viewing an overseen patient. Keeping these stores physically
+    /// separate is what prevents caregiver and patient data from ever blending in one store.
+    private func activeContext(for account: ActiveAccountContext) -> NSManagedObjectContext {
+        guard account.isViewingOtherAccount else { return context }
+        return PersistenceController.shared.context(forPatient: account.activeUserId)
+    }
+
     private func dismissSplash() {
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.6) {
             showSplash = false
@@ -82,11 +94,21 @@ struct RootView: View {
             } else if let activeAccount {
                 MainTabView()
                     .environmentObject(activeAccount)
+                    .environment(\.managedObjectContext, activeContext(for: activeAccount))
                     .transition(.opacity)
                     .onAppear {
                         watchManager.syncTodayMedications(context: context)
                         // Pull all user data from Supabase on first app open after sign-in
                         Task { await SupabaseSyncManager.shared.pullAll(context: context) }
+                    }
+                    .onChange(of: activeAccount.activeUserId) { _, newUserId in
+                        // Only fires on an actual account switch (own <-> patient, or patient A -> B),
+                        // never on redraws, since `onChange` only triggers when the value differs.
+                        guard newUserId != activeAccount.ownUserId else { return }
+                        let patientContext = PersistenceController.shared.context(forPatient: newUserId)
+                        Task {
+                            await SupabaseSyncManager.shared.pullAll(context: patientContext, forUserId: newUserId)
+                        }
                     }
             }
 

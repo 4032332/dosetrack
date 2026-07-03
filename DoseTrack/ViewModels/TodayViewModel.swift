@@ -38,7 +38,7 @@ final class TodayViewModel: ObservableObject {
     /// Pulses true→false when the last dose for today is marked taken.
     @Published var celebrateNow: Bool = false
 
-    private let context: NSManagedObjectContext
+    private var context: NSManagedObjectContext
     private var cancellables = Set<AnyCancellable>()
 
     init(context: NSManagedObjectContext) {
@@ -52,6 +52,15 @@ final class TodayViewModel: ObservableObject {
     }
 
     // MARK: - Public
+
+    /// Swaps the underlying store this view model reads/writes against (e.g. when a caregiver
+    /// switches between their own account and an overseen patient's separate local store) and
+    /// refreshes immediately so the UI reflects the new store's data.
+    func updateContext(_ newContext: NSManagedObjectContext) {
+        guard newContext !== context else { return }
+        context = newContext
+        refresh()
+    }
 
     func refresh() {
         let entries = buildTodayEntries()

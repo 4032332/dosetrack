@@ -2,12 +2,21 @@
 import SwiftUI
 
 struct TodayView: View {
+    @Environment(\.managedObjectContext) private var context
+    // Not initialized with the environment context directly: @StateObject's initial value is
+    // evaluated before the environment is available. Instead we seed it with a placeholder and
+    // rebuild it in `.task`/`.onChange(of: context)` below so the view always operates against
+    // whichever context RootView has injected (own store vs. a caregiver-viewed patient store).
     @StateObject private var viewModel = TodayViewModel(
         context: PersistenceController.shared.viewContext
     )
     @State private var selectedEntry: DoseEntry?
     @AppStorage("patientName") private var patientName: String = ""
     @State private var showConfetti = false
+
+    private func syncContext() {
+        viewModel.updateContext(context)
+    }
 
     var body: some View {
         NavigationStack {
@@ -94,7 +103,11 @@ struct TodayView: View {
                 )
             }
         }
-        .onAppear { viewModel.refresh() }
+        .onAppear {
+            syncContext()
+            viewModel.refresh()
+        }
+        .onChange(of: context) { _, _ in syncContext() }
         .onChange(of: viewModel.celebrateNow) { _, newValue in
             if newValue { showConfetti = true }
         }
