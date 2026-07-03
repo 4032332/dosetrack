@@ -19,18 +19,22 @@ final class SupabaseSyncManager: ObservableObject {
     // MARK: - Full pull on login
 
     /// Called after a successful sign-in. Pulls all remote data and merges into CoreData.
-    func pullAll(context: NSManagedObjectContext) async {
+    func pullAll(context: NSManagedObjectContext, forUserId: UUID? = nil) async {
         guard AuthManager.shared.isSignedIn, !AuthManager.shared.isGuest else { return }
+        guard let targetUserId = forUserId ?? AuthManager.shared.session?.user.id else { return }
         do {
-            async let meds    = fetchRemoteMedications()
-            async let scheds  = fetchRemoteSchedules()
-            async let logs    = fetchRemoteDoseLogs()
-            async let settings = fetchRemoteSettings()
+            async let meds    = fetchRemoteMedications(userId: targetUserId)
+            async let scheds  = fetchRemoteSchedules(userId: targetUserId)
+            async let logs    = fetchRemoteDoseLogs(userId: targetUserId)
+            async let settings = fetchRemoteSettings(userId: targetUserId)
             let (m, s, l, st) = try await (meds, scheds, logs, settings)
             mergeMedications(m, context: context)
             mergeSchedules(s, context: context)
             mergeDoseLogs(l, context: context)
-            if let st { applySettings(st) }
+            // Only apply settings when syncing the signed-in user's own account — applying a
+            // linked patient's UserDefaults onto the caregiver's own device would silently
+            // overwrite the caregiver's theme/name/preferences. See risk note above.
+            if forUserId == nil, let st { applySettings(st) }
             try? context.save()
             WidgetCenter.shared.reloadAllTimelines()
         } catch {
@@ -40,15 +44,15 @@ final class SupabaseSyncManager: ObservableObject {
 
     // MARK: - Push individual records
 
-    func pushMedication(_ med: Medication) async {
+    func pushMedication(_ med: Medication, forUserId: UUID? = nil) async {
         guard AuthManager.shared.isSignedIn, !AuthManager.shared.isGuest,
-              let userId = AuthManager.shared.session?.user.id,
-              let id = med.id else { return }
-        let row = MedicationRow(medication: med, userId: userId)
+              let id = med.id,
+              let targetUserId = forUserId ?? AuthManager.shared.session?.user.id else { return }
+        let row = MedicationRow(medication: med, userId: targetUserId)
         do {
             try await client.from("medications").upsert(row).execute()
             for schedule in med.schedulesArray {
-                await pushSchedule(schedule, medicationId: id, userId: userId)
+                await pushSchedule(schedule, medicationId: id, userId: targetUserId)
             }
         } catch { print("pushMedication error: \(error)") }
     }
@@ -60,10 +64,10 @@ final class SupabaseSyncManager: ObservableObject {
         } catch { print("pushSchedule error: \(error)") }
     }
 
-    func pushDoseLog(_ log: DoseLog) async {
+    func pushDoseLog(_ log: DoseLog, forUserId: UUID? = nil) async {
         guard AuthManager.shared.isSignedIn, !AuthManager.shared.isGuest,
-              let userId = AuthManager.shared.session?.user.id else { return }
-        let row = DoseLogRow(log: log, userId: userId)
+              let targetUserId = forUserId ?? AuthManager.shared.session?.user.id else { return }
+        let row = DoseLogRow(log: log, userId: targetUserId)
         do {
             try await client.from("dose_logs").upsert(row).execute()
         } catch { print("pushDoseLog error: \(error)") }
@@ -108,17 +112,17 @@ final class SupabaseSyncManager: ObservableObject {
 
     // MARK: - Remote fetch helpers
 
-    private func fetchRemoteMedications() async throws -> [MedicationRow] {
-        try await client.from("medications").select().execute().value
+    private func fetchRemoteMedications(userId: UUID) async throws -> [MedicationRow] {
+        try await client.from("medications").select().eq("user_id", value: userId.uuidString).execute().value
     }
-    private func fetchRemoteSchedules() async throws -> [ScheduleRow] {
-        try await client.from("schedules").select().execute().value
+    private func fetchRemoteSchedules(userId: UUID) async throws -> [ScheduleRow] {
+        try await client.from("schedules").select().eq("user_id", value: userId.uuidString).execute().value
     }
-    private func fetchRemoteDoseLogs() async throws -> [DoseLogRow] {
-        try await client.from("dose_logs").select().execute().value
+    private func fetchRemoteDoseLogs(userId: UUID) async throws -> [DoseLogRow] {
+        try await client.from("dose_logs").select().eq("user_id", value: userId.uuidString).execute().value
     }
-    private func fetchRemoteSettings() async throws -> UserSettingsRow? {
-        let rows: [UserSettingsRow] = try await client.from("user_settings").select().execute().value
+    private func fetchRemoteSettings(userId: UUID) async throws -> UserSettingsRow? {
+        let rows: [UserSettingsRow] = try await client.from("user_settings").select().eq("user_id", value: userId.uuidString).execute().value
         return rows.first
     }
 
