@@ -1,6 +1,7 @@
 import XCTest
 @testable import DoseTrack
 
+@MainActor
 final class ActiveAccountContextTests: XCTestCase {
     func test_defaultsToSignedInUser() {
         let ownId = UUID()
