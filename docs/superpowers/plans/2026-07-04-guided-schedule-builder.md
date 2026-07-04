@@ -916,7 +916,7 @@ private struct DayToggleButtonStyle: ButtonStyle {
 
 #Preview {
     Form {
-        GuidedScheduleView(schedules: .constant([ScheduleDraft()]), medicationName: "Metformin", doseDescription: "500mg")
+        GuidedScheduleView(schedules: .constant([ScheduleDraft()]), medicationName: "Metformin", doseDescription: "500mg", isEditingExistingMedication: false)
     }
 }
 ```
