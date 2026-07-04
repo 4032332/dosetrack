@@ -80,6 +80,12 @@ struct AppPreferencesView: View {
                 } label: {
                     Label("Change App Icon", systemImage: "app.fill")
                 }
+
+                NavigationLink {
+                    MealTimesView()
+                } label: {
+                    Label("Meal Times", systemImage: "fork.knife")
+                }
             }
         }
         .scrollIndicators(.visible)

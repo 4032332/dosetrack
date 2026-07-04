@@ -31,6 +31,7 @@
 		4A10FD62DC2DEB5AF07B0B56 /* AccountSwitcherView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAB6477B7EBA6905CBA433D1 /* AccountSwitcherView.swift */; };
 		4C445F45962C9EBAB0F56410 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A0D0350A360359C3266D8EA8 /* Assets.xcassets */; };
 		4D78F29D27AEDC042E91D7EF /* WatchConnectivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAE408261B453CFADBF3254C /* WatchConnectivityManager.swift */; };
+		4F1037004E1446B8180AC548 /* MealTimesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 029DF751591E2CD71D187974 /* MealTimesView.swift */; };
 		4F3261C581BABC751AD313E9 /* TodayWatchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DDD5DD43921C6555BF1DFC38 /* TodayWatchView.swift */; };
 		52BBABB2657676374042E7CE /* AppIconPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5A6AD6DF22AA6DA14A40CE1 /* AppIconPickerView.swift */; };
 		52C9E3A1F42D612CBA015307 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 9B6C3AC9FF53C48EE22EB94C /* Assets.xcassets */; };
@@ -148,6 +149,7 @@
 		0092AEE5F32DECE392F1FBC5 /* PaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallView.swift; sourceTree = "<group>"; };
 		0115A9385AA49A9D72B70082 /* Vision.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Vision.framework; path = System/Library/Frameworks/Vision.framework; sourceTree = SDKROOT; };
 		020BE8E8783CD63DD6223C2A /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		029DF751591E2CD71D187974 /* MealTimesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealTimesView.swift; sourceTree = "<group>"; };
 		0642B52A4FE3BAEB0C80CDEC /* MissedDoseDetectorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MissedDoseDetectorTests.swift; sourceTree = "<group>"; };
 		0D35D9FC76F2B59C118BB1DA /* WatchRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchRootView.swift; sourceTree = "<group>"; };
 		11A7EC4C5C94FE23E59262D0 /* TabNavigator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabNavigator.swift; sourceTree = "<group>"; };
@@ -468,6 +470,7 @@
 				F94A8FE73284D8CC6C89EC51 /* AvatarPickerView.swift */,
 				74716822DA208FC0B80FAC07 /* CaregiverInviteView.swift */,
 				E9BC6878833AE5C45FC5BA65 /* ContraceptiveTrackerView.swift */,
+				029DF751591E2CD71D187974 /* MealTimesView.swift */,
 				A1A152E48F7A10E094FB3B37 /* ProfileView.swift */,
 				020BE8E8783CD63DD6223C2A /* SettingsView.swift */,
 			);
@@ -810,6 +813,7 @@
 				B88C9038817C7EB6A325029B /* HistoryViewModel.swift in Sources */,
 				1C754212C521F888A1A4EEBB /* MainTabView.swift in Sources */,
 				AA59320BDF49357220E95DB9 /* MealTimes.swift in Sources */,
+				4F1037004E1446B8180AC548 /* MealTimesView.swift in Sources */,
 				0BC90785D91585C04CE04E06 /* Medication+CoreDataClass.swift in Sources */,
 				C00D5FEE995F258E5957DAF3 /* Medication+Extensions.swift in Sources */,
 				2D49CAEEC5B0F96B2C0D696F /* MedicationDetailView.swift in Sources */,
