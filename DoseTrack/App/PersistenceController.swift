@@ -57,9 +57,7 @@ final class PersistenceController: ObservableObject {
             return existing.viewContext
         }
 
-        let modelURL = Bundle.main.url(forResource: "DoseTrack", withExtension: "momd")!
-        let model = NSManagedObjectModel(contentsOf: modelURL)!
-        let container = NSPersistentContainer(name: "DoseTrack", managedObjectModel: model)
+        let container = NSPersistentContainer(name: "DoseTrack", managedObjectModel: Self.sharedModel)
 
         let storeURL = Self.storeURL(filename: "DoseTrack-caregiver-\(userId.uuidString).sqlite")
         let description = NSPersistentStoreDescription(url: storeURL)
@@ -96,11 +94,25 @@ final class PersistenceController: ObservableObject {
         return (groupURL ?? URL.documentsDirectory).appendingPathComponent(filename)
     }
 
-    private static func makeContainer(inMemory: Bool) -> NSPersistentContainer {
+    /// Loaded exactly once and reused by every `NSPersistentContainer` this class
+    /// creates (the main store AND every per-patient caregiver store). Loading a
+    /// fresh `NSManagedObjectModel(contentsOf:)` per container — as this file
+    /// previously did in both `makeContainer` and `context(forPatient:)` — creates
+    /// multiple distinct model instances that each describe the same entities,
+    /// which is exactly what triggers Core Data's "Multiple NSEntityDescriptions
+    /// claim the NSManagedObject subclass" runtime confusion and the resulting
+    /// unrecognized-selector crashes (e.g. `-[DoseLog id]: unrecognized selector`)
+    /// when an object created under one model instance is treated as the wrong
+    /// runtime type by code expecting another. A single shared model instance,
+    /// used by every container, is the fix — NSManagedObjectModel is safe to
+    /// share across multiple NSPersistentContainers.
+    private static let sharedModel: NSManagedObjectModel = {
         let modelURL = Bundle.main.url(forResource: "DoseTrack", withExtension: "momd")!
-        let model = NSManagedObjectModel(contentsOf: modelURL)!
+        return NSManagedObjectModel(contentsOf: modelURL)!
+    }()
 
-        let container = NSPersistentContainer(name: "DoseTrack", managedObjectModel: model)
+    private static func makeContainer(inMemory: Bool) -> NSPersistentContainer {
+        let container = NSPersistentContainer(name: "DoseTrack", managedObjectModel: sharedModel)
 
         let storeURL: URL
         if inMemory {

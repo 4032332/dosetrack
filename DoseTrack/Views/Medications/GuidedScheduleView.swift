@@ -90,7 +90,12 @@ struct GuidedScheduleView: View {
 
     private var collapsedRow: some View {
         Button {
-            step = schedules.count > 1 ? .review : .howOften
+            // `isEditingExistingMedication`, not `schedules.count > 1` — a fresh
+            // once-daily draft and a genuinely-edited once-daily schedule both have
+            // exactly 1 entry, so count alone can't distinguish them. Any existing
+            // medication (even once-daily) should open on Review, not restart at Q1;
+            // any new medication should always start the question flow.
+            step = isEditingExistingMedication ? .review : .howOften
         } label: {
             HStack {
                 Text("Taken: \(summaryText)")
