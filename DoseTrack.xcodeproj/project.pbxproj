@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0506750C0692CB8F16ED0F57 /* ScheduleGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34A75E53E9DD5ED47776C699 /* ScheduleGenerator.swift */; };
 		058CB864FC21FFD0B15D5D62 /* WatchConnectivityReceiver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95BD112A0D8B0134A22442EA /* WatchConnectivityReceiver.swift */; };
 		07F37FF17071E0A6FBB9F38D /* Vision.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0115A9385AA49A9D72B70082 /* Vision.framework */; };
 		0A20C2B5AEEBCA76A32C54AA /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBFCBCE0FBCEF7C83ABACD61 /* Constants.swift */; };
@@ -59,6 +60,7 @@
 		7C8FB0932E6F3F34D16EE7A4 /* MealTimesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5ADB75D545FA339E11BBD39 /* MealTimesTests.swift */; };
 		7DE4589978C2550373CAD8E8 /* ActiveAccountContextTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACABF038925D50BED3918261 /* ActiveAccountContextTests.swift */; };
 		7F5377E26E907D675E2182C0 /* PushTokenManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A56A87A1C5B6E9F4E003903F /* PushTokenManager.swift */; };
+		7FBD95C52FDB4CE14634CB1E /* ScheduleGeneratorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD01A0081D63EFC4FF3B1510 /* ScheduleGeneratorTests.swift */; };
 		805EF89ABB7B15F3A56A6F88 /* MedicationsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C08ADCFD6A3E049DEBD7438 /* MedicationsViewModel.swift */; };
 		80773C22C0B7D6FC5CCF3537 /* AcceptCaregiverInviteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9ECD54ED0D8136C78ECBDDF8 /* AcceptCaregiverInviteView.swift */; };
 		81FB7687797B34816A18D3FD /* NotificationScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = DFA3D671FBA09F78CAF744E2 /* NotificationScheduler.swift */; };
@@ -163,6 +165,7 @@
 		2F20E87845CCE9E5F84D954F /* LockScreenWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LockScreenWidget.swift; sourceTree = "<group>"; };
 		2F9FC8A28D3514A8AF3C2784 /* Products.storekit */ = {isa = PBXFileReference; path = Products.storekit; sourceTree = "<group>"; };
 		326537A1EABFA4A5B04DE7DA /* ExportManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportManagerTests.swift; sourceTree = "<group>"; };
+		34A75E53E9DD5ED47776C699 /* ScheduleGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleGenerator.swift; sourceTree = "<group>"; };
 		3833AC585BF70A401BF55B25 /* DoseTrack.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = DoseTrack.entitlements; sourceTree = "<group>"; };
 		3B989472EF06D9A177E413CA /* DoseTrackWatch.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = DoseTrackWatch.entitlements; sourceTree = "<group>"; };
 		43BED9E826F283CA03584C67 /* WatchConfettiView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchConfettiView.swift; sourceTree = "<group>"; };
@@ -237,6 +240,7 @@
 		DB37B24455EDD3E856F140EB /* DoseTrackWatchApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DoseTrackWatchApp.swift; sourceTree = "<group>"; };
 		DB8881AEF9994F330EEA6BB1 /* ColorExtensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorExtensions.swift; sourceTree = "<group>"; };
 		DCDF5F2A2D877DBCE0D53836 /* ConfettiView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfettiView.swift; sourceTree = "<group>"; };
+		DD01A0081D63EFC4FF3B1510 /* ScheduleGeneratorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleGeneratorTests.swift; sourceTree = "<group>"; };
 		DDCC6A63AA218E60F89B87AA /* CaregiverManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaregiverManager.swift; sourceTree = "<group>"; };
 		DDD5DD43921C6555BF1DFC38 /* TodayWatchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayWatchView.swift; sourceTree = "<group>"; };
 		DFA3D671FBA09F78CAF744E2 /* NotificationScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationScheduler.swift; sourceTree = "<group>"; };
@@ -419,6 +423,7 @@
 				DFA3D671FBA09F78CAF744E2 /* NotificationScheduler.swift */,
 				A56A87A1C5B6E9F4E003903F /* PushTokenManager.swift */,
 				BB4EAC2257487A3F340D6310 /* ReportGenerator.swift */,
+				34A75E53E9DD5ED47776C699 /* ScheduleGenerator.swift */,
 				EBAFC4266E63CAD4933926A5 /* SubscriptionManager.swift */,
 				D8F0A5CF3936D62E1ED5B2EF /* SupabaseSyncManager.swift */,
 				FAE408261B453CFADBF3254C /* WatchConnectivityManager.swift */,
@@ -531,6 +536,7 @@
 				0642B52A4FE3BAEB0C80CDEC /* MissedDoseDetectorTests.swift */,
 				BA1090D2A5C494DAAB7160DC /* NotificationSchedulerTests.swift */,
 				1334F53F193DF18162FD3082 /* Placeholder.swift */,
+				DD01A0081D63EFC4FF3B1510 /* ScheduleGeneratorTests.swift */,
 				1FA89388364D687BFC710600 /* SubscriptionManagerTests.swift */,
 				D882B65CF2991AA971D2DF0D /* SupabaseSyncManagerTargetUserTests.swift */,
 				F4A5D3091DF9FA6B51262E03 /* TodayViewModelTests.swift */,
@@ -755,6 +761,7 @@
 				33962C7BDA120E5FC8E3CC75 /* MissedDoseDetectorTests.swift in Sources */,
 				6F0BF41105812A2D4130060F /* NotificationSchedulerTests.swift in Sources */,
 				758648FC943D5E93E40B4D86 /* Placeholder.swift in Sources */,
+				7FBD95C52FDB4CE14634CB1E /* ScheduleGeneratorTests.swift in Sources */,
 				CC32A8FABA8182BE6986EDB8 /* SubscriptionManagerTests.swift in Sources */,
 				B5BD41CCDB13D6824F0ECAC4 /* SupabaseSyncManagerTargetUserTests.swift in Sources */,
 				916A863B157262FC0976EA50 /* TodayViewModelTests.swift in Sources */,
@@ -835,6 +842,7 @@
 				FB10E263F64A40D6F09922AB /* Schedule+CoreDataClass.swift in Sources */,
 				5779CA573B4CF9E77729B6C5 /* Schedule+Extensions.swift in Sources */,
 				F31CD3B97CC2F0790CD8B8A1 /* ScheduleBuilderView.swift in Sources */,
+				0506750C0692CB8F16ED0F57 /* ScheduleGenerator.swift in Sources */,
 				1158F9B3D8437466D48B2052 /* Secrets.swift in Sources */,
 				6C986A2D0DFCBCC472B41B60 /* SettingsView.swift in Sources */,
 				2E3B16F548370D35434679C9 /* SubscriptionManager.swift in Sources */,
