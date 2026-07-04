@@ -227,13 +227,13 @@ final class SupabaseSyncManager: ObservableObject {
             d.set(ts, forKey: "patientDOBInterval")
         }
         let meals = MealTimes(
-            breakfast: MealTime(hour: row.mealBreakfastHour, minute: row.mealBreakfastMinute),
-            morningTea: MealTime(hour: row.mealMorningTeaHour, minute: row.mealMorningTeaMinute),
-            lunch: MealTime(hour: row.mealLunchHour, minute: row.mealLunchMinute),
-            afternoonTea: MealTime(hour: row.mealAfternoonTeaHour, minute: row.mealAfternoonTeaMinute),
-            dinner: MealTime(hour: row.mealDinnerHour, minute: row.mealDinnerMinute),
-            dessert: MealTime(hour: row.mealDessertHour, minute: row.mealDessertMinute),
-            midnightSnack: MealTime(hour: row.mealMidnightSnackHour, minute: row.mealMidnightSnackMinute)
+            breakfast: MealTime(hour: row.mealBreakfastHour ?? MealTimes.default.breakfast.hour, minute: row.mealBreakfastMinute ?? MealTimes.default.breakfast.minute),
+            morningTea: MealTime(hour: row.mealMorningTeaHour ?? MealTimes.default.morningTea.hour, minute: row.mealMorningTeaMinute ?? MealTimes.default.morningTea.minute),
+            lunch: MealTime(hour: row.mealLunchHour ?? MealTimes.default.lunch.hour, minute: row.mealLunchMinute ?? MealTimes.default.lunch.minute),
+            afternoonTea: MealTime(hour: row.mealAfternoonTeaHour ?? MealTimes.default.afternoonTea.hour, minute: row.mealAfternoonTeaMinute ?? MealTimes.default.afternoonTea.minute),
+            dinner: MealTime(hour: row.mealDinnerHour ?? MealTimes.default.dinner.hour, minute: row.mealDinnerMinute ?? MealTimes.default.dinner.minute),
+            dessert: MealTime(hour: row.mealDessertHour ?? MealTimes.default.dessert.hour, minute: row.mealDessertMinute ?? MealTimes.default.dessert.minute),
+            midnightSnack: MealTime(hour: row.mealMidnightSnackHour ?? MealTimes.default.midnightSnack.hour, minute: row.mealMidnightSnackMinute ?? MealTimes.default.midnightSnack.minute)
         )
         meals.save(to: d)
     }
@@ -362,20 +362,20 @@ struct UserSettingsRow: Codable {
     var patientPhone: String
     var patientCountry: String
     var patientState: String
-    var mealBreakfastHour: Int
-    var mealBreakfastMinute: Int
-    var mealMorningTeaHour: Int
-    var mealMorningTeaMinute: Int
-    var mealLunchHour: Int
-    var mealLunchMinute: Int
-    var mealAfternoonTeaHour: Int
-    var mealAfternoonTeaMinute: Int
-    var mealDinnerHour: Int
-    var mealDinnerMinute: Int
-    var mealDessertHour: Int
-    var mealDessertMinute: Int
-    var mealMidnightSnackHour: Int
-    var mealMidnightSnackMinute: Int
+    var mealBreakfastHour: Int?
+    var mealBreakfastMinute: Int?
+    var mealMorningTeaHour: Int?
+    var mealMorningTeaMinute: Int?
+    var mealLunchHour: Int?
+    var mealLunchMinute: Int?
+    var mealAfternoonTeaHour: Int?
+    var mealAfternoonTeaMinute: Int?
+    var mealDinnerHour: Int?
+    var mealDinnerMinute: Int?
+    var mealDessertHour: Int?
+    var mealDessertMinute: Int?
+    var mealMidnightSnackHour: Int?
+    var mealMidnightSnackMinute: Int?
 
     enum CodingKeys: String, CodingKey {
         case userId = "user_id"
