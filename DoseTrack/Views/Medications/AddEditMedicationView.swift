@@ -113,16 +113,12 @@ struct AddEditMedicationView: View {
 
                 // MARK: Schedule
                 Section("Schedule") {
-                    ForEach($viewModel.schedules) { $draft in
-                        ScheduleBuilderView(draft: $draft)
-                            .padding(.vertical, 4)
-                    }
-                    .onDelete { viewModel.removeSchedule(at: $0) }
-                    Button {
-                        viewModel.addSchedule()
-                    } label: {
-                        Label("Add Another Time", systemImage: "plus.circle")
-                    }
+                    GuidedScheduleView(
+                        schedules: $viewModel.schedules,
+                        medicationName: viewModel.name.isEmpty ? "this medication" : viewModel.name,
+                        doseDescription: viewModel.doseAmount.isEmpty ? "a dose" : "\(viewModel.doseAmount)\(viewModel.doseUnit)",
+                        isEditingExistingMedication: viewModel.isEditing
+                    )
                 }
 
                 // MARK: Refill tracking
