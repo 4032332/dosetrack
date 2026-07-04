@@ -226,6 +226,16 @@ final class SupabaseSyncManager: ObservableObject {
             let ts = ISO8601DateFormatter().date(from: dob)?.timeIntervalSince1970 ?? 0
             d.set(ts, forKey: "patientDOBInterval")
         }
+        let meals = MealTimes(
+            breakfast: MealTime(hour: row.mealBreakfastHour, minute: row.mealBreakfastMinute),
+            morningTea: MealTime(hour: row.mealMorningTeaHour, minute: row.mealMorningTeaMinute),
+            lunch: MealTime(hour: row.mealLunchHour, minute: row.mealLunchMinute),
+            afternoonTea: MealTime(hour: row.mealAfternoonTeaHour, minute: row.mealAfternoonTeaMinute),
+            dinner: MealTime(hour: row.mealDinnerHour, minute: row.mealDinnerMinute),
+            dessert: MealTime(hour: row.mealDessertHour, minute: row.mealDessertMinute),
+            midnightSnack: MealTime(hour: row.mealMidnightSnackHour, minute: row.mealMidnightSnackMinute)
+        )
+        meals.save(to: d)
     }
 }
 
@@ -352,6 +362,20 @@ struct UserSettingsRow: Codable {
     var patientPhone: String
     var patientCountry: String
     var patientState: String
+    var mealBreakfastHour: Int
+    var mealBreakfastMinute: Int
+    var mealMorningTeaHour: Int
+    var mealMorningTeaMinute: Int
+    var mealLunchHour: Int
+    var mealLunchMinute: Int
+    var mealAfternoonTeaHour: Int
+    var mealAfternoonTeaMinute: Int
+    var mealDinnerHour: Int
+    var mealDinnerMinute: Int
+    var mealDessertHour: Int
+    var mealDessertMinute: Int
+    var mealMidnightSnackHour: Int
+    var mealMidnightSnackMinute: Int
 
     enum CodingKeys: String, CodingKey {
         case userId = "user_id"
@@ -369,6 +393,20 @@ struct UserSettingsRow: Codable {
         case patientPhone = "patient_phone"
         case patientCountry = "patient_country"
         case patientState = "patient_state"
+        case mealBreakfastHour = "meal_breakfast_hour"
+        case mealBreakfastMinute = "meal_breakfast_minute"
+        case mealMorningTeaHour = "meal_morning_tea_hour"
+        case mealMorningTeaMinute = "meal_morning_tea_minute"
+        case mealLunchHour = "meal_lunch_hour"
+        case mealLunchMinute = "meal_lunch_minute"
+        case mealAfternoonTeaHour = "meal_afternoon_tea_hour"
+        case mealAfternoonTeaMinute = "meal_afternoon_tea_minute"
+        case mealDinnerHour = "meal_dinner_hour"
+        case mealDinnerMinute = "meal_dinner_minute"
+        case mealDessertHour = "meal_dessert_hour"
+        case mealDessertMinute = "meal_dessert_minute"
+        case mealMidnightSnackHour = "meal_midnight_snack_hour"
+        case mealMidnightSnackMinute = "meal_midnight_snack_minute"
     }
 
     init(userId: UUID) {
@@ -391,6 +429,21 @@ struct UserSettingsRow: Codable {
         if dobInterval > 0 {
             patientDob = ISO8601DateFormatter().string(from: Date(timeIntervalSince1970: dobInterval))
         }
+        let meals = MealTimes.load(from: d)
+        mealBreakfastHour = meals.breakfast.hour
+        mealBreakfastMinute = meals.breakfast.minute
+        mealMorningTeaHour = meals.morningTea.hour
+        mealMorningTeaMinute = meals.morningTea.minute
+        mealLunchHour = meals.lunch.hour
+        mealLunchMinute = meals.lunch.minute
+        mealAfternoonTeaHour = meals.afternoonTea.hour
+        mealAfternoonTeaMinute = meals.afternoonTea.minute
+        mealDinnerHour = meals.dinner.hour
+        mealDinnerMinute = meals.dinner.minute
+        mealDessertHour = meals.dessert.hour
+        mealDessertMinute = meals.dessert.minute
+        mealMidnightSnackHour = meals.midnightSnack.hour
+        mealMidnightSnackMinute = meals.midnightSnack.minute
     }
 }
 
