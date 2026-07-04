@@ -27,6 +27,8 @@ This spec replaces that flat form with a guided, question-driven flow for anythi
 
 **Entry point:** The Schedule section defaults to a single collapsed row summarizing the current schedule (e.g. "Taken: Once daily at 8:00 AM"). Tapping it expands into the guided flow below. A brand-new medication starts pre-expanded on Question 1 (nothing to summarize yet, and iOS is 17+, so pushing to guided-flow-first is fine for a new medication — the fast path exists once a schedule already exists, when *editing*, to spare returning users from question dead ends).
 
+**Re-entering an existing multi-dose schedule:** tapping the collapsed row to edit a schedule that already has more than one dose/day does **not** restart at Question 1 — it reopens directly at the Review step (Q4) with the current schedule's times pre-populated as the editable summary. From there the user can adjust individual times directly, or tap an explicit "Change schedule type" action to fully restart the question sequence from Q1 if they want a structurally different schedule (e.g. switching from manual times to meal-tied). This avoids forcing a returning user to re-answer questions whose answers are implicit in the schedule they already have, while still offering a clear path back into the guided flow for a real restructure.
+
 **Question sequence** (one question visible at a time, each answer revealing the next):
 
 1. **"How often is [dose] of [medication name] taken?"** → **Every day** / **Specific days**
@@ -35,11 +37,12 @@ This spec replaces that flat form with a guided, question-driven flow for anythi
    - If 1 → single time picker, flow ends, generates one `ScheduleDraft`.
 3. **If >1 — "How are doses spaced?"** → **Fixed intervals** / **Tied to meals** / **Set each time manually**
    - **Fixed intervals:**
-     - Ask "First dose time" (time picker) and "Hours between doses" (integer, full hours only).
+     - Ask "First dose time" (time picker) and "Hours between doses" (integer, full hours only, **minimum 1** — the input control enforces this, e.g. a stepper starting at 1, so an interval of 0 is never reachable rather than being a runtime case to detect).
      - Generate N times: `first`, `first + interval`, `first + 2×interval`, ... for `i in 0..<N` — never divides 24 hours by N. Times may land past midnight (e.g. 4 doses/6h from 10pm → 10pm, 4am, 10am, 4pm) — this is expected and not an error case.
+     - If `interval × (N-1)` spans past 24 hours enough to wrap back onto an already-generated clock time (e.g. a large interval combined with a large count), duplicate times are **not deduplicated automatically** — they're generated as-is and surfaced in the Review step (Q4) exactly like any other result, where the user sees the actual list and can go back to adjust the count or interval themselves. This keeps the generation function a simple, total pure function with no special-cased failure mode.
    - **Tied to meals:**
      - Show a checklist of the 7 meal slots, each pre-filled with the current global meal time (see below) and independently adjustable right there via a time wheel.
-     - The count of meals selected must equal the times-per-day answer from Q2 before continuing (show an inline count, e.g. "2 of 3 selected").
+     - The count of meals selected must equal the times-per-day answer from Q2 before continuing — the "Continue" button is disabled until the counts match, with an inline count shown at all times (e.g. "2 of 3 selected") so the user always sees why it's disabled without a separate error message.
      - Selecting a meal generates a `ScheduleDraft` at that meal's current global time.
    - **Set each time manually:**
      - Show N sequential time pickers, one per dose ("Dose 1 time", "Dose 2 time", ... "Dose N time").
@@ -59,7 +62,13 @@ This spec replaces that flat form with a guided, question-driven flow for anythi
 | Dessert | 7:30 PM |
 | Midnight Snack | 11:00 PM |
 
-**Storage:** persisted locally (UserDefaults, alongside the app's other preference keys) and synced through the existing `SupabaseSyncManager` / `user_settings` mechanism — the same round-trip already used for other preferences (time format, haptics, etc.), so it survives reinstall/device-change/crash like everything else does. No new table needed; this is additional columns (or a single encoded blob) on the existing `user_settings` row.
+**Storage:** persisted locally (UserDefaults, alongside the app's other preference keys) and synced through the existing `SupabaseSyncManager` / `user_settings` mechanism — the same round-trip already used for other preferences (time format, haptics, etc.), so it survives reinstall/device-change/crash like everything else does. No new table needed.
+
+`UserSettingsRow` (in `SupabaseSyncManager.swift`) is a flat struct of scalar fields with explicit `CodingKeys` mapping camelCase to snake_case columns (e.g. `colorTheme` → `color_theme`) — there is no blob/JSON-encoded field anywhere in it. Meal times follow that same established pattern exactly: **14 new flat integer columns**, two per slot (hour + minute), not a single encoded blob:
+
+`meal_breakfast_hour`, `meal_breakfast_minute`, `meal_morning_tea_hour`, `meal_morning_tea_minute`, `meal_lunch_hour`, `meal_lunch_minute`, `meal_afternoon_tea_hour`, `meal_afternoon_tea_minute`, `meal_dinner_hour`, `meal_dinner_minute`, `meal_dessert_hour`, `meal_dessert_minute`, `meal_midnight_snack_hour`, `meal_midnight_snack_minute`.
+
+`UserSettingsRow.init(userId:)` reads these the same way it reads every other field today (from `UserDefaults`, falling back to the default table above if unset), and `applySettings(_:)` writes them back into `UserDefaults` on pull, exactly mirroring the existing pattern for every other preference in that struct — no new sync logic, just more fields on the same row.
 
 **Editing:** two entry points write to the same shared value —
 - Inline, during the "Tied to meals" step of the guided flow (adjust-and-continue, doesn't require a separate trip to Settings first).
