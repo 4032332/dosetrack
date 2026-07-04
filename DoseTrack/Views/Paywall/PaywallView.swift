@@ -17,7 +17,7 @@ struct PaywallView: View {
                     Text("DoseTrack Pro")
                         .font(.largeTitle.weight(.bold))
 
-                    Text("Unlimited medications, iCloud sync, PDF reports, and family sharing.")
+                    Text("Unlimited medications, PDF reports, and caregiver sharing.")
                         .multilineTextAlignment(.center)
                         .foregroundStyle(.secondary)
                         .padding(.horizontal)

@@ -5,13 +5,7 @@ struct MainTabView: View {
     @StateObject private var navigator = TabNavigator.shared
     @EnvironmentObject private var activeAccount: ActiveAccountContext
     @EnvironmentObject private var caregiverManager: CaregiverManager
-    @AppStorage("colorTheme") private var colorTheme: String = AppColorTheme.oceanBlue.rawValue
-    @AppStorage("appearanceOverride") private var appearanceOverride: String = "system"
     @State private var showingAccountSwitcher = false
-
-    private var activeTheme: AppColorTheme {
-        AppColorTheme(rawValue: colorTheme) ?? .oceanBlue
-    }
 
     enum Tab: Hashable {
         case today, medications, restock, history, settings
@@ -40,11 +34,6 @@ struct MainTabView: View {
                 .tag(Tab.settings)
         }
         .environmentObject(navigator)
-        .tint(activeTheme.primary)
-        .preferredColorScheme(
-            appearanceOverride == "light" ? .light :
-            appearanceOverride == "dark"  ? .dark  : nil
-        )
         .safeAreaInset(edge: .top) {
             if !caregiverManager.overseenPatients.isEmpty {
                 Button {

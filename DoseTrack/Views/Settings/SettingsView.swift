@@ -21,6 +21,29 @@ struct SettingsView: View {
     @State private var testNotificationSent = false
     @State private var showingSignUp = false
 
+    #if DEBUG
+    private enum DebugProOption: Hashable { case real, forceFree, forcePro }
+
+    private var debugProOverrideBinding: Binding<DebugProOption> {
+        Binding(
+            get: {
+                switch subscriptionManager.debugForceProOverride {
+                case .some(true):  return .forcePro
+                case .some(false): return .forceFree
+                case .none:        return .real
+                }
+            },
+            set: { option in
+                switch option {
+                case .real:      subscriptionManager.debugForceProOverride = nil
+                case .forceFree: subscriptionManager.debugForceProOverride = false
+                case .forcePro:  subscriptionManager.debugForceProOverride = true
+                }
+            }
+        )
+    }
+    #endif
+
     var body: some View {
         NavigationStack {
             List {
@@ -255,6 +278,21 @@ struct SettingsView: View {
                         Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
                     }
                 }
+
+                #if DEBUG
+                // MARK: Debug (DEBUG builds only — never present in release/TestFlight/App Store)
+                Section {
+                    Picker("Subscription (debug)", selection: debugProOverrideBinding) {
+                        Text("Real StoreKit status").tag(DebugProOption.real)
+                        Text("Force Free").tag(DebugProOption.forceFree)
+                        Text("Force Pro").tag(DebugProOption.forcePro)
+                    }
+                } header: {
+                    Text("Debug")
+                } footer: {
+                    Text("Lets you test Pro-gated features without a real purchase. Only compiled into debug builds.")
+                }
+                #endif
 
                 // MARK: Danger zone
                 Section {

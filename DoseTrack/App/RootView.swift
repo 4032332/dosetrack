@@ -9,6 +9,7 @@ struct RootView: View {
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding: Bool = false
     @AppStorage("guestMode") private var guestMode: Bool = false
+    @AppStorage("appearanceOverride") private var appearanceOverride: String = "system"
 
     @State private var showSplash: Bool = true
     @State private var pendingInviteCode: String?
@@ -125,6 +126,16 @@ struct RootView: View {
 
         .animation(.easeInOut(duration: 0.35), value: hasCompletedOnboarding)
         .animation(.easeInOut(duration: 0.5), value: showSplash)
+        // Applied at the true root of the view hierarchy (above MainTabView/onboarding/auth)
+        // so it covers every screen, and `.id(...)` forces SwiftUI to rebuild this subtree on
+        // change — without it, toggling between "system" (nil) and an explicit light/dark
+        // value doesn't reliably re-render when the root is a manually-hosted
+        // UIHostingController (see SceneDelegate.swift) rather than a plain SwiftUI App.
+        .id(appearanceOverride)
+        .preferredColorScheme(
+            appearanceOverride == "light" ? .light :
+            appearanceOverride == "dark"  ? .dark  : nil
+        )
         .onReceive(NotificationCenter.default.publisher(for: .guestModeActivated)) { _ in
             // Guest fallback path (anonymous Supabase auth disabled/failed): session stays nil,
             // so `onChange(of: auth.session?.user.id)` never fires. Refresh explicitly here so

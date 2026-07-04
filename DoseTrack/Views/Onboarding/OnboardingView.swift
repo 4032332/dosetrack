@@ -136,9 +136,9 @@ private struct WelcomePage: View {
                     FeatureRow(icon: "heart.fill", color: .red,
                                title: "5 medications free forever",
                                subtitle: "No surprise paywalls on core reminder functionality")
-                    FeatureRow(icon: "arrow.trianglehead.2.clockwise", color: .purple,
-                               title: "Sync across devices",
-                               subtitle: "Pro subscribers get iCloud sync across iPhone, iPad, and Watch")
+                    FeatureRow(icon: "person.2.fill", color: .purple,
+                               title: "Caregiver sharing",
+                               subtitle: "Pro subscribers can invite a caregiver to help manage medications")
                 }
                 .padding(.horizontal, 28)
 

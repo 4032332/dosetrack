@@ -1,18 +1,20 @@
 // DoseTrack/Views/Medications/SupplyWheelPicker.swift
 import SwiftUI
 
+/// Current-supply input for refill tracking. A prior scrolling-wheel design had a
+/// persistent visual bug (the highlighted number never lined up with the selection
+/// box), so this is a plain stepper with a large tappable number that opens a numpad
+/// for direct entry — simpler and more reliable than a custom scroll-snapping picker.
 struct SupplyWheelPicker: View {
     @Binding var value: Int
     let unit: String
 
     private let maxValue = 999
-    private let itemWidth: CGFloat = 60
-    @State private var scrollPosition: Int?
     @State private var showingManualEntry = false
     @State private var manualText = ""
 
     var body: some View {
-        VStack(spacing: 6) {
+        VStack(spacing: 10) {
             HStack {
                 Label("Current supply", systemImage: "cross.case.fill")
                     .font(.subheadline)
@@ -22,49 +24,41 @@ struct SupplyWheelPicker: View {
                     .foregroundStyle(Color.accentColor)
             }
 
-            GeometryReader { geo in
-                let padding = (geo.size.width - itemWidth) / 2
+            HStack(spacing: 20) {
+                Button {
+                    if value > 0 { value -= 1 }
+                } label: {
+                    Image(systemName: "minus.circle.fill")
+                        .font(.system(size: 30))
+                }
+                .buttonStyle(.plain)
+                .disabled(value <= 0)
 
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 0) {
-                        ForEach(0...maxValue, id: \.self) { n in
-                            NumberCell(n: n, selected: n == value, itemWidth: itemWidth)
-                                .id(n)
-                                .onTapGesture {
-                                    if n == value {
-                                        // Tap the already-selected (centre) cell → open numpad
-                                        manualText = "\(value)"
-                                        showingManualEntry = true
-                                    } else {
-                                        withAnimation(.spring(response: 0.25)) {
-                                            value = n
-                                            scrollPosition = n
-                                        }
-                                    }
-                                }
-                        }
-                    }
-                    .scrollTargetLayout()
-                    .padding(.horizontal, padding)
+                Button {
+                    manualText = "\(value)"
+                    showingManualEntry = true
+                } label: {
+                    Text("\(value)")
+                        .font(.system(size: 34, weight: .bold, design: .rounded))
+                        .foregroundStyle(Color.accentColor)
+                        .frame(minWidth: 90)
+                        .padding(.vertical, 6)
+                        .background(Color.accentColor.opacity(0.12), in: RoundedRectangle(cornerRadius: 12))
                 }
-                .scrollPosition(id: $scrollPosition, anchor: .center)
-                .scrollTargetBehavior(.viewAligned)
-                .onChange(of: scrollPosition) { _, newPos in
-                    if let pos = newPos { value = pos }
-                }
-                .onAppear {
-                    scrollPosition = value
-                }
-            }
-            .frame(height: 56)
-            .overlay {
-                RoundedRectangle(cornerRadius: 10)
-                    .stroke(Color.accentColor, lineWidth: 2)
-                    .frame(width: itemWidth, height: 46)
-                    .allowsHitTesting(false)
-            }
+                .buttonStyle(.plain)
 
-            Text("Tap the highlighted number to type a value")
+                Button {
+                    if value < maxValue { value += 1 }
+                } label: {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.system(size: 30))
+                }
+                .buttonStyle(.plain)
+                .disabled(value >= maxValue)
+            }
+            .frame(maxWidth: .infinity)
+
+            Text("Tap the number to type a value")
                 .font(.caption2)
                 .foregroundStyle(.tertiary)
         }
@@ -74,29 +68,12 @@ struct SupplyWheelPicker: View {
             Button("Set") {
                 if let n = Int(manualText), n >= 0, n <= maxValue {
                     value = n
-                    scrollPosition = n
                 }
             }
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("How many \(unit)s do you have?")
         }
-    }
-}
-
-private struct NumberCell: View {
-    let n: Int
-    let selected: Bool
-    let itemWidth: CGFloat
-
-    var body: some View {
-        Text("\(n)")
-            .font(.system(size: selected ? 20 : 15, weight: selected ? .bold : .regular, design: .rounded))
-            .foregroundStyle(selected ? Color.accentColor : .secondary)
-            .frame(width: itemWidth, height: 56)
-            .contentShape(Rectangle())
-            .scaleEffect(selected ? 1.15 : 1.0)
-            .animation(.spring(response: 0.2), value: selected)
     }
 }
 
