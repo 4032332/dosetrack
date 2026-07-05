@@ -35,7 +35,6 @@
 		4D78F29D27AEDC042E91D7EF /* WatchConnectivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAE408261B453CFADBF3254C /* WatchConnectivityManager.swift */; };
 		4F1037004E1446B8180AC548 /* MealTimesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 029DF751591E2CD71D187974 /* MealTimesView.swift */; };
 		4F3261C581BABC751AD313E9 /* TodayWatchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DDD5DD43921C6555BF1DFC38 /* TodayWatchView.swift */; };
-		52BBABB2657676374042E7CE /* AppIconPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5A6AD6DF22AA6DA14A40CE1 /* AppIconPickerView.swift */; };
 		52C9E3A1F42D612CBA015307 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 9B6C3AC9FF53C48EE22EB94C /* Assets.xcassets */; };
 		53136E3D6F146CE4520086DB /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88CBDE8FA9B0BA4DD62E2B41 /* SceneDelegate.swift */; };
 		5356CA88CFBF7B7259AB067C /* LockScreenWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F20E87845CCE9E5F84D954F /* LockScreenWidget.swift */; };
@@ -246,7 +245,6 @@
 		DDCC6A63AA218E60F89B87AA /* CaregiverManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaregiverManager.swift; sourceTree = "<group>"; };
 		DDD5DD43921C6555BF1DFC38 /* TodayWatchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayWatchView.swift; sourceTree = "<group>"; };
 		DFA3D671FBA09F78CAF744E2 /* NotificationScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationScheduler.swift; sourceTree = "<group>"; };
-		E5A6AD6DF22AA6DA14A40CE1 /* AppIconPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppIconPickerView.swift; sourceTree = "<group>"; };
 		E6EDB9C9C80FC6420898A0E4 /* MissedDoseDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MissedDoseDetector.swift; sourceTree = "<group>"; };
 		E717CD7D819338EACA8690F6 /* CaregiverManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaregiverManagerTests.swift; sourceTree = "<group>"; };
 		E9BC6878833AE5C45FC5BA65 /* ContraceptiveTrackerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContraceptiveTrackerView.swift; sourceTree = "<group>"; };
@@ -473,7 +471,6 @@
 			isa = PBXGroup;
 			children = (
 				9ECD54ED0D8136C78ECBDDF8 /* AcceptCaregiverInviteView.swift */,
-				E5A6AD6DF22AA6DA14A40CE1 /* AppIconPickerView.swift */,
 				464D0595D1B5467B84401EE6 /* AppPreferencesView.swift */,
 				F94A8FE73284D8CC6C89EC51 /* AvatarPickerView.swift */,
 				74716822DA208FC0B80FAC07 /* CaregiverInviteView.swift */,
@@ -796,7 +793,6 @@
 				9D77D04CB6E41B3632210DA9 /* AddEditMedicationViewModel.swift in Sources */,
 				3AC02CB59E3F208940FCC564 /* AdherenceChartView.swift in Sources */,
 				B69642E8F4E8AED1DA17645A /* AppDelegate.swift in Sources */,
-				52BBABB2657676374042E7CE /* AppIconPickerView.swift in Sources */,
 				C10D224E99C65DA91A6C6536 /* AppPreferencesView.swift in Sources */,
 				6FF0D471179DFC7041436CFF /* AuthManager.swift in Sources */,
 				F24737D9C6039DF5252A4B6C /* AuthView.swift in Sources */,

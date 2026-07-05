@@ -72,19 +72,24 @@ struct AppPreferencesView: View {
                         .font(.caption)
                 }
             }
-
-            // MARK: App Icon
-            Section("App Icon") {
-                NavigationLink {
-                    AppIconPickerView()
-                } label: {
-                    Label("Change App Icon", systemImage: "app.fill")
-                }
-            }
         }
         .scrollIndicators(.visible)
         .navigationTitle("Preferences")
         .navigationBarTitleDisplayMode(.inline)
+        // Every preference here is also mirrored to Supabase's user_settings row so it survives
+        // reinstalls/other devices (see UserSettingsRow). Without pushing on change, a signed-in
+        // (non-guest) user's toggle would appear to work locally but get silently overwritten
+        // back to its old value the next time pullAll() ran on launch, since the remote row was
+        // never updated to match — this was a real bug caught in manual testing.
+        .onChange(of: appearanceOverride) { _, _ in pushSettings() }
+        .onChange(of: timeFormat) { _, _ in pushSettings() }
+        .onChange(of: hapticsEnabled) { _, _ in pushSettings() }
+        .onChange(of: showDoseBadge) { _, _ in pushSettings() }
+        .onChange(of: compactRows) { _, _ in pushSettings() }
+    }
+
+    private func pushSettings() {
+        Task { await SupabaseSyncManager.shared.pushSettings() }
     }
 }
 
