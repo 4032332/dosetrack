@@ -46,4 +46,26 @@ final class SyncMergeTests: XCTestCase {
         SupabaseSyncManager.shared.mergeMedicationsForTesting([freshRow], context: ctx)
         XCTAssertEqual((try? ctx.fetch(Medication.fetchRequest()))?.first?.name, "RemoteNew")
     }
+
+    // MARK: - Unsynced local changes
+
+    func test_unsyncedLogs_selectsThoseUpdatedAfterLastSync() {
+        let ctx = PersistenceController(inMemory: true).viewContext
+        let med = Medication.create(in: ctx, name: "M", dosage: "1")
+        let old = DoseLog.create(in: ctx, medication: med, scheduledAt: Date(), status: .taken)
+        old.updatedAt = Date().addingTimeInterval(-1000)
+        let new = DoseLog.create(in: ctx, medication: med, scheduledAt: Date(), status: .taken)
+        new.updatedAt = Date()
+        let cutoff = Date().addingTimeInterval(-500)
+        let unsynced = SupabaseSyncManager.unsyncedLogs([old, new], since: cutoff)
+        XCTAssertEqual(unsynced.map(\.objectID), [new.objectID])
+    }
+
+    func test_unsyncedLogs_returnsAllWhenNeverSynced() {
+        let ctx = PersistenceController(inMemory: true).viewContext
+        let med = Medication.create(in: ctx, name: "M", dosage: "1")
+        let log = DoseLog.create(in: ctx, medication: med, scheduledAt: Date(), status: .taken)
+        let unsynced = SupabaseSyncManager.unsyncedLogs([log], since: nil)
+        XCTAssertEqual(unsynced.map(\.objectID), [log.objectID])
+    }
 }

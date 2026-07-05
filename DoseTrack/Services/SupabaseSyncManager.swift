@@ -92,6 +92,35 @@ final class SupabaseSyncManager: ObservableObject {
         } catch { print("pushDoseLog error: \(error)") }
     }
 
+    /// Dose logs updated after `since` (nil = push everything). Pure selection logic, split
+    /// out for testing since `NSManagedObject` fetches aren't easily unit-testable directly.
+    static func unsyncedLogs(_ logs: [DoseLog], since: Date?) -> [DoseLog] {
+        guard let since else { return logs }
+        return logs.filter { ($0.updatedAt ?? .distantPast) > since }
+    }
+
+    private static func lastPushSyncKey(for userId: UUID) -> String {
+        "lastDoseLogPushAt.\(userId.uuidString)"
+    }
+
+    /// Pushes any locally-updated dose logs that haven't been pushed since the last successful
+    /// call — covers doses logged while the app was closed (e.g. the widget's Mark Taken
+    /// intent), which otherwise only ever get written locally and never reach Supabase.
+    func pushUnsyncedLocalChanges(context: NSManagedObjectContext, forUserId: UUID? = nil) async {
+        guard AuthManager.shared.isSignedIn, !AuthManager.shared.isGuest,
+              let targetUserId = forUserId ?? AuthManager.shared.session?.user.id else { return }
+        let sinceInterval = UserDefaults.standard.double(forKey: Self.lastPushSyncKey(for: targetUserId))
+        let since = sinceInterval > 0 ? Date(timeIntervalSince1970: sinceInterval) : nil
+
+        let logs = (try? context.fetch(DoseLog.fetchRequest())) ?? []
+        let toPush = Self.unsyncedLogs(logs, since: since)
+        let pushStartedAt = Date()
+        for log in toPush {
+            await pushDoseLog(log, forUserId: forUserId)
+        }
+        UserDefaults.standard.set(pushStartedAt.timeIntervalSince1970, forKey: Self.lastPushSyncKey(for: targetUserId))
+    }
+
     func pushSettings() async {
         guard AuthManager.shared.isSignedIn, !AuthManager.shared.isGuest,
               let userId = AuthManager.shared.session?.user.id else { return }

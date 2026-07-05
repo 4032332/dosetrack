@@ -142,6 +142,13 @@ struct RootView: View {
                         revocationMessage = "Your access to that account has ended."
                     }
                 }
+                // Push any dose logs written while the app was closed (e.g. via the widget's
+                // Mark Taken intent) — those only ever land locally otherwise.
+                let activeId = ActiveAccountResolver.shared.activeUserId
+                let pushContext = activeId == nil ? context : PersistenceController.shared.context(forPatient: activeId!)
+                Task {
+                    await SupabaseSyncManager.shared.pushUnsyncedLocalChanges(context: pushContext, forUserId: activeId)
+                }
             }
         }
         .sheet(item: $pendingInviteCode.mappedToIdentifiable()) { wrapped in
