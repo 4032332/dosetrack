@@ -24,6 +24,7 @@
 		2E3B16F548370D35434679C9 /* SubscriptionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = EBAFC4266E63CAD4933926A5 /* SubscriptionManager.swift */; };
 		2F4666001E67FF1A940B4CB1 /* DoseLog+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABE8C1BB6ADF181C91D7B1B5 /* DoseLog+Extensions.swift */; };
 		335912EEB4077A23F3E0700A /* CaregiverInviteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74716822DA208FC0B80FAC07 /* CaregiverInviteView.swift */; };
+		336A948E449C464DD2A1B81E /* SupplyMath.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17A75568414E936D13FACEEF /* SupplyMath.swift */; };
 		33962C7BDA120E5FC8E3CC75 /* MissedDoseDetectorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0642B52A4FE3BAEB0C80CDEC /* MissedDoseDetectorTests.swift */; };
 		37BC34AB00889BC038C55C6E /* MediumWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = A177488B7127CD2F5DCABCEB /* MediumWidget.swift */; };
 		3AC02CB59E3F208940FCC564 /* AdherenceChartView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15FB0D0175781373455B3A93 /* AdherenceChartView.swift */; };
@@ -106,6 +107,7 @@
 		C02195D91642F8D7E77AE383 /* WidgetColorExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = 822594ED54F9EFC6980C7E5D /* WidgetColorExtension.swift */; };
 		C10D224E99C65DA91A6C6536 /* AppPreferencesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 464D0595D1B5467B84401EE6 /* AppPreferencesView.swift */; };
 		C37D796C202161CB4E87469B /* WatchConfettiView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43BED9E826F283CA03584C67 /* WatchConfettiView.swift */; };
+		C9462A1F1EA57803BFE055EC /* SupplyMathTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC7240C53C599D651F5DA31E /* SupplyMathTests.swift */; };
 		C946DC2FCC34233F54D48A3B /* CoreDataTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8DF9733C237D4FC1AC12A310 /* CoreDataTests.swift */; };
 		CC32A8FABA8182BE6986EDB8 /* SubscriptionManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FA89388364D687BFC710600 /* SubscriptionManagerTests.swift */; };
 		CF78CFEB0883C456B2A70708 /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1BE89FDB7E4F9D9923C173E /* HistoryView.swift */; };
@@ -166,6 +168,7 @@
 		1334F53F193DF18162FD3082 /* Placeholder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Placeholder.swift; sourceTree = "<group>"; };
 		14894400AD92BDDA5EEA2A18 /* MedicationsViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MedicationsViewModelTests.swift; sourceTree = "<group>"; };
 		15FB0D0175781373455B3A93 /* AdherenceChartView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdherenceChartView.swift; sourceTree = "<group>"; };
+		17A75568414E936D13FACEEF /* SupplyMath.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupplyMath.swift; sourceTree = "<group>"; };
 		1B9416BCF667D44B1B1CCB75 /* TodayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayView.swift; sourceTree = "<group>"; };
 		1F9568B988B88A0C6E1034A3 /* Secrets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Secrets.swift; sourceTree = "<group>"; };
 		1FA89388364D687BFC710600 /* SubscriptionManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionManagerTests.swift; sourceTree = "<group>"; };
@@ -240,6 +243,7 @@
 		BA1090D2A5C494DAAB7160DC /* NotificationSchedulerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationSchedulerTests.swift; sourceTree = "<group>"; };
 		BB4EAC2257487A3F340D6310 /* ReportGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportGenerator.swift; sourceTree = "<group>"; };
 		BBFCBCE0FBCEF7C83ABACD61 /* Constants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Constants.swift; sourceTree = "<group>"; };
+		BC7240C53C599D651F5DA31E /* SupplyMathTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupplyMathTests.swift; sourceTree = "<group>"; };
 		BF2BEF367E2B42E12D66BD9B /* HistoryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryViewModel.swift; sourceTree = "<group>"; };
 		C4F92BE8F2BEE4599D462CEC /* Schedule+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Schedule+Extensions.swift"; sourceTree = "<group>"; };
 		C52052AE425D7A4CB3943378 /* SupplyWheelPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupplyWheelPicker.swift; sourceTree = "<group>"; };
@@ -439,6 +443,7 @@
 				34A75E53E9DD5ED47776C699 /* ScheduleGenerator.swift */,
 				EBAFC4266E63CAD4933926A5 /* SubscriptionManager.swift */,
 				D8F0A5CF3936D62E1ED5B2EF /* SupabaseSyncManager.swift */,
+				17A75568414E936D13FACEEF /* SupplyMath.swift */,
 				FAE408261B453CFADBF3254C /* WatchConnectivityManager.swift */,
 			);
 			path = Services;
@@ -554,6 +559,7 @@
 				DD01A0081D63EFC4FF3B1510 /* ScheduleGeneratorTests.swift */,
 				1FA89388364D687BFC710600 /* SubscriptionManagerTests.swift */,
 				D882B65CF2991AA971D2DF0D /* SupabaseSyncManagerTargetUserTests.swift */,
+				BC7240C53C599D651F5DA31E /* SupplyMathTests.swift */,
 				F4A5D3091DF9FA6B51262E03 /* TodayViewModelTests.swift */,
 			);
 			path = DoseTrackTests;
@@ -781,6 +787,7 @@
 				7FBD95C52FDB4CE14634CB1E /* ScheduleGeneratorTests.swift in Sources */,
 				CC32A8FABA8182BE6986EDB8 /* SubscriptionManagerTests.swift in Sources */,
 				B5BD41CCDB13D6824F0ECAC4 /* SupabaseSyncManagerTargetUserTests.swift in Sources */,
+				C9462A1F1EA57803BFE055EC /* SupplyMathTests.swift in Sources */,
 				916A863B157262FC0976EA50 /* TodayViewModelTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -870,6 +877,7 @@
 				6C986A2D0DFCBCC472B41B60 /* SettingsView.swift in Sources */,
 				2E3B16F548370D35434679C9 /* SubscriptionManager.swift in Sources */,
 				97CF120B7DF5A4BDB06BF36B /* SupabaseSyncManager.swift in Sources */,
+				336A948E449C464DD2A1B81E /* SupplyMath.swift in Sources */,
 				93FF0F39C336E9618A5DB9BC /* SupplyWheelPicker.swift in Sources */,
 				495721E2FC0B4A6C27C3932A /* TabNavigator.swift in Sources */,
 				2B031CC8817D8E6AD49EA624 /* TimeFormatting.swift in Sources */,
