@@ -23,9 +23,10 @@ final class SupabaseSyncManager: ObservableObject {
         guard AuthManager.shared.isSignedIn, !AuthManager.shared.isGuest else { return }
         guard let targetUserId = forUserId ?? AuthManager.shared.session?.user.id else { return }
         do {
+            let pullStartedAt = Date()
             async let meds    = fetchRemoteMedications(userId: targetUserId)
             async let scheds  = fetchRemoteSchedules(userId: targetUserId)
-            async let logs    = fetchRemoteDoseLogs(userId: targetUserId)
+            async let logs    = fetchRemoteDoseLogs(userId: targetUserId, since: Self.lastDoseLogSyncAt(for: targetUserId))
             async let settings = fetchRemoteSettings(userId: targetUserId)
             let (m, s, l, st) = try await (meds, scheds, logs, settings)
             mergeMedications(m, context: context)
@@ -37,9 +38,27 @@ final class SupabaseSyncManager: ObservableObject {
             if forUserId == nil, let st { applySettings(st) }
             try? context.save()
             WidgetCenter.shared.reloadAllTimelines()
+            Self.setLastDoseLogSyncAt(pullStartedAt, for: targetUserId)
         } catch {
             print("SupabaseSync pullAll error: \(error)")
         }
+    }
+
+    // MARK: - Incremental dose-log sync bookkeeping
+
+    private static func lastDoseLogSyncKey(for userId: UUID) -> String {
+        "lastDoseLogSyncAt.\(userId.uuidString)"
+    }
+
+    /// `nil` on a user's first sync — `fetchRemoteDoseLogs` then falls back to a 90-day window
+    /// instead of pulling every dose log the user has ever logged on every launch.
+    private static func lastDoseLogSyncAt(for userId: UUID) -> Date? {
+        let interval = UserDefaults.standard.double(forKey: lastDoseLogSyncKey(for: userId))
+        return interval > 0 ? Date(timeIntervalSince1970: interval) : nil
+    }
+
+    private static func setLastDoseLogSyncAt(_ date: Date, for userId: UUID) {
+        UserDefaults.standard.set(date.timeIntervalSince1970, forKey: lastDoseLogSyncKey(for: userId))
     }
 
     // MARK: - Push individual records
@@ -131,8 +150,17 @@ final class SupabaseSyncManager: ObservableObject {
     private func fetchRemoteSchedules(userId: UUID) async throws -> [ScheduleRow] {
         try await client.from("schedules").select().eq("user_id", value: userId.uuidString).execute().value
     }
-    private func fetchRemoteDoseLogs(userId: UUID) async throws -> [DoseLogRow] {
-        try await client.from("dose_logs").select().eq("user_id", value: userId.uuidString).execute().value
+    /// - Parameter since: only rows updated after this date are pulled. `nil` (a user's first
+    ///   sync on this device) falls back to a 90-day window rather than the full history —
+    ///   older logs are still available on demand via History/export, which read the local
+    ///   store directly and aren't affected by this window.
+    private func fetchRemoteDoseLogs(userId: UUID, since: Date?) async throws -> [DoseLogRow] {
+        let cutoff = since ?? Date(timeIntervalSinceNow: -90 * 86400)
+        return try await client.from("dose_logs")
+            .select()
+            .eq("user_id", value: userId.uuidString)
+            .gte("updated_at", value: ISO8601DateFormatter().string(from: cutoff))
+            .execute().value
     }
     private func fetchRemoteSettings(userId: UUID) async throws -> UserSettingsRow? {
         let rows: [UserSettingsRow] = try await client.from("user_settings").select().eq("user_id", value: userId.uuidString).execute().value
