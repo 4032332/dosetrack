@@ -15,6 +15,12 @@
 **Bundle ID:** `com.robbrown.dosetrack`  
 **App Store category:** Health & Fitness  
 
+### First-time setup
+
+`DoseTrack/Resources/Secrets.swift` is gitignored and required to build. Copy
+`Secrets.example.txt` (repo root) to `DoseTrack/Resources/Secrets.swift` and fill in your
+Supabase project URL/anon key.
+
 ### What DoseTrack is
 
 A medication and supplement tracker that wins on three things competitors fail at:
