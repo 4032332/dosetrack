@@ -3,6 +3,8 @@ import SwiftUI
 import Supabase
 import AuthenticationServices
 import GoogleSignIn
+import UserNotifications
+import WidgetKit
 
 @MainActor
 final class AuthManager: ObservableObject {
@@ -163,6 +165,11 @@ final class AuthManager: ObservableObject {
             try await client.auth.signOut()
         } catch { /* session cleared locally regardless */ }
         session = nil
+        // A different user signing in on this device must never see (or re-upload) the
+        // previous user's medical data — the local store is shared, not per-user.
+        PersistenceController.shared.wipeLocalStore()
+        UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
+        WidgetCenter.shared.reloadAllTimelines()
     }
 
     // MARK: - Profile

@@ -82,6 +82,24 @@ final class PersistenceController: ObservableObject {
         patientContainers.removeValue(forKey: userId)
     }
 
+    /// Removes all locally-stored data from the main store. Called on sign-out so a different
+    /// user signing in on the same device never sees (or re-uploads) the previous user's data.
+    func wipeLocalStore() {
+        let ctx = container.viewContext
+        for entity in ["DoseLog", "Schedule", "Medication"] {
+            let req: NSFetchRequest<NSFetchRequestResult> = NSFetchRequest(entityName: entity)
+            let del = NSBatchDeleteRequest(fetchRequest: req)
+            del.resultType = .resultTypeObjectIDs
+            if let result = try? ctx.execute(del) as? NSBatchDeleteResult,
+               let ids = result.result as? [NSManagedObjectID] {
+                NSManagedObjectContext.mergeChanges(fromRemoteContextSave: [NSDeletedObjectsKey: ids], into: [ctx])
+            }
+        }
+        try? ctx.save()
+        // Also drop cached per-patient stores so a former caregiver's patient data doesn't linger.
+        patientContainers.removeAll()
+    }
+
     // MARK: - Private factory
 
     /// Resolves the on-disk URL for a given store filename inside the shared app group
