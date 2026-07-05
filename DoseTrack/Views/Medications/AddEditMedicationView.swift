@@ -127,7 +127,11 @@ struct AddEditMedicationView: View {
                         value: $viewModel.currentCount,
                         unit: viewModel.quantityUnit
                     )
-                    let dpd = max(viewModel.quantityAmount, 1)
+                    // Daily consumption = quantity per dose × how many times a day the schedule
+                    // fires — not just `quantityAmount` on its own, which is only the per-dose
+                    // amount (e.g. "1 tablet") and ignores a 4-times-daily schedule entirely.
+                    let dosesPerDay = max(viewModel.schedules.filter { $0.isEnabled }.count, 1)
+                    let dpd = max(viewModel.quantityAmount * dosesPerDay, 1)
                     let daysLeft = viewModel.currentCount / dpd
                     HStack {
                         Image(systemName: supplyIcon(days: daysLeft))

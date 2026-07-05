@@ -157,7 +157,10 @@ final class AddEditMedicationViewModel: ObservableObject {
         med.refillThreshold = Int32(refillThreshold)
         med.photoData = photoData
         med.escriptData = escriptData
-        med.totalDosesPerDay = Int32(isContraceptive ? 0 : schedules.filter { $0.isEnabled }.count)
+        // Daily consumption = quantity per dose × how many times a day the schedule fires —
+        // schedule count alone undercounts whenever a dose is more than one unit (e.g. "2
+        // tablets, twice daily" is 4/day, not 2).
+        med.totalDosesPerDay = Int32(isContraceptive ? 0 : quantityAmount * schedules.filter { $0.isEnabled }.count)
 
         for old in med.schedulesArray { context.delete(old) }
         for draft in schedules {
