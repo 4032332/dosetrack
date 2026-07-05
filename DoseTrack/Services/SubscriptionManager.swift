@@ -155,6 +155,15 @@ final class SubscriptionManager: ObservableObject {
     private func applyDebugOverrideIfNeeded() {
         if let override = debugForceProOverride {
             isProSubscriber = override
+            // Several other places in the app (e.g. MedicationsViewModel's default
+            // isProSubscriber closure) read Constants.UserDefaultsKeys.isProSubscriber
+            // directly from UserDefaults instead of observing this class's @Published
+            // property — that raw key is normally kept truthful by refreshEntitlement()
+            // on every real purchase/restore, but the override path above returns
+            // before reaching that write. Without this line, the debug override only
+            // ever updates this in-memory property, leaving every UserDefaults-reading
+            // consumer still seeing stale (usually `false`) Pro status.
+            UserDefaults.standard.set(override, forKey: Constants.UserDefaultsKeys.isProSubscriber)
         }
     }
     #endif

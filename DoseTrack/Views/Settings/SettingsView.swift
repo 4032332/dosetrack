@@ -6,6 +6,7 @@ struct SettingsView: View {
     @Environment(\.managedObjectContext) private var context
     @EnvironmentObject private var subscriptionManager: SubscriptionManager
     @EnvironmentObject private var auth: AuthManager
+    @EnvironmentObject private var caregiverManager: CaregiverManager
 
     @AppStorage("patientName")           private var patientName: String = ""
     @AppStorage("selectedAvatar")           private var selectedAvatar: String = "milli"
@@ -287,10 +288,15 @@ struct SettingsView: View {
                         Text("Force Free").tag(DebugProOption.forceFree)
                         Text("Force Pro").tag(DebugProOption.forcePro)
                     }
+
+                    Toggle("Caregiver Mode Preview", isOn: Binding(
+                        get: { caregiverManager.isDebugCaregiverModeActive },
+                        set: { caregiverManager.setDebugCaregiverModeActive($0) }
+                    ))
                 } header: {
                     Text("Debug")
                 } footer: {
-                    Text("Lets you test Pro-gated features without a real purchase. Only compiled into debug builds.")
+                    Text("Subscription override lets you test Pro-gated features without a real purchase. Caregiver Mode Preview adds a fake \"Test Patient\" to the account switcher (top of the tab bar) pointing at your own data, so you can see the caregiver interface without a second account. Only compiled into debug builds.")
                 }
                 #endif
 
@@ -314,6 +320,7 @@ struct SettingsView: View {
             }
             .scrollIndicators(.visible)
             .contentMargins(.bottom, 32, for: .scrollContent)
+            .refreshable { await refresh() }
             .navigationTitle("Settings")
             .sheet(isPresented: $showingPaywall) { PaywallView() }
             .sheet(isPresented: $showingSignUp) { AuthView().environmentObject(auth) }
@@ -331,6 +338,11 @@ struct SettingsView: View {
     }
 
     // MARK: - Helpers
+
+    private func refresh() async {
+        await SupabaseSyncManager.shared.pullAll(context: context)
+        _ = await subscriptionManager.checkEntitlement()
+    }
 
     private func sendTestNotification() {
         Task {
@@ -397,4 +409,5 @@ private extension Bundle {
         .environment(\.managedObjectContext, PersistenceController.preview.viewContext)
         .environmentObject(SubscriptionManager())
         .environmentObject(AuthManager.shared)
+        .environmentObject(CaregiverManager.shared)
 }

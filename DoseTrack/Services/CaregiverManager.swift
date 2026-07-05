@@ -63,4 +63,42 @@ final class CaregiverManager: ObservableObject {
             .execute()
         await refresh()
     }
+
+    #if DEBUG
+    // MARK: - Debug-only caregiver mode preview
+    //
+    // Lets a developer preview the caregiver-side UI (account switcher, "viewing
+    // another account" capsule) without a second Supabase account and a real
+    // invite/accept round-trip. Injects a synthetic relationship pointing the
+    // "patient" back at the developer's own account, so switching to it still
+    // shows real local data. Never present in release builds (#if DEBUG).
+
+    private static let debugPatientId = UUID(uuidString: "00000000-0000-0000-0000-00000000DEBB")!
+
+    var isDebugCaregiverModeActive: Bool {
+        myRelationships.contains { $0.id == Self.debugPatientId }
+    }
+
+    func setDebugCaregiverModeActive(_ active: Bool) {
+        if active {
+            guard let userId = AuthManager.shared.session?.user.id, !isDebugCaregiverModeActive else { return }
+            let fake = CaregiverRelationshipRow(
+                id: Self.debugPatientId,
+                caregiverUserId: userId,
+                patientUserId: userId,
+                patientDisplayName: "Test Patient (Debug)",
+                caregiverDisplayName: nil,
+                status: "active",
+                inviteCode: "DEBUG",
+                createdAt: Date(),
+                expiresAt: Date.distantFuture,
+                activatedAt: Date(),
+                revokedAt: nil
+            )
+            myRelationships.append(fake)
+        } else {
+            myRelationships.removeAll { $0.id == Self.debugPatientId }
+        }
+    }
+    #endif
 }

@@ -47,7 +47,7 @@ struct MedicationsView: View {
             }
             .environment(\.editMode, $isEditMode)
             .navigationDestination(for: Medication.self) { med in
-                MedicationDetailView(medication: med)
+                MedicationDetailView(medication: med, onDelete: { viewModel.fetchMedications() })
             }
             .sheet(isPresented: $viewModel.showingAddForm, onDismiss: { viewModel.fetchMedications() }) {
                 AddEditMedicationView(
@@ -107,6 +107,11 @@ struct MedicationsView: View {
                     .tint(.blue)
                 }
             }
+            .onDelete { offsets in
+                for index in offsets {
+                    viewModel.requestDelete(viewModel.medications[index])
+                }
+            }
             .onMove { viewModel.moveItems(from: $0, to: $1) }
 
             if shouldShowContraceptiveHint {
@@ -147,6 +152,7 @@ struct MedicationsView: View {
             }
         }
         .scrollIndicators(.visible)
+        .refreshable { viewModel.fetchMedications() }
     }
 
     private var emptyState: some View {

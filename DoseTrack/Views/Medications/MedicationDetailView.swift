@@ -1,10 +1,19 @@
 // DoseTrack/Views/Medications/MedicationDetailView.swift
 import SwiftUI
+import WidgetKit
 
 struct MedicationDetailView: View {
     @Environment(\.managedObjectContext) private var context
+    @Environment(\.dismiss) private var dismiss
     let medication: Medication
+    /// Called after a successful delete (before/around `dismiss()`) so the caller
+    /// (the Medications list) can refetch — its own `.onAppear` is attached to the
+    /// outer NavigationStack and does NOT refire when popping back from a pushed
+    /// detail view, so without this callback the list would silently show stale
+    /// data (the just-deleted medication) until the tab was fully re-entered.
+    var onDelete: () -> Void = {}
     @State private var showingEditSheet = false
+    @State private var showingDeleteConfirm = false
 
     var body: some View {
         List {
@@ -93,7 +102,20 @@ struct MedicationDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Button("Edit") { showingEditSheet = true }
+                Menu {
+                    Button {
+                        showingEditSheet = true
+                    } label: {
+                        Label("Edit", systemImage: "pencil")
+                    }
+                    Button(role: .destructive) {
+                        showingDeleteConfirm = true
+                    } label: {
+                        Label("Delete", systemImage: "trash")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                }
             }
         }
         .sheet(isPresented: $showingEditSheet) {
@@ -102,6 +124,27 @@ struct MedicationDetailView: View {
                 onSave: { _ in }
             )
         }
+        .confirmationDialog(
+            "Delete \(medication.wrappedName)?",
+            isPresented: $showingDeleteConfirm,
+            titleVisibility: .visible
+        ) {
+            Button("Delete", role: .destructive) { softDeleteAndDismiss() }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This removes the medication from your active list. History is preserved.")
+        }
+    }
+
+    /// Soft-delete (isActive = false, preserving history — same convention as
+    /// MedicationsViewModel.confirmSoftDelete), then pop back to the list, whose
+    /// own .onAppear re-fetches and reflects the removal.
+    private func softDeleteAndDismiss() {
+        medication.isActive = false
+        try? context.save()
+        WidgetCenter.shared.reloadAllTimelines()
+        onDelete()
+        dismiss()
     }
 
     private func scheduleLabel(_ schedule: Schedule) -> String {

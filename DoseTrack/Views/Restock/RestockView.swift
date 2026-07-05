@@ -54,6 +54,7 @@ struct RestockView: View {
                     }
                     .scrollIndicators(.visible)
                     .contentMargins(.bottom, 32, for: .scrollContent)
+                    .refreshable { await refresh() }
                 }
             }
             .navigationTitle("Restock")
@@ -147,6 +148,11 @@ struct RestockView: View {
                 .multilineTextAlignment(.center)
         }
         .padding()
+    }
+
+    private func refresh() async {
+        await SupabaseSyncManager.shared.pullAll(context: context)
+        context.refreshAllObjects()
     }
 
     private func urgencyRank(_ med: Medication) -> Int {
