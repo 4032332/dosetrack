@@ -78,6 +78,10 @@ final class MedicationsViewModel: ObservableObject {
         med.isActive = false
         try? context.save()
         WidgetCenter.shared.reloadAllTimelines()
+        // Push the tombstone, or a stale remote row keeps this medication looking active on
+        // the next pull. Capture the account id/med before clearing state below.
+        let pushUserId = ActiveAccountResolver.shared.activeUserId
+        Task { await SupabaseSyncManager.shared.pushMedication(med, forUserId: pushUserId) }
         fetchMedications()
         medicationToDelete = nil
         showingDeleteConfirm = false

@@ -143,6 +143,10 @@ struct MedicationDetailView: View {
         medication.isActive = false
         try? context.save()
         WidgetCenter.shared.reloadAllTimelines()
+        // Push the tombstone, or a stale remote row keeps this medication looking active on
+        // the next pull.
+        let pushUserId = ActiveAccountResolver.shared.activeUserId
+        Task { await SupabaseSyncManager.shared.pushMedication(medication, forUserId: pushUserId) }
         onDelete()
         dismiss()
     }

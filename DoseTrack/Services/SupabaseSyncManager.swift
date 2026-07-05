@@ -141,7 +141,13 @@ final class SupabaseSyncManager: ObservableObject {
             med.unit         = row.unit
             med.colorHex     = row.colorHex
             med.notes        = row.notes
-            med.isActive     = row.isActive
+            // Never let a stale remote row reactivate a medication we've locally soft-deleted.
+            // (A follow-up conflict-resolution pass adds updated_at comparison for the general
+            // case; this interim rule covers the specific resurrection bug.) A remote row CAN
+            // still deactivate a locally-active medication.
+            if !(existing != nil && existing!.isActive == false && row.isActive == true) {
+                med.isActive = row.isActive
+            }
             med.currentCount = Int32(row.currentCount)
             med.refillThreshold = Int32(row.refillThreshold)
             med.sortOrder    = Int32(row.sortOrder)
@@ -162,6 +168,13 @@ final class SupabaseSyncManager: ObservableObject {
             }
         }
     }
+
+    #if DEBUG
+    /// Test-only entry point into the private merge logic. Never compiled into release builds.
+    func mergeMedicationsForTesting(_ rows: [MedicationRow], context: NSManagedObjectContext) {
+        mergeMedications(rows, context: context)
+    }
+    #endif
 
     private func mergeSchedules(_ rows: [ScheduleRow], context: NSManagedObjectContext) {
         for row in rows {
@@ -283,6 +296,32 @@ struct MedicationRow: Codable {
         photoPath      = nil   // set separately after upload
         escriptPath    = nil
     }
+
+    #if DEBUG
+    /// Test-only factory — lets merge-logic tests construct a remote row without a real
+    /// Medication/upload round-trip. Never compiled into release builds.
+    static func testRow(id: String, isActive: Bool, name: String = "Remote") -> MedicationRow {
+        var row = MedicationRow(
+            id: id, userId: UUID().uuidString, name: name, dosage: "1", unit: "pill",
+            colorHex: "#000000", notes: "", isActive: isActive, currentCount: 0,
+            refillThreshold: 7, sortOrder: 0
+        )
+        row.photoPath = nil
+        row.escriptPath = nil
+        return row
+    }
+
+    private init(
+        id: String, userId: String, name: String, dosage: String, unit: String,
+        colorHex: String, notes: String, isActive: Bool, currentCount: Int,
+        refillThreshold: Int, sortOrder: Int
+    ) {
+        self.id = id; self.userId = userId; self.name = name; self.dosage = dosage
+        self.unit = unit; self.colorHex = colorHex; self.notes = notes; self.isActive = isActive
+        self.currentCount = currentCount; self.refillThreshold = refillThreshold
+        self.sortOrder = sortOrder; self.photoPath = nil; self.escriptPath = nil
+    }
+    #endif
 }
 
 struct ScheduleRow: Codable {

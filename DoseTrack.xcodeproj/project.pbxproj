@@ -111,6 +111,7 @@
 		C37D796C202161CB4E87469B /* WatchConfettiView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43BED9E826F283CA03584C67 /* WatchConfettiView.swift */; };
 		C9462A1F1EA57803BFE055EC /* SupplyMathTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC7240C53C599D651F5DA31E /* SupplyMathTests.swift */; };
 		C946DC2FCC34233F54D48A3B /* CoreDataTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8DF9733C237D4FC1AC12A310 /* CoreDataTests.swift */; };
+		CA5BBFDEAB8B18DA3DF5C154 /* SyncMergeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 856E2087A98DF1DC78EE02F0 /* SyncMergeTests.swift */; };
 		CC32A8FABA8182BE6986EDB8 /* SubscriptionManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FA89388364D687BFC710600 /* SubscriptionManagerTests.swift */; };
 		CF78CFEB0883C456B2A70708 /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1BE89FDB7E4F9D9923C173E /* HistoryView.swift */; };
 		D76707027834FD6DCC843135 /* Products.storekit in Resources */ = {isa = PBXBuildFile; fileRef = 2F9FC8A28D3514A8AF3C2784 /* Products.storekit */; };
@@ -211,6 +212,7 @@
 		80992CD6D8F672994CF27502 /* DoseLog+CoreDataClass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "DoseLog+CoreDataClass.swift"; sourceTree = "<group>"; };
 		81DA062623FAFAD8798ED2BF /* CollapsiblePickers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollapsiblePickers.swift; sourceTree = "<group>"; };
 		822594ED54F9EFC6980C7E5D /* WidgetColorExtension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetColorExtension.swift; sourceTree = "<group>"; };
+		856E2087A98DF1DC78EE02F0 /* SyncMergeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncMergeTests.swift; sourceTree = "<group>"; };
 		862F377A339FECEE7C6CCC43 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		878B68C292228E0060558260 /* MedicationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MedicationsView.swift; sourceTree = "<group>"; };
 		88CBDE8FA9B0BA4DD62E2B41 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
@@ -566,6 +568,7 @@
 				1FA89388364D687BFC710600 /* SubscriptionManagerTests.swift */,
 				D882B65CF2991AA971D2DF0D /* SupabaseSyncManagerTargetUserTests.swift */,
 				BC7240C53C599D651F5DA31E /* SupplyMathTests.swift */,
+				856E2087A98DF1DC78EE02F0 /* SyncMergeTests.swift */,
 				F4A5D3091DF9FA6B51262E03 /* TodayViewModelTests.swift */,
 			);
 			path = DoseTrackTests;
@@ -795,6 +798,7 @@
 				CC32A8FABA8182BE6986EDB8 /* SubscriptionManagerTests.swift in Sources */,
 				B5BD41CCDB13D6824F0ECAC4 /* SupabaseSyncManagerTargetUserTests.swift in Sources */,
 				C9462A1F1EA57803BFE055EC /* SupplyMathTests.swift in Sources */,
+				CA5BBFDEAB8B18DA3DF5C154 /* SyncMergeTests.swift in Sources */,
 				916A863B157262FC0976EA50 /* TodayViewModelTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
