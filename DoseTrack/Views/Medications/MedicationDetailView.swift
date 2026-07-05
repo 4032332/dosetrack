@@ -141,6 +141,7 @@ struct MedicationDetailView: View {
     /// own .onAppear re-fetches and reflects the removal.
     private func softDeleteAndDismiss() {
         medication.isActive = false
+        medication.updatedAt = Date()
         try? context.save()
         WidgetCenter.shared.reloadAllTimelines()
         // Push the tombstone, or a stale remote row keeps this medication looking active on

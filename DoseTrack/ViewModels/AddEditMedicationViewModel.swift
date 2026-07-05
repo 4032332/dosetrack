@@ -161,6 +161,7 @@ final class AddEditMedicationViewModel: ObservableObject {
         // schedule count alone undercounts whenever a dose is more than one unit (e.g. "2
         // tablets, twice daily" is 4/day, not 2).
         med.totalDosesPerDay = Int32(isContraceptive ? 0 : quantityAmount * schedules.filter { $0.isEnabled }.count)
+        med.updatedAt = Date()
 
         for old in med.schedulesArray { context.delete(old) }
         for draft in schedules {
@@ -173,6 +174,7 @@ final class AddEditMedicationViewModel: ObservableObject {
             s.isEnabled = draft.isEnabled
             s.intervalDays = Int16(min(draft.intervalDays, Int(Int16.max)))
             s.medication = med
+            s.updatedAt = Date()
         }
 
         if isContraceptive && !isEditing {
@@ -182,6 +184,7 @@ final class AddEditMedicationViewModel: ObservableObject {
             log.scheduledAt = lastAdministeredDate
             log.loggedAt = lastAdministeredDate
             log.status = "taken"
+            log.updatedAt = Date()
         }
 
         try? context.save()

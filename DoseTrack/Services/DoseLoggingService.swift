@@ -28,14 +28,17 @@ final class DoseLoggingService {
     ) {
         let wasAlreadyTaken = existingLog?.status == DoseStatus.taken.rawValue
 
+        let now = Date()
         let doseLog: DoseLog
         if let existing = existingLog {
             existing.status = status.rawValue
-            existing.loggedAt = Date()
+            existing.loggedAt = now
+            existing.updatedAt = now
             if let notes { existing.notes = notes }
             doseLog = existing
         } else {
             doseLog = DoseLog.create(in: context, medication: medication, scheduledAt: scheduledAt, status: status)
+            doseLog.updatedAt = now
             if let notes { doseLog.notes = notes }
         }
 
@@ -47,6 +50,7 @@ final class DoseLoggingService {
                 enabledScheduleCount: scheduleCount
             )
             medication.currentCount = Int32(SupplyMath.decrementedCount(current: Int(medication.currentCount), by: perDose))
+            medication.updatedAt = now
         }
 
         do { try context.save() } catch { assertionFailure("DoseLoggingService save failed: \(error)") }

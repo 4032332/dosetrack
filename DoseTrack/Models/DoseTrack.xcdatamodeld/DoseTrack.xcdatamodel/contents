@@ -15,6 +15,7 @@
         <attribute name="sortOrder" optional="NO" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
         <attribute name="totalDosesPerDay" optional="NO" attributeType="Integer 32" defaultValueString="1" usesScalarValueType="YES"/>
         <attribute name="unit" optional="NO" attributeType="String" defaultValueString="pill"/>
+        <attribute name="updatedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
         <relationship name="doseLogs" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="DoseLog" inverseName="medication" inverseEntity="DoseLog"/>
         <relationship name="schedules" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="Schedule" inverseName="medication" inverseEntity="Schedule"/>
     </entity>
@@ -27,6 +28,7 @@
         <attribute name="isEnabled" optional="NO" attributeType="Boolean" defaultValueString="YES" usesScalarValueType="YES"/>
         <attribute name="minute" optional="NO" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
         <attribute name="notificationIds" optional="YES" attributeType="Transformable" valueTransformerName="NSSecureUnarchiveFromDataTransformer"/>
+        <attribute name="updatedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
         <relationship name="medication" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Medication" inverseName="schedules" inverseEntity="Medication"/>
     </entity>
     <entity name="DoseLog" representedClassName="DoseLog" syncable="YES" codeGenerationType="category">
@@ -35,6 +37,7 @@
         <attribute name="notes" optional="YES" attributeType="String"/>
         <attribute name="scheduledAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="status" optional="NO" attributeType="String" defaultValueString="taken"/>
+        <attribute name="updatedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
         <relationship name="medication" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Medication" inverseName="doseLogs" inverseEntity="Medication"/>
     </entity>
     <elements>

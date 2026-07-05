@@ -76,6 +76,7 @@ final class MedicationsViewModel: ObservableObject {
     func confirmSoftDelete() {
         guard let med = medicationToDelete else { return }
         med.isActive = false
+        med.updatedAt = Date()
         try? context.save()
         WidgetCenter.shared.reloadAllTimelines()
         // Push the tombstone, or a stale remote row keeps this medication looking active on
