@@ -4,7 +4,7 @@
 
 **Goal:** Fix the data-integrity, notification-reliability, sync-robustness, and polish defects found in the 2026-07-05 code review so DoseTrack keeps its three core promises — correct data, reliable reminders, honest deletion — before any TestFlight build.
 
-**Architecture:** Four sequential phases. Phase 1 introduces a single shared `DoseLoggingService` and threads the active-account user ID through every write path, eliminating the divergent logging/sync code and the caregiver-writes-under-wrong-user bug. Phase 2 makes the notification engine reliable (preserve snoozes, sort the 64-cap, honor the critical-alerts toggle, actually arm background refresh). Phase 3 adds `updated_at`-based conflict resolution, incremental pulls, and an unsynced-record sweep. Phase 4 is polish (PDF pagination, widget identity, save-error reporting, HealthKit category decision, secrets template). Each phase produces a shippable, testable increment on its own.
+**Architecture:** Four sequential phases. Phase 1 introduces a single shared `DoseLoggingService` and threads the active-account user ID through every write path, eliminating the divergent logging/sync code and the caregiver-writes-under-wrong-user bug — and removes the HealthKit integration entirely (category misuse, low value, no Android counterpart) rather than fixing its disclosure. Phase 2 makes the notification engine reliable (preserve snoozes, sort the 64-cap, honor the critical-alerts toggle, actually arm background refresh). Phase 3 adds `updated_at`-based conflict resolution, incremental pulls, and an unsynced-record sweep. Phase 4 is polish (PDF pagination, widget identity, save-error reporting, secrets template). Each phase produces a shippable, testable increment on its own.
 
 **Tech Stack:** Swift 5.9 / SwiftUI, Core Data (App Group shared store + per-patient stores), Supabase (Postgres + RLS + Edge Functions), StoreKit 2, WidgetKit (AppIntent), UserNotifications, XcodeGen (`xcodegen generate` after any new file), XCTest.
 
@@ -27,7 +27,7 @@ This phase eliminates the four critical findings: divergent dose-logging paths (
 
 ### File Structure (Phase 1)
 
-- **Create** `DoseTrack/Services/DoseLoggingService.swift` — the single source of truth for writing a `DoseLog`. Owns: upsert the log, decrement supply by per-dose quantity on a taken transition, push to Supabase under the correct user ID, log to HealthKit, reload widgets. Used by `TodayViewModel`, `AppDelegate`, and (via a thin sync entry point) anywhere else.
+- **Create** `DoseTrack/Services/DoseLoggingService.swift` — the single source of truth for writing a `DoseLog`. Owns: upsert the log, decrement supply by per-dose quantity on a taken transition, push to Supabase under the correct user ID, reload widgets. No HealthKit call — that integration is removed as part of this phase (see Task 1.10) rather than carried forward. Used by `TodayViewModel`, `AppDelegate`, and (via a thin sync entry point) anywhere else.
 - **Create** `DoseTrack/Services/ActiveAccountResolver.swift` — a tiny `@MainActor` singleton holding the currently-viewed user ID (`nil` = own account). `RootView`/`ActiveSessionView` sets it on account switch; non-View code (`AppDelegate`, `DoseLoggingService`) reads it. This avoids threading `ActiveAccountContext` (a SwiftUI `EnvironmentObject`) into UIKit/service code.
 - **Modify** `DoseTrack/ViewModels/TodayViewModel.swift` — delegate `markTaken`/`markSkipped` to `DoseLoggingService`; delete the local `log(...)` body.
 - **Modify** `DoseTrack/App/AppDelegate.swift` — `logDose(...)` delegates to `DoseLoggingService`.
@@ -210,7 +210,7 @@ git commit -m "Add SupplyMath pure functions for per-dose supply decrement"
 
 ### Task 1.3: DoseLoggingService — one write path for all dose logging
 
-Consolidates the two divergent code paths (`TodayViewModel.log` and `AppDelegate.logDose`) so every "mark taken/skipped" — from Today screen, notification action, or widget — has identical side effects: upsert log, decrement supply (taken only, per-dose quantity, on a fresh taken transition), push to Supabase under the resolved user ID, HealthKit (own account only), reload widgets.
+Consolidates the two divergent code paths (`TodayViewModel.log` and `AppDelegate.logDose`) so every "mark taken/skipped" — from Today screen, notification action, or widget — has identical side effects: upsert log, decrement supply (taken only, per-dose quantity, on a fresh taken transition), push to Supabase under the resolved user ID, reload widgets. (No HealthKit call — see Task 1.10, which removes that integration in this same phase.)
 
 **Files:**
 - Create: `DoseTrack/Services/DoseLoggingService.swift`
@@ -311,9 +311,9 @@ import WidgetKit
 
 /// The single write path for logging a dose (taken / skipped / missed). Every caller —
 /// TodayViewModel, AppDelegate's notification-action handler, the widget intent bridge —
-/// goes through here so side effects (supply decrement, Supabase push, HealthKit, widget
-/// reload) are identical no matter how a dose is logged. Previously TodayViewModel and
-/// AppDelegate had separate, divergent implementations; that drift is the bug this fixes.
+/// goes through here so side effects (supply decrement, Supabase push, widget reload) are
+/// identical no matter how a dose is logged. Previously TodayViewModel and AppDelegate had
+/// separate, divergent implementations; that drift is the bug this fixes.
 @MainActor
 final class DoseLoggingService {
     static let shared = DoseLoggingService()
@@ -360,17 +360,6 @@ final class DoseLoggingService {
 
         WidgetCenter.shared.reloadAllTimelines()
         Task { await SupabaseSyncManager.shared.pushDoseLog(doseLog, forUserId: pushUserId) }
-
-        // HealthKit only for the signed-in user's own doses (pushUserId == nil).
-        if status == .taken, pushUserId == nil, HealthKitManager.shared.isAuthorized {
-            Task {
-                await HealthKitManager.shared.logDose(
-                    medicationName: medication.wrappedName,
-                    dosage: "\(medication.wrappedDosage) \(medication.wrappedUnit)",
-                    scheduledAt: scheduledAt
-                )
-            }
-        }
     }
 }
 ```
@@ -419,7 +408,7 @@ func markSkipped(_ entry: DoseEntry, reason: String? = nil) {
 
 > NOTE for implementer: confirm the exact pre-existing celebration mechanism (`celebrateNow` pulse) before this change and preserve its behavior. If `refresh()` already sets `celebrateNow`, do not double-set it. Read the current `log(...)` body first.
 
-- [ ] **Step 2: Build + run full test suite** — Expected: BUILD SUCCEEDED, all tests pass (the existing `TodayViewModelTests` for `markTaken`/`markSkipped` must still pass — if they assert supply/HealthKit behavior, adjust only if the assertion was wrong).
+- [ ] **Step 2: Build + run full test suite** — Expected: BUILD SUCCEEDED, all tests pass (the existing `TodayViewModelTests` for `markTaken`/`markSkipped` must still pass — if they assert supply behavior, adjust only if the assertion was wrong).
 
 - [ ] **Step 3: Commit**
 
@@ -706,6 +695,59 @@ WidgetCenter.shared.reloadAllTimelines()
 ```bash
 git add DoseTrack/App/PersistenceController.swift DoseTrack/Services/AuthManager.swift
 git commit -m "Wipe local store on sign-out to prevent cross-account medical-data leakage"
+```
+
+---
+
+### Task 1.10: Remove the HealthKit integration entirely
+
+**Decision:** removed, not disclosed-and-kept. Logging doses as "mindfulness sessions" is a category misuse with no clean HK type to fall back to, it adds negligible value over the app's own History/export (which is the trustworthy source of truth), and it's a maintenance liability with no Android counterpart on the roadmap. Cheaper to delete now, before Task 1.3's `DoseLoggingService` carries the pattern forward, than to delete later once real users have HK data written under the mindfulness mislabel.
+
+**Files:**
+- Delete: `DoseTrack/Services/HealthKitManager.swift`
+- Modify: `DoseTrack/Views/Settings/AppPreferencesView.swift` — remove the "Apple Health" section (`healthKitEnabled` AppStorage, the `@StateObject private var healthKit`, and the whole `if healthKit.isAvailable { Section { ... } }` block).
+- Modify: `DoseTrack/Resources/Info.plist` — remove `NSHealthShareUsageDescription` / `NSHealthUpdateUsageDescription`.
+- Modify: `DoseTrack/Resources/DoseTrack.entitlements` — remove `com.apple.developer.healthkit` / `com.apple.developer.healthkit.access`.
+- Modify: `project.yml` — remove the `com.apple.developer.healthkit` / `com.apple.developer.healthkit.access` entitlement properties, remove `- sdk: HealthKit.framework` from the DoseTrack target's dependencies. Leave `Vision.framework` alone (used by the medication label scanner, unrelated).
+
+- [ ] **Step 1: Remove Settings UI** — delete the `healthKitEnabled` AppStorage property, the `healthKit` StateObject, and the entire `if healthKit.isAvailable { Section { ... } }` block from `AppPreferencesView.swift`.
+
+- [ ] **Step 2: Delete the service file**
+
+```bash
+rm DoseTrack/Services/HealthKitManager.swift
+```
+
+- [ ] **Step 3: Strip entitlements and Info.plist**
+
+Remove from `DoseTrack/Resources/DoseTrack.entitlements`:
+```xml
+<key>com.apple.developer.healthkit</key>
+<true/>
+<key>com.apple.developer.healthkit.access</key>
+<array/>
+```
+Remove from `DoseTrack/Resources/Info.plist`:
+```xml
+<key>NSHealthShareUsageDescription</key>
+<string>...</string>
+<key>NSHealthUpdateUsageDescription</key>
+<string>...</string>
+```
+
+- [ ] **Step 4: Strip project.yml**
+
+Remove `com.apple.developer.healthkit: true` and `com.apple.developer.healthkit.access: []` from the `DoseTrack` target's `entitlements.properties`, and remove `- sdk: HealthKit.framework` from its `dependencies`. Keep `- sdk: Vision.framework`.
+
+- [ ] **Step 5: `xcodegen generate`, build, test** — Expected: BUILD SUCCEEDED, full suite passes with 0 failures (no HealthKit-specific tests should exist to remove; if any do, delete them too).
+
+- [ ] **Step 6: Manual check:** Settings > App Preferences no longer shows an "Apple Health" section.
+
+- [ ] **Step 7: Commit**
+
+```bash
+git add -A
+git commit -m "Remove HealthKit integration entirely (category misuse, low value, no Android counterpart)"
 ```
 
 ---
@@ -1135,7 +1177,7 @@ git commit -m "Push unsynced local dose logs on foreground so widget-logged dose
 
 ## Chunk 4: Phase 4 — Polish & Hygiene (Medium/Low)
 
-Fixes: PDF pagination (#14), widget ForEach identity (#13), widget timeline thrash clamp (#16), free-tier gating in caregiver view (#17), HealthKit category misuse (#18), save-error reporting (#15), secrets template (process).
+Fixes: PDF pagination (#14), widget ForEach identity (#13), widget timeline thrash clamp (#16), free-tier gating in caregiver view (#17), save-error reporting (#15), secrets template (process). (HealthKit removal (#18) already handled in Phase 1, Task 1.10.)
 
 ### File Structure (Phase 4)
 
@@ -1143,7 +1185,6 @@ Fixes: PDF pagination (#14), widget ForEach identity (#13), widget timeline thra
 - **Modify** `DoseTrackWidgets/MediumWidget.swift` — composite identity.
 - **Modify** `DoseTrackWidgets/SmallWidget.swift` + `MediumWidget.swift` — timeline reload clamp `max(nextDose, now+15m)` (verify already done; if so, skip).
 - **Modify** `DoseTrack/ViewModels/MedicationsViewModel.swift` — disable add when viewing another account.
-- **Modify** `DoseTrack/Services/HealthKitManager.swift` — decision per below.
 - **Create** `DoseTrack/Utilities/CoreDataSave.swift` — `saveOrReport`.
 - **Create** `DoseTrack/Resources/Secrets.example.swift` + README note.
 
@@ -1261,25 +1302,7 @@ git commit -m "Disable add-medication while viewing a patient; free-tier limit c
 
 ---
 
-### Task 4.5: HealthKit category decision
-
-**Files:**
-- Modify: `DoseTrack/Services/HealthKitManager.swift`
-- Modify: `DoseTrack/Views/Settings/AppPreferencesView.swift` (disclosure copy)
-
-- [ ] **Decision (default, per YAGNI + App Review risk): keep the write-out but make the disclosure explicit and honest.** Update the Settings footer to state clearly that doses are recorded as *mindfulness sessions* (Apple provides no medication-intake type) and that this is optional. Alternatively, if the team prefers, remove HK write entirely — flag to the human before choosing removal, since it's a user-facing feature change.
-- [ ] **Step 1:** Update the footer copy in `AppPreferencesView` to name the mindfulness-session mechanism plainly.
-- [ ] **Step 2: Build + test.**
-- [ ] **Step 3: Commit**
-
-```bash
-git add DoseTrack/Services/HealthKitManager.swift DoseTrack/Views/Settings/AppPreferencesView.swift
-git commit -m "Make HealthKit mindfulness-session disclosure explicit for doses"
-```
-
----
-
-### Task 4.6: Secrets template + clone safety
+### Task 4.5: Secrets template + clone safety
 
 **Files:**
 - Create: `DoseTrack/Resources/Secrets.example.swift`
