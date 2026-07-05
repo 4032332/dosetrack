@@ -51,7 +51,9 @@
             </array>
         </dict>
     </array>
-    <!-- Alternate app icons — image sets must be added to Assets.xcassets to activate -->
+    <!-- Alternate app icons. Each reuses one of the existing profile-avatar image sets already
+         in Assets.xcassets (512x512, no alpha — valid as-is for an alternate icon) rather than
+         requiring separate dedicated icon artwork, so these are real, selectable icons. -->
     <key>CFBundleIcons</key>
     <dict>
         <key>CFBundlePrimaryIcon</key>
@@ -63,31 +65,38 @@
         </dict>
         <key>CFBundleAlternateIcons</key>
         <dict>
-            <key>Midnight</key>
+            <key>Avatar_bear</key>
             <dict>
                 <key>CFBundleIconFiles</key>
-                <array><string>AppIconMidnight</string></array>
+                <array><string>Avatar_bear</string></array>
                 <key>UIPrerenderedIcon</key>
                 <false/>
             </dict>
-            <key>Coral</key>
+            <key>Avatar_robot</key>
             <dict>
                 <key>CFBundleIconFiles</key>
-                <array><string>AppIconCoral</string></array>
+                <array><string>Avatar_robot</string></array>
                 <key>UIPrerenderedIcon</key>
                 <false/>
             </dict>
-            <key>Forest</key>
+            <key>Avatar_wizard</key>
             <dict>
                 <key>CFBundleIconFiles</key>
-                <array><string>AppIconForest</string></array>
+                <array><string>Avatar_wizard</string></array>
                 <key>UIPrerenderedIcon</key>
                 <false/>
             </dict>
-            <key>Rose</key>
+            <key>Avatar_hero</key>
             <dict>
                 <key>CFBundleIconFiles</key>
-                <array><string>AppIconRose</string></array>
+                <array><string>Avatar_hero</string></array>
+                <key>UIPrerenderedIcon</key>
+                <false/>
+            </dict>
+            <key>Avatar_owl</key>
+            <dict>
+                <key>CFBundleIconFiles</key>
+                <array><string>Avatar_owl</string></array>
                 <key>UIPrerenderedIcon</key>
                 <false/>
             </dict>

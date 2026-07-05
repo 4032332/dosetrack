@@ -236,6 +236,12 @@ struct SettingsView: View {
                     } label: {
                         Label("App Preferences", systemImage: "slider.horizontal.3")
                     }
+
+                    NavigationLink {
+                        MealTimesView()
+                    } label: {
+                        Label("Meal Times", systemImage: "fork.knife")
+                    }
                 }
 
                 // MARK: Data & Privacy

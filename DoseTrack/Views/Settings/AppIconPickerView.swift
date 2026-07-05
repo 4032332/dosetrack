@@ -1,23 +1,22 @@
 // DoseTrack/Views/Settings/AppIconPickerView.swift
-// Lets users switch between alternate app icons.
-// Each icon requires a corresponding image set in Assets.xcassets
-// and an entry under CFBundleIcons → CFBundleAlternateIcons in Info.plist.
+// Lets users switch between alternate app icons. Each option reuses one of the
+// existing profile-avatar image sets already in Assets.xcassets (real artwork,
+// not a placeholder) — see the matching CFBundleAlternateIcons entries in Info.plist.
 
 import SwiftUI
 
-struct AppIconOption: Identifiable {
-    let id: String          // nil for default, or the alternateIconName string
-    let name: String
-    let preview: String     // SF Symbol to preview until real icon images exist
-    let accent: Color
+private struct AppIconOption: Identifiable {
+    let id: String   // nil (represented as "default") for the primary icon, else the avatar key
+    var avatar: AvatarOption? { allAvatars.first { $0.key == id } }
 }
 
 private let iconOptions: [AppIconOption] = [
-    AppIconOption(id: "default",   name: "Default",  preview: "pill.fill",       accent: Color(hex: "5B9BD5")),
-    AppIconOption(id: "Midnight",  name: "Midnight",  preview: "moon.stars.fill", accent: Color(hex: "2C2C54")),
-    AppIconOption(id: "Coral",     name: "Coral",     preview: "sun.horizon.fill", accent: Color(hex: "E8836A")),
-    AppIconOption(id: "Forest",    name: "Forest",    preview: "leaf.fill",       accent: Color(hex: "5FAD7C")),
-    AppIconOption(id: "Rose",      name: "Rose Gold", preview: "heart.fill",      accent: Color(hex: "D4829A")),
+    AppIconOption(id: "default"),
+    AppIconOption(id: "bear"),
+    AppIconOption(id: "robot"),
+    AppIconOption(id: "wizard"),
+    AppIconOption(id: "hero"),
+    AppIconOption(id: "owl"),
 ]
 
 struct AppIconPickerView: View {
@@ -39,18 +38,12 @@ struct AppIconPickerView: View {
                         switchIcon(to: option)
                     } label: {
                         HStack(spacing: 16) {
-                            // Icon preview tile
-                            ZStack {
-                                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                    .fill(option.accent.gradient)
-                                    .frame(width: 56, height: 56)
-                                Image(systemName: option.preview)
-                                    .font(.system(size: 24, weight: .medium))
-                                    .foregroundStyle(.white)
-                            }
-                            .shadow(color: option.accent.opacity(0.35), radius: 6, x: 0, y: 3)
+                            iconPreview(for: option)
+                                .frame(width: 56, height: 56)
+                                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                                .shadow(color: .black.opacity(0.15), radius: 6, x: 0, y: 3)
 
-                            Text(option.name)
+                            Text(option.avatar?.name ?? "Default")
                                 .font(.body.weight(.medium))
                                 .foregroundStyle(.primary)
 
@@ -58,7 +51,7 @@ struct AppIconPickerView: View {
 
                             if currentIconName == option.id {
                                 Image(systemName: "checkmark.circle.fill")
-                                    .foregroundStyle(option.accent)
+                                    .foregroundStyle(Color.accentColor)
                                     .font(.title3)
                             }
                         }
@@ -66,12 +59,6 @@ struct AppIconPickerView: View {
                     }
                     .buttonStyle(.plain)
                 }
-            }
-
-            Section {
-                Text("Note: custom icons require the icon image files to be added by a developer. Placeholder colours are shown above.")
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
             }
         }
         .navigationTitle("App Icon")
@@ -81,8 +68,28 @@ struct AppIconPickerView: View {
         }
     }
 
+    @ViewBuilder
+    private func iconPreview(for option: AppIconOption) -> some View {
+        // The default icon lives in an .appiconset, which isn't reliably loadable via
+        // UIImage(named:) — render a stand-in tile instead of risking a blank image.
+        if option.id == "default" {
+            ZStack {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(Color.accentColor.gradient)
+                Image(systemName: "pill.fill")
+                    .font(.system(size: 24, weight: .medium))
+                    .foregroundStyle(.white)
+            }
+        } else if let assetName = option.avatar?.assetName, let ui = UIImage(named: assetName) {
+            Image(uiImage: flattenOnWhite(ui)).resizable().scaledToFill()
+        } else {
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(Color.accentColor.gradient)
+        }
+    }
+
     private func switchIcon(to option: AppIconOption) {
-        let name: String? = option.id == "default" ? nil : option.id
+        let name: String? = option.id == "default" ? nil : "Avatar_\(option.id)"
         UIApplication.shared.setAlternateIconName(name) { error in
             if let error {
                 print("setAlternateIconName error: \(error)")
