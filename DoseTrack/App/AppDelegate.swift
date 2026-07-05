@@ -37,6 +37,14 @@ class AppDelegate: NSObject, UIApplicationDelegate {
     }
 
     func applicationDidBecomeActive(_ application: UIApplication) {
+        // Under XCTest, the host app still receives UIApplication lifecycle events (e.g. when
+        // the simulator regains focus mid test-run). Refreshing here would race unit tests'
+        // own `NotificationScheduler.shared.refreshAll` calls against the same real,
+        // process-wide `UNUserNotificationCenter`, and would fault in `PersistenceController
+        // .shared`'s objects (from `Bundle.main`'s model) interleaved with test-owned
+        // in-memory contexts.
+        guard ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil else { return }
+
         NotificationManager.shared.clearBadge()
         Task {
             await NotificationManager.shared.refreshStatus()
