@@ -86,7 +86,9 @@ final class NotificationSchedulerTests: XCTestCase {
         try context.save()
 
         // refreshAll should not crash and should produce no pending notifications for this med
-        scheduler.refreshAll(context: context)
+        let refreshDone = XCTestExpectation(description: "refresh done")
+        scheduler.refreshAll(context: context) { refreshDone.fulfill() }
+        wait(for: [refreshDone], timeout: 5)
 
         let expectation = XCTestExpectation(description: "getPendingNotificationRequests")
         UNUserNotificationCenter.current().getPendingNotificationRequests { requests in
@@ -136,7 +138,9 @@ final class NotificationSchedulerTests: XCTestCase {
         Schedule.create(in: context, medication: med, hour: 21, minute: 0, frequency: "daily")
         try context.save()
 
-        scheduler.refreshAll(context: context)
+        let refreshDone = XCTestExpectation(description: "refresh done")
+        scheduler.refreshAll(context: context) { refreshDone.fulfill() }
+        wait(for: [refreshDone], timeout: 5)
 
         let expectation = XCTestExpectation(description: "pending notifications check")
         UNUserNotificationCenter.current().getPendingNotificationRequests { requests in
@@ -152,7 +156,9 @@ final class NotificationSchedulerTests: XCTestCase {
         Schedule.create(in: context, medication: med, hour: 8, minute: 0)
         try context.save()
 
-        scheduler.refreshAll(context: context)
+        let refreshDone = XCTestExpectation(description: "refresh done")
+        scheduler.refreshAll(context: context) { refreshDone.fulfill() }
+        wait(for: [refreshDone], timeout: 5)
 
         let expectation = XCTestExpectation(description: "no notifications for inactive med")
         UNUserNotificationCenter.current().getPendingNotificationRequests { requests in
@@ -168,7 +174,9 @@ final class NotificationSchedulerTests: XCTestCase {
         Schedule.create(in: context, medication: med, hour: 8, minute: 0)
         try context.save()
 
-        scheduler.refreshAll(context: context)
+        let refreshDone = XCTestExpectation(description: "refresh done")
+        scheduler.refreshAll(context: context) { refreshDone.fulfill() }
+        wait(for: [refreshDone], timeout: 5)
 
         let lastRefresh = UserDefaults.standard.object(forKey: Constants.UserDefaultsKeys.lastNotificationRefresh)
         XCTAssertNotNil(lastRefresh, "Should record last refresh timestamp")
@@ -193,7 +201,9 @@ final class NotificationSchedulerTests: XCTestCase {
         Schedule.create(in: context, medication: med, hour: 8, minute: 0, frequency: "daily")
         try context.save()
 
-        scheduler.refreshAll(context: context)
+        let refreshDone = XCTestExpectation(description: "refresh done")
+        scheduler.refreshAll(context: context) { refreshDone.fulfill() }
+        wait(for: [refreshDone], timeout: 5)
 
         let expectation = XCTestExpectation(description: "check content")
         UNUserNotificationCenter.current().getPendingNotificationRequests { requests in
@@ -207,6 +217,35 @@ final class NotificationSchedulerTests: XCTestCase {
             expectation.fulfill()
         }
         wait(for: [expectation], timeout: 5)
+    }
+
+    // MARK: - Preserve snoozes across refresh
+
+    func test_identifiersToCancel_keepsSnoozes_removesScheduled() {
+        let all = ["dt.med.sch.123", "snooze.med.abc", "dt.interval.due.x.9"]
+        let toCancel = NotificationScheduler.identifiersToCancel(from: all)
+        XCTAssertEqual(Set(toCancel), Set(["dt.med.sch.123", "dt.interval.due.x.9"]))
+        XCTAssertFalse(toCancel.contains("snooze.med.abc"))
+    }
+
+    // MARK: - Sort + cap at 64
+
+    func test_capTo64_keepsEarliestFireDatesAcrossMedications() {
+        let now = Date()
+        let dates = (0..<100).map { now.addingTimeInterval(Double($0) * 3600) }.shuffled()
+        let items = dates.map { NotificationScheduler.Fireable(id: UUID().uuidString, fireDate: $0) }
+        let kept = NotificationScheduler.earliest64(items)
+        XCTAssertEqual(kept.count, 64)
+        let keptDates = kept.map(\.fireDate).sorted()
+        XCTAssertEqual(keptDates.first, dates.sorted().first)
+        XCTAssertEqual(keptDates.last, dates.sorted()[63])
+    }
+
+    // MARK: - Critical alerts toggle
+
+    func test_sound_isCritical_onlyWhenToggleOn() {
+        XCTAssertTrue(NotificationScheduler.useCriticalSound(criticalEnabled: true))
+        XCTAssertFalse(NotificationScheduler.useCriticalSound(criticalEnabled: false))
     }
 }
 

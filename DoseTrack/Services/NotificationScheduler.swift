@@ -20,18 +20,21 @@ final class NotificationScheduler {
 
     /// Refresh the full notification queue for all active medications.
     /// Call on every app foreground and after any medication/schedule change.
-    func refreshAll(context: NSManagedObjectContext) {
+    ///
+    /// - Parameter completion: called on the main queue once the queue has been rebuilt.
+    ///   Optional — production call sites don't need it, but it makes the async rebuild
+    ///   deterministic for tests and for BGAppRefreshTask's `setTaskCompleted`.
+    func refreshAll(context: NSManagedObjectContext, completion: (() -> Void)? = nil) {
         let request = NSFetchRequest<Medication>(entityName: "Medication")
         request.predicate = NSPredicate(format: "isActive == YES")
 
-        guard let medications = try? context.fetch(request) else { return }
-
-        // Cancel everything then rebuild (simplest correctness guarantee)
-        center.removeAllPendingNotificationRequests()
+        guard let medications = try? context.fetch(request) else { completion?(); return }
 
         let now = Date()
         let calendar = Calendar.current
-        guard let horizon = calendar.date(byAdding: .day, value: daysAhead, to: now) else { return }
+        guard let horizon = calendar.date(byAdding: .day, value: daysAhead, to: now) else {
+            completion?(); return
+        }
 
         var requests: [UNNotificationRequest] = []
 
@@ -59,13 +62,59 @@ final class NotificationScheduler {
             }
         }
 
-        // iOS cap: 64 pending notifications. Sort by fire date and take earliest.
-        let sorted = requests.prefix(64)
-        for req in sorted {
-            center.add(req) { _ in }
+        // Sort by fire date and take the earliest 64 (iOS's pending-notification cap) so a
+        // medication added later never silently loses all its reminders to one added earlier.
+        let fireables = requests.map { req -> Fireable in
+            let fireDate = (req.trigger as? UNCalendarNotificationTrigger)?.nextTriggerDate()
+                ?? (req.trigger as? UNTimeIntervalNotificationTrigger)?.nextTriggerDate()
+                ?? now
+            return Fireable(id: req.identifier, fireDate: fireDate)
         }
+        let keptIds = Set(Self.earliest64(fireables).map(\.id))
+        let toAdd = requests.filter { keptIds.contains($0.identifier) }
 
-        UserDefaults.standard.set(Date(), forKey: Constants.UserDefaultsKeys.lastNotificationRefresh)
+        // Cancel only the scheduled (dt.*) requests we're about to rebuild — a one-off snooze
+        // (snooze.*) isn't rebuilt here, so removing it would silently destroy it.
+        center.getPendingNotificationRequests { [weak self] pending in
+            guard let self else { completion?(); return }
+            let cancelIds = Self.identifiersToCancel(from: pending.map(\.identifier))
+            self.center.removePendingNotificationRequests(withIdentifiers: cancelIds)
+
+            let group = DispatchGroup()
+            for req in toAdd {
+                group.enter()
+                self.center.add(req) { _ in group.leave() }
+            }
+            group.notify(queue: .main) {
+                UserDefaults.standard.set(Date(), forKey: Constants.UserDefaultsKeys.lastNotificationRefresh)
+                completion?()
+            }
+        }
+    }
+
+    /// Scheduled reminders are namespaced `dt.*`; one-off snoozes are `snooze.*`. A full
+    /// refresh must rebuild the former without destroying the latter (snoozes aren't rebuilt).
+    static func identifiersToCancel(from pending: [String]) -> [String] {
+        pending.filter { $0.hasPrefix("dt.") }
+    }
+
+    struct Fireable {
+        let id: String
+        let fireDate: Date
+    }
+
+    /// iOS allows at most 64 pending notifications per app. Keep the earliest-firing ones
+    /// across ALL medications, rather than filling the cap from the first medication built.
+    static func earliest64(_ items: [Fireable]) -> [Fireable] {
+        Array(items.sorted { $0.fireDate < $1.fireDate }.prefix(64))
+    }
+
+    /// Whether to use the (loud, bypasses silent mode) critical sound, per the user's
+    /// Critical Alerts setting. Actual critical delivery additionally requires the Critical
+    /// Alerts entitlement; without it iOS silently downgrades, but the toggle still
+    /// meaningfully switches sound/interruption level either way.
+    static func useCriticalSound(criticalEnabled: Bool) -> Bool {
+        criticalEnabled
     }
 
     /// Cancel all pending notifications for a single medication.
@@ -187,7 +236,14 @@ final class NotificationScheduler {
         let content = UNMutableNotificationContent()
         content.title = medicationName
         content.body = "Time to take \(dosage)"
-        content.sound = .defaultCritical
+        let criticalEnabled = UserDefaults.standard.object(forKey: "criticalAlertsEnabled") as? Bool ?? true
+        if Self.useCriticalSound(criticalEnabled: criticalEnabled) {
+            content.sound = .defaultCritical
+            content.interruptionLevel = .critical
+        } else {
+            content.sound = .default
+            content.interruptionLevel = .timeSensitive
+        }
         content.categoryIdentifier = Constants.Notification.categoryMedicationDue
         content.userInfo = [
             "medicationId": medicationId,
