@@ -78,6 +78,27 @@ final class TodayViewModel: ObservableObject {
         log(entry: entry, status: .skipped, notes: reason)
     }
 
+    private func log(entry: DoseEntry, status: DoseStatus, notes: String? = nil) {
+        DoseLoggingService.shared.log(
+            medication: entry.medication,
+            schedule: entry.schedule,
+            scheduledAt: entry.scheduledAt,
+            status: status,
+            existingLog: entry.existingLog,
+            notes: notes,
+            context: context,
+            pushUserId: ActiveAccountResolver.shared.activeUserId
+        )
+        refresh()
+        // Pulse celebrateNow after refresh so the count is up-to-date
+        if status == .taken && totalCount > 0 && takenCount == totalCount {
+            celebrateNow = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+                self?.celebrateNow = false
+            }
+        }
+    }
+
     func snooze(_ entry: DoseEntry, minutes: Int = 30) {
         NotificationScheduler.shared.scheduleSnooze(
             medicationId: entry.medication.id?.uuidString ?? "",
@@ -101,55 +122,6 @@ final class TodayViewModel: ObservableObject {
     }
 
     // MARK: - Private
-
-    private func log(entry: DoseEntry, status: DoseStatus, notes: String? = nil) {
-        let doseLog: DoseLog
-        if let existing = entry.existingLog {
-            existing.status = status.rawValue
-            existing.loggedAt = Date()
-            if let notes { existing.notes = notes }
-            doseLog = existing
-        } else {
-            doseLog = DoseLog.create(
-                in: context,
-                medication: entry.medication,
-                scheduledAt: entry.scheduledAt,
-                status: status
-            )
-            if let notes { doseLog.notes = notes }
-        }
-        // Decrement supply count when a dose is taken (not if we're un-taking/changing status)
-        if status == .taken && entry.existingLog?.status != DoseStatus.taken.rawValue {
-            let med = entry.medication
-            if med.currentCount > 0 {
-                med.currentCount = max(0, med.currentCount - Int32(med.totalDosesPerDay == 0 ? 1 : 1))
-            }
-        }
-        try? context.save()
-        WidgetCenter.shared.reloadAllTimelines()
-        Task { await SupabaseSyncManager.shared.pushDoseLog(doseLog) }
-        // Log to Apple Health if user has enabled it
-        if status == .taken {
-            let hk = HealthKitManager.shared
-            if hk.isAuthorized {
-                Task {
-                    await hk.logDose(
-                        medicationName: entry.medication.wrappedName,
-                        dosage: "\(entry.medication.wrappedDosage) \(entry.medication.wrappedUnit)",
-                        scheduledAt: entry.scheduledAt
-                    )
-                }
-            }
-        }
-        refresh()
-        // Pulse celebrateNow after refresh so the count is up-to-date
-        if status == .taken && totalCount > 0 && takenCount == totalCount {
-            celebrateNow = true
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
-                self?.celebrateNow = false
-            }
-        }
-    }
 
     private func buildTodayEntries() -> [DoseEntry] {
         let medRequest = Medication.fetchRequest()
