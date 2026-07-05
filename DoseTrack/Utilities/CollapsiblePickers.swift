@@ -11,6 +11,7 @@ struct CollapsibleDatePicker: View {
     var range: PartialRangeThrough<Date>? = nil
     var displayedComponents: DatePickerComponents = .date
 
+    @AppStorage("timeFormat") private var timeFormat: String = "system"
     @State private var isExpanded = false
 
     var body: some View {
@@ -57,7 +58,7 @@ struct CollapsibleDatePicker: View {
 
     private var formattedValue: String {
         if displayedComponents == .hourAndMinute {
-            return date.formatted(date: .omitted, time: .shortened)
+            return TimeFormatPreference.string(for: date, preference: timeFormat)
         }
         return date.formatted(date: .abbreviated, time: .omitted)
     }
@@ -71,6 +72,7 @@ struct CollapsibleTimePicker: View {
     let systemImage: String
     @Binding var date: Date
 
+    @AppStorage("timeFormat") private var timeFormat: String = "system"
     @State private var isExpanded = false
 
     var body: some View {
@@ -82,7 +84,7 @@ struct CollapsibleTimePicker: View {
                     Label(label, systemImage: systemImage)
                         .foregroundStyle(.primary)
                     Spacer()
-                    Text(date.formatted(date: .omitted, time: .shortened))
+                    Text(TimeFormatPreference.string(for: date, preference: timeFormat))
                         .foregroundStyle(isExpanded ? Color.accentColor : .secondary)
                     Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
                         .font(.caption2)

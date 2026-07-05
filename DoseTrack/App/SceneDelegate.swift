@@ -7,6 +7,7 @@ import GoogleSignIn
 final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
     var window: UIWindow?
+    private var appearanceObserver: NSObjectProtocol?
 
     func scene(_ scene: UIScene, willConnectTo session: UISceneSession,
                options connectionOptions: UIScene.ConnectionOptions) {
@@ -50,6 +51,33 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         if let restrictions = windowScene.sizeRestrictions {
             restrictions.minimumSize = screenSize
             restrictions.maximumSize = screenSize
+        }
+
+        // Appearance override (Settings > Preferences > Appearance) is applied here at the
+        // UIKit level, not via SwiftUI's `.preferredColorScheme`. A `.preferredColorScheme` +
+        // `.id(appearanceOverride)` on RootView was tried first, but forcing SwiftUI to rebuild
+        // the whole subtree on every change reset the entire view hierarchy's navigation state —
+        // toggling the setting from inside Settings > Preferences popped the user straight back
+        // to the root. `overrideUserInterfaceStyle` recolors in place without touching SwiftUI's
+        // view identity, so navigation stacks stay exactly where they were.
+        applyAppearanceOverride()
+        appearanceObserver = NotificationCenter.default.addObserver(
+            forName: UserDefaults.didChangeNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            self?.applyAppearanceOverride()
+        }
+    }
+
+    private func applyAppearanceOverride() {
+        let value = UserDefaults.standard.string(forKey: "appearanceOverride") ?? "system"
+        let style: UIUserInterfaceStyle
+        switch value {
+        case "light": style = .light
+        case "dark":  style = .dark
+        default:      style = .unspecified
+        }
+        if window?.overrideUserInterfaceStyle != style {
+            window?.overrideUserInterfaceStyle = style
         }
     }
 

@@ -3,41 +3,47 @@ import SwiftUI
 
 struct DoseRowView: View {
     let entry: DoseEntry
+    @AppStorage("timeFormat") private var timeFormat: String = "system"
+    @AppStorage("compactRows") private var compactRows: Bool = false
+
+    private var iconSize: CGFloat { compactRows ? 30 : 40 }
 
     var body: some View {
-        HStack(spacing: 14) {
+        HStack(spacing: compactRows ? 10 : 14) {
             // Colour-coded pill icon
             ZStack {
-                RoundedRectangle(cornerRadius: 10)
+                RoundedRectangle(cornerRadius: compactRows ? 7 : 10)
                     .fill(entry.medication.color.opacity(0.15))
-                    .frame(width: 40, height: 40)
+                    .frame(width: iconSize, height: iconSize)
                 Image(systemName: unitIcon)
-                    .font(.system(size: 16))
+                    .font(.system(size: compactRows ? 13 : 16))
                     .foregroundStyle(entry.medication.color)
             }
 
-            VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .leading, spacing: compactRows ? 1 : 3) {
                 Text(entry.medication.wrappedName)
-                    .font(.body.weight(.medium))
-                Text(entry.medication.wrappedDosage)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(compactRows ? .subheadline.weight(.medium) : .body.weight(.medium))
+                if !compactRows {
+                    Text(entry.medication.wrappedDosage)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
 
             Spacer()
 
             VStack(alignment: .trailing, spacing: 4) {
-                Text(entry.scheduledAt, format: .dateTime.hour().minute())
+                Text(TimeFormatPreference.string(for: entry.scheduledAt, preference: timeFormat))
                     .font(.caption.monospacedDigit())
                     .foregroundStyle(.secondary)
                 StatusChip(status: entry.status)
             }
         }
-        .padding(.vertical, 6)
+        .padding(.vertical, compactRows ? 2 : 6)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(
             "\(entry.medication.wrappedName), \(entry.medication.wrappedDosage), " +
-            "due at \(entry.scheduledAt.formatted(date: .omitted, time: .shortened)), " +
+            "due at \(TimeFormatPreference.string(for: entry.scheduledAt, preference: timeFormat)), " +
             "\(entry.status.displayName)"
         )
     }

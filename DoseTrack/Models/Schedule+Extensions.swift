@@ -42,7 +42,7 @@ extension Schedule {
         let m = Int(minute)
         let components = DateComponents(hour: h, minute: m)
         let date = Calendar.current.date(from: components) ?? Date()
-        return date.formatted(date: .omitted, time: .shortened)
+        return date.appFormattedTime
     }
 
     var wrappedFrequency: String { frequency ?? "daily" }

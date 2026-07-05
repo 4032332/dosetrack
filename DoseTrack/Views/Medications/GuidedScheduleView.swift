@@ -22,6 +22,7 @@ struct GuidedScheduleView: View {
         case review
     }
 
+    @AppStorage("timeFormat") private var timeFormat: String = "system"
     @State private var step: Step = .collapsed
     @State private var everyDay = true
     @State private var daysOfWeek: [Int] = []
@@ -123,7 +124,7 @@ struct GuidedScheduleView: View {
         var c = DateComponents()
         c.hour = hour; c.minute = minute
         let date = Calendar.current.date(from: c) ?? Date()
-        return date.formatted(date: .omitted, time: .shortened)
+        return TimeFormatPreference.string(for: date, preference: timeFormat)
     }
 
     // MARK: - Q1: How often

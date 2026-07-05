@@ -17,6 +17,7 @@
 		1E6D95CE6D459A3E57CC30D7 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAB551C1FB8D1EA35972B282 /* OnboardingView.swift */; };
 		22EE2C8CD64A1DBD581B3AAA /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0092AEE5F32DECE392F1FBC5 /* PaywallView.swift */; };
 		252DA2BBDFE91030C731389E /* PersistenceController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 783256424249ECF294A3B6D3 /* PersistenceController.swift */; };
+		2B031CC8817D8E6AD49EA624 /* TimeFormatting.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45FE49CC7A35859480FBCB71 /* TimeFormatting.swift */; };
 		2C98FE3103EBB26D84D66BB2 /* DoseTrackApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C581B6A1682A93A48B3FCC0 /* DoseTrackApp.swift */; };
 		2CDA49F943EA08271F752313 /* ContraceptiveTrackerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9BC6878833AE5C45FC5BA65 /* ContraceptiveTrackerView.swift */; };
 		2D49CAEEC5B0F96B2C0D696F /* MedicationDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F171A7EC3E2D466D5BF55CC /* MedicationDetailView.swift */; };
@@ -169,6 +170,7 @@
 		3833AC585BF70A401BF55B25 /* DoseTrack.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = DoseTrack.entitlements; sourceTree = "<group>"; };
 		3B989472EF06D9A177E413CA /* DoseTrackWatch.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = DoseTrackWatch.entitlements; sourceTree = "<group>"; };
 		43BED9E826F283CA03584C67 /* WatchConfettiView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchConfettiView.swift; sourceTree = "<group>"; };
+		45FE49CC7A35859480FBCB71 /* TimeFormatting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeFormatting.swift; sourceTree = "<group>"; };
 		464D0595D1B5467B84401EE6 /* AppPreferencesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppPreferencesView.swift; sourceTree = "<group>"; };
 		49E70FC6E1596E9EFC428455 /* ExportManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportManager.swift; sourceTree = "<group>"; };
 		5010CFC8C3F763A36668FE2C /* TodayViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayViewModel.swift; sourceTree = "<group>"; };
@@ -462,6 +464,7 @@
 				81DA062623FAFAD8798ED2BF /* CollapsiblePickers.swift */,
 				DB8881AEF9994F330EEA6BB1 /* ColorExtensions.swift */,
 				BBFCBCE0FBCEF7C83ABACD61 /* Constants.swift */,
+				45FE49CC7A35859480FBCB71 /* TimeFormatting.swift */,
 			);
 			path = Utilities;
 			sourceTree = "<group>";
@@ -849,6 +852,7 @@
 				97CF120B7DF5A4BDB06BF36B /* SupabaseSyncManager.swift in Sources */,
 				93FF0F39C336E9618A5DB9BC /* SupplyWheelPicker.swift in Sources */,
 				495721E2FC0B4A6C27C3932A /* TabNavigator.swift in Sources */,
+				2B031CC8817D8E6AD49EA624 /* TimeFormatting.swift in Sources */,
 				69A9CC9A6BCDF42A46280271 /* TodayView.swift in Sources */,
 				AB9F67B2E65BA6CEFE554DB2 /* TodayViewModel.swift in Sources */,
 				4D78F29D27AEDC042E91D7EF /* WatchConnectivityManager.swift in Sources */,

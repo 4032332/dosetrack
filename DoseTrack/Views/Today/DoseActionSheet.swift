@@ -8,6 +8,7 @@ struct DoseActionSheet: View {
     let onSkipped: (String?) -> Void
     let onSnooze: () -> Void
     @Environment(\.dismiss) private var dismiss
+    @AppStorage("timeFormat") private var timeFormat: String = "system"
 
     @State private var showingSkipReasonChoice = false
     @State private var showingReasonEntry = false
@@ -30,7 +31,7 @@ struct DoseActionSheet: View {
                 VStack(alignment: .leading) {
                     Text(entry.medication.wrappedName)
                         .font(.headline)
-                    Text("\(entry.medication.wrappedDosage) · \(entry.scheduledAt.formatted(date: .omitted, time: .shortened))")
+                    Text("\(entry.medication.wrappedDosage) · \(TimeFormatPreference.string(for: entry.scheduledAt, preference: timeFormat))")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
