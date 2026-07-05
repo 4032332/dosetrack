@@ -94,9 +94,9 @@ struct MediumWidgetView: View {
                         .foregroundStyle(.secondary)
                     Spacer()
                 } else {
-                    ForEach(entry.entries, id: \.medicationId) { dose in
+                    ForEach(entry.entries) { dose in
                         MediumDoseRow(dose: dose, isInteractive: entry.isOwnAccount)
-                        if dose.medicationId != entry.entries.last?.medicationId {
+                        if dose.id != entry.entries.last?.id {
                             Divider().padding(.vertical, 2)
                         }
                     }

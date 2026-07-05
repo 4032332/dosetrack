@@ -4,7 +4,7 @@
 import Foundation
 import CoreData
 
-struct WidgetDoseEntry {
+struct WidgetDoseEntry: Identifiable {
     let medicationName: String
     let dosage: String
     let colorHex: String
@@ -12,6 +12,10 @@ struct WidgetDoseEntry {
     let isTaken: Bool
     let medicationId: String
     let scheduleId: String
+
+    /// medicationId alone collides for a medication with more than one dose a day (e.g.
+    /// twice-daily), causing SwiftUI's ForEach(id: \.medicationId) to collapse/misrender rows.
+    var id: String { "\(medicationId)-\(Int(scheduledAt.timeIntervalSince1970))" }
 }
 
 /// A lightweight, Codable snapshot of who the widget can show data for: the signed-in user
