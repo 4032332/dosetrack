@@ -188,8 +188,9 @@ final class AddEditMedicationViewModel: ObservableObject {
         WidgetCenter.shared.reloadAllTimelines()
         // Push to Supabase — photos uploaded separately if present
         let medCopy = med
+        let pushUserId = ActiveAccountResolver.shared.activeUserId
         Task {
-            await SupabaseSyncManager.shared.pushMedication(medCopy)
+            await SupabaseSyncManager.shared.pushMedication(medCopy, forUserId: pushUserId)
             // Upload photos to storage if they exist
             if let photoData = medCopy.photoData, let medId = medCopy.id,
                let path = await SupabaseSyncManager.shared.uploadPhoto(
