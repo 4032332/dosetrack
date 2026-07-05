@@ -5,6 +5,7 @@ struct HistoryView: View {
     @Environment(\.managedObjectContext) private var context
     @EnvironmentObject private var subscriptionManager: SubscriptionManager
     @EnvironmentObject private var caregiverManager: CaregiverManager
+    @EnvironmentObject private var activeAccount: ActiveAccountContext
     @StateObject private var viewModel = HistoryViewModel(
         context: PersistenceController.shared.viewContext
     )
@@ -136,7 +137,7 @@ struct HistoryView: View {
                                 showingPaywall = true
                             }
                         } label: {
-                            Label("Doctor Report (PDF)", systemImage: "doc.richtext")
+                            Label("Adherence Report (PDF)", systemImage: "doc.richtext")
                         }
                     } label: {
                         Image(systemName: "square.and.arrow.up")
@@ -190,7 +191,12 @@ struct HistoryView: View {
         let medRequest = Medication.fetchRequest()
         medRequest.predicate = NSPredicate(format: "isActive == YES")
         let meds = (try? context.fetch(medRequest)) ?? []
-        let patientName = UserDefaults.standard.string(forKey: "patientName") ?? ""
+        // A caregiver viewing an overseen patient must get that patient's name on the report,
+        // not their own — UserDefaults["patientName"] is always the signed-in user's own
+        // profile field, regardless of which account's data is currently being viewed.
+        let patientName = activeAccount.isViewingOtherAccount
+            ? activeAccount.activeDisplayName
+            : (UserDefaults.standard.string(forKey: "patientName") ?? "")
         let data = ReportGenerator.shared.generatePDF(
             logs: logs, medications: meds, dateRange: interval, patientName: patientName
         )
@@ -297,4 +303,5 @@ struct ActivityView: UIViewControllerRepresentable {
         .environment(\.managedObjectContext, PersistenceController.preview.viewContext)
         .environmentObject(SubscriptionManager.shared)
         .environmentObject(CaregiverManager.shared)
+        .environmentObject(ActiveAccountContext(ownUserId: UUID(), ownDisplayName: "Preview User"))
 }
