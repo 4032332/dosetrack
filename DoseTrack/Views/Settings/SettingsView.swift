@@ -1,6 +1,8 @@
 // DoseTrack/Views/Settings/SettingsView.swift
 import SwiftUI
 import CoreData
+import UserNotifications
+import WidgetKit
 
 struct SettingsView: View {
     @Environment(\.managedObjectContext) private var context
@@ -372,11 +374,25 @@ struct SettingsView: View {
     }
 
     private func deleteAllData() {
+        // Local batch delete, then merge the changes into the live context so the UI updates
+        // without a relaunch (NSBatchDeleteRequest bypasses the context by default).
         for entity in ["DoseLog", "Schedule", "Medication"] {
             let req: NSFetchRequest<NSFetchRequestResult> = NSFetchRequest(entityName: entity)
-            try? context.execute(NSBatchDeleteRequest(fetchRequest: req))
+            let del = NSBatchDeleteRequest(fetchRequest: req)
+            del.resultType = .resultTypeObjectIDs
+            if let result = try? context.execute(del) as? NSBatchDeleteResult,
+               let ids = result.result as? [NSManagedObjectID] {
+                NSManagedObjectContext.mergeChanges(fromRemoteContextSave: [NSDeletedObjectsKey: ids], into: [context])
+            }
         }
         try? context.save()
+
+        // Cancel all scheduled reminders and refresh widgets so nothing points at deleted data.
+        UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
+        WidgetCenter.shared.reloadAllTimelines()
+
+        // Delete the cloud copy too, or the next pullAll restores everything.
+        Task { await SupabaseSyncManager.shared.deleteAllRemoteData() }
     }
 }
 

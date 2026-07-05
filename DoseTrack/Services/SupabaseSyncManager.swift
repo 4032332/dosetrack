@@ -90,6 +90,19 @@ final class SupabaseSyncManager: ObservableObject {
         } catch { print("deleteMedication error: \(error)") }
     }
 
+    /// Deletes all of the signed-in user's rows from Supabase. Best-effort; guarded so guests
+    /// (no server data) and unauth'd states are no-ops. Called by Settings > Delete All Data —
+    /// without this, the local wipe alone was undone by the very next pullAll() on relaunch.
+    func deleteAllRemoteData() async {
+        guard AuthManager.shared.isSignedIn, !AuthManager.shared.isGuest,
+              let userId = AuthManager.shared.session?.user.id else { return }
+        let uid = userId.uuidString
+        for table in ["dose_logs", "schedules", "medications"] {
+            do { try await client.from(table).delete().eq("user_id", value: uid).execute() }
+            catch { print("deleteAllRemoteData(\(table)) error: \(error)") }
+        }
+    }
+
     // MARK: - Photo upload / download
 
     func uploadPhoto(_ data: Data, forMedicationId medId: UUID, type: PhotoType) async -> String? {
