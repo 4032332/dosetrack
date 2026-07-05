@@ -112,7 +112,6 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
         withCompletionHandler completionHandler: @escaping () -> Void
     ) {
         let userInfo = response.notification.request.content.userInfo
-        let context = PersistenceController.shared.viewContext
 
         guard
             let medIdStr = userInfo["medicationId"] as? String,
@@ -124,9 +123,9 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
 
         switch response.actionIdentifier {
         case Constants.Notification.actionTakeDose:
-            logDose(medicationId: medId, scheduledAt: scheduledAt, status: "taken", context: context)
+            logDose(medicationId: medId, scheduledAt: scheduledAt, status: .taken)
         case Constants.Notification.actionSkipDose:
-            logDose(medicationId: medId, scheduledAt: scheduledAt, status: "skipped", context: context)
+            logDose(medicationId: medId, scheduledAt: scheduledAt, status: .skipped)
         case Constants.Notification.actionSnooze30:
             snooze(userInfo: userInfo, minutes: 30)
         default: break
@@ -135,8 +134,18 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
         completionHandler()
     }
 
-    private func logDose(medicationId: UUID, scheduledAt: Date, status: String, context: NSManagedObjectContext) {
-        context.perform {
+    /// Delegates to DoseLoggingService (same write path as the Today screen and the widget)
+    /// so a dose logged from a notification action gets identical side effects: supply
+    /// decrement, Supabase push under the correct account, widget reload. Resolves the
+    /// active account itself via ActiveAccountResolver since this handler runs outside
+    /// SwiftUI and has no environment to read ActiveAccountContext from.
+    private func logDose(medicationId: UUID, scheduledAt: Date, status: DoseStatus) {
+        Task { @MainActor in
+            let activeId = ActiveAccountResolver.shared.activeUserId
+            let context = activeId == nil
+                ? PersistenceController.shared.viewContext
+                : PersistenceController.shared.context(forPatient: activeId!)
+
             let req = NSFetchRequest<Medication>(entityName: "Medication")
             req.predicate = NSPredicate(format: "id == %@", medicationId as CVarArg)
             req.fetchLimit = 1
@@ -146,15 +155,16 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
             logReq.predicate = NSPredicate(format: "medication == %@ AND scheduledAt == %@",
                                            medication, scheduledAt as NSDate)
             logReq.fetchLimit = 1
+            let existing = try? context.fetch(logReq).first
 
-            if let existing = try? context.fetch(logReq).first {
-                existing.status = status; existing.loggedAt = Date()
-            } else {
-                let log = DoseLog(context: context)
-                log.id = UUID(); log.medication = medication
-                log.scheduledAt = scheduledAt; log.loggedAt = Date(); log.status = status
-            }
-            try? context.save()
+            guard let schedule = medication.schedulesArray.first(where: { $0.isEnabled }) ?? medication.schedulesArray.first
+            else { return }
+
+            DoseLoggingService.shared.log(
+                medication: medication, schedule: schedule, scheduledAt: scheduledAt,
+                status: status, existingLog: existing, notes: nil,
+                context: context, pushUserId: activeId
+            )
         }
     }
 
