@@ -21,6 +21,11 @@ struct SettingsView: View {
     @State private var showingDeleteConfirm = false
     @State private var testNotificationSent = false
     @State private var showingSignUp = false
+    @Binding var showingAccountSwitcher: Bool
+
+    init(showingAccountSwitcher: Binding<Bool> = .constant(false)) {
+        self._showingAccountSwitcher = showingAccountSwitcher
+    }
 
     #if DEBUG
     private enum DebugProOption: Hashable { case real, forceFree, forcePro }
@@ -328,6 +333,13 @@ struct SettingsView: View {
             .contentMargins(.bottom, 32, for: .scrollContent)
             .refreshable { await refresh() }
             .navigationTitle("Settings")
+            .toolbar {
+                if !caregiverManager.overseenPatients.isEmpty {
+                    ToolbarItem(placement: .principal) {
+                        AccountSwitcherPill(isPresented: $showingAccountSwitcher)
+                    }
+                }
+            }
             .sheet(isPresented: $showingPaywall) { PaywallView() }
             .sheet(isPresented: $showingSignUp) { AuthView().environmentObject(auth) }
             .confirmationDialog(

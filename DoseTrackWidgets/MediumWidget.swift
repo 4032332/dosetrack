@@ -10,34 +10,42 @@ struct MediumWidgetEntry: TimelineEntry {
     let entries: [WidgetDoseEntry]
     let takenCount: Int
     let totalCount: Int
+    /// Interactive "mark taken" only writes to the signed-in user's own store (see
+    /// MarkDoseTakenIntent) — when showing an overseen patient's doses instead, rows render
+    /// read-only rather than offer a checkbox whose tap wouldn't actually do anything useful.
+    var isOwnAccount: Bool = true
 }
 
 // MARK: - Timeline Provider
 
-struct MediumWidgetProvider: TimelineProvider {
+struct MediumWidgetProvider: AppIntentTimelineProvider {
     func placeholder(in context: Context) -> MediumWidgetEntry {
-        MediumWidgetEntry(date: Date(), entries: [], takenCount: 0, totalCount: 0)
+        MediumWidgetEntry(date: Date(), entries: [], takenCount: 0, totalCount: 0, isOwnAccount: true)
     }
 
-    func getSnapshot(in context: Context, completion: @escaping (MediumWidgetEntry) -> Void) {
-        completion(makeEntry())
+    func snapshot(for configuration: SelectDoseAccountIntent, in context: Context) async -> MediumWidgetEntry {
+        makeEntry(for: configuration)
     }
 
-    func getTimeline(in context: Context, completion: @escaping (Timeline<MediumWidgetEntry>) -> Void) {
-        let entry = makeEntry()
+    func timeline(for configuration: SelectDoseAccountIntent, in context: Context) async -> Timeline<MediumWidgetEntry> {
+        let entry = makeEntry(for: configuration)
         let nextDue = entry.entries.first { !$0.isTaken }?.scheduledAt
-        let reloadDate = nextDue ?? Date(timeIntervalSinceNow: 3600)
-        completion(Timeline(entries: [entry], policy: .after(reloadDate)))
+        // Refresh at the next dose time, or fall back to a short interval so the widget keeps
+        // catching up even on days with no more doses due (rather than sitting stale for an hour).
+        let reloadDate = nextDue ?? Date(timeIntervalSinceNow: 900)
+        return Timeline(entries: [entry], policy: .after(reloadDate))
     }
 
-    private func makeEntry() -> MediumWidgetEntry {
-        let allEntries = WidgetDataProvider.shared.todayEntries()
+    private func makeEntry(for configuration: SelectDoseAccountIntent) -> MediumWidgetEntry {
+        let accountId = configuration.storageAccountId
+        let allEntries = WidgetDataProvider.shared.todayEntries(for: accountId)
         let taken = allEntries.filter { $0.isTaken }.count
         return MediumWidgetEntry(
             date: Date(),
             entries: Array(allEntries.prefix(5)),  // Show up to 5 rows in medium widget
             takenCount: taken,
-            totalCount: allEntries.count
+            totalCount: allEntries.count,
+            isOwnAccount: accountId == nil
         )
     }
 }
@@ -87,7 +95,7 @@ struct MediumWidgetView: View {
                     Spacer()
                 } else {
                     ForEach(entry.entries, id: \.medicationId) { dose in
-                        MediumDoseRow(dose: dose)
+                        MediumDoseRow(dose: dose, isInteractive: entry.isOwnAccount)
                         if dose.medicationId != entry.entries.last?.medicationId {
                             Divider().padding(.vertical, 2)
                         }
@@ -106,22 +114,32 @@ struct MediumWidgetView: View {
 
 private struct MediumDoseRow: View {
     let dose: WidgetDoseEntry
+    /// False when showing an overseen patient's doses — MarkDoseTakenIntent only ever writes to
+    /// the signed-in user's own store, so a checkbox here would silently do nothing useful.
+    var isInteractive: Bool = true
 
     var body: some View {
         HStack(spacing: 8) {
-            // Interactive checkbox — marks taken without opening the app
-            Button(intent: MarkDoseTakenIntent(
-                medicationId: dose.medicationId,
-                scheduleId: dose.scheduleId,
-                scheduledAt: dose.scheduledAt
-            )) {
+            if isInteractive {
+                // Interactive checkbox — marks taken without opening the app
+                Button(intent: MarkDoseTakenIntent(
+                    medicationId: dose.medicationId,
+                    scheduleId: dose.scheduleId,
+                    scheduledAt: dose.scheduledAt
+                )) {
+                    Image(systemName: dose.isTaken ? "checkmark.circle.fill" : "circle")
+                        .font(.system(size: 18))
+                        .foregroundStyle(dose.isTaken ? .green : .secondary)
+                        .frame(width: 24, height: 24)
+                }
+                .buttonStyle(.plain)
+                .disabled(dose.isTaken)
+            } else {
                 Image(systemName: dose.isTaken ? "checkmark.circle.fill" : "circle")
                     .font(.system(size: 18))
                     .foregroundStyle(dose.isTaken ? .green : .secondary)
                     .frame(width: 24, height: 24)
             }
-            .buttonStyle(.plain)
-            .disabled(dose.isTaken)
 
             Circle()
                 .fill(Color(hex: dose.colorHex))
@@ -154,11 +172,11 @@ struct MediumWidget: Widget {
     let kind: String = "MediumWidget"
 
     var body: some WidgetConfiguration {
-        StaticConfiguration(kind: kind, provider: MediumWidgetProvider()) { entry in
+        AppIntentConfiguration(kind: kind, intent: SelectDoseAccountIntent.self, provider: MediumWidgetProvider()) { entry in
             MediumWidgetView(entry: entry)
         }
         .configurationDisplayName("Today's Doses")
-        .description("See today's medications and mark them taken without opening the app.")
+        .description("See today's medications and mark them taken without opening the app. Caregivers can choose whose medications to show.")
         .supportedFamilies([.systemMedium])
     }
 }

@@ -4,6 +4,7 @@ import SwiftUI
 struct HistoryView: View {
     @Environment(\.managedObjectContext) private var context
     @EnvironmentObject private var subscriptionManager: SubscriptionManager
+    @EnvironmentObject private var caregiverManager: CaregiverManager
     @StateObject private var viewModel = HistoryViewModel(
         context: PersistenceController.shared.viewContext
     )
@@ -13,6 +14,11 @@ struct HistoryView: View {
     @State private var showingExportSheet = false
     @State private var exportItem: ExportItem? = nil
     @State private var showingPaywall = false
+    @Binding var showingAccountSwitcher: Bool
+
+    init(showingAccountSwitcher: Binding<Bool> = .constant(false)) {
+        self._showingAccountSwitcher = showingAccountSwitcher
+    }
 
     var body: some View {
         NavigationStack {
@@ -110,6 +116,11 @@ struct HistoryView: View {
             .contentMargins(.bottom, 32, for: .scrollContent)
             .navigationTitle("History")
             .toolbar {
+                if !caregiverManager.overseenPatients.isEmpty {
+                    ToolbarItem(placement: .principal) {
+                        AccountSwitcherPill(isPresented: $showingAccountSwitcher)
+                    }
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
                         Button {
@@ -285,4 +296,5 @@ struct ActivityView: UIViewControllerRepresentable {
     HistoryView()
         .environment(\.managedObjectContext, PersistenceController.preview.viewContext)
         .environmentObject(SubscriptionManager.shared)
+        .environmentObject(CaregiverManager.shared)
 }

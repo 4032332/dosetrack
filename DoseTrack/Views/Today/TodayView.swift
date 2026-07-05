@@ -3,6 +3,7 @@ import SwiftUI
 
 struct TodayView: View {
     @Environment(\.managedObjectContext) private var context
+    @EnvironmentObject private var caregiverManager: CaregiverManager
     // Not initialized with the environment context directly: @StateObject's initial value is
     // evaluated before the environment is available. Instead we seed it with a placeholder and
     // rebuild it in `.task`/`.onChange(of: context)` below so the view always operates against
@@ -13,6 +14,11 @@ struct TodayView: View {
     @State private var selectedEntry: DoseEntry?
     @AppStorage("patientName") private var patientName: String = ""
     @State private var showConfetti = false
+    @Binding var showingAccountSwitcher: Bool
+
+    init(showingAccountSwitcher: Binding<Bool> = .constant(false)) {
+        self._showingAccountSwitcher = showingAccountSwitcher
+    }
 
     private func syncContext() {
         viewModel.updateContext(context)
@@ -86,6 +92,13 @@ struct TodayView: View {
             .contentMargins(.bottom, 32, for: .scrollContent)
             .navigationTitle(Date().formatted(.dateTime.weekday(.wide).month().day()))
             .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                if !caregiverManager.overseenPatients.isEmpty {
+                    ToolbarItem(placement: .principal) {
+                        AccountSwitcherPill(isPresented: $showingAccountSwitcher)
+                    }
+                }
+            }
             .refreshable { viewModel.refresh() }
             .safeAreaInset(edge: .bottom) {
                 if !viewModel.medicationAlerts.isEmpty {
@@ -359,4 +372,5 @@ private struct AlertRow: View {
     TodayView()
         .environment(\.managedObjectContext, PersistenceController.preview.viewContext)
         .environmentObject(SubscriptionManager())
+        .environmentObject(CaregiverManager.shared)
 }

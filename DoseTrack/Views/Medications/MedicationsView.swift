@@ -4,6 +4,7 @@ import SwiftUI
 struct MedicationsView: View {
     @Environment(\.managedObjectContext) private var context
     @EnvironmentObject private var subscriptionManager: SubscriptionManager
+    @EnvironmentObject private var caregiverManager: CaregiverManager
     @StateObject private var viewModel = MedicationsViewModel(
         context: PersistenceController.shared.viewContext
     )
@@ -13,6 +14,11 @@ struct MedicationsView: View {
     @AppStorage("contraceptiveMethod")          private var contraceptiveMethod: String = ""
 
     @State private var isEditMode: EditMode = .inactive
+    @Binding var showingAccountSwitcher: Bool
+
+    init(showingAccountSwitcher: Binding<Bool> = .constant(false)) {
+        self._showingAccountSwitcher = showingAccountSwitcher
+    }
 
     private var shouldShowContraceptiveHint: Bool {
         let eligibleGenders = ["Female", "Other", "Prefer not to say"]
@@ -31,6 +37,11 @@ struct MedicationsView: View {
             }
             .navigationTitle("Medications")
             .toolbar {
+                if !caregiverManager.overseenPatients.isEmpty {
+                    ToolbarItem(placement: .principal) {
+                        AccountSwitcherPill(isPresented: $showingAccountSwitcher)
+                    }
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         viewModel.requestAddMedication()
@@ -208,4 +219,5 @@ private struct MedicationRowView: View {
     MedicationsView()
         .environment(\.managedObjectContext, PersistenceController.preview.viewContext)
         .environmentObject(SubscriptionManager())
+        .environmentObject(CaregiverManager.shared)
 }

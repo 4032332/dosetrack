@@ -5,6 +5,7 @@ import PhotosUI
 
 struct RestockView: View {
     @Environment(\.managedObjectContext) private var context
+    @EnvironmentObject private var caregiverManager: CaregiverManager
     @FetchRequest(
         sortDescriptors: [NSSortDescriptor(keyPath: \Medication.currentCount, ascending: true)],
         predicate: NSPredicate(format: "isActive == YES"),
@@ -17,6 +18,11 @@ struct RestockView: View {
     @State private var escriptPhotoItem: PhotosPickerItem? = nil
     @State private var showingEscriptUpload = false
     @State private var showingCameraPicker = false
+    @Binding var showingAccountSwitcher: Bool
+
+    init(showingAccountSwitcher: Binding<Bool> = .constant(false)) {
+        self._showingAccountSwitcher = showingAccountSwitcher
+    }
 
     private var sorted: [Medication] {
         medications.sorted { a, b in
@@ -59,6 +65,11 @@ struct RestockView: View {
             }
             .navigationTitle("Restock")
             .toolbar {
+                if !caregiverManager.overseenPatients.isEmpty {
+                    ToolbarItem(placement: .principal) {
+                        AccountSwitcherPill(isPresented: $showingAccountSwitcher)
+                    }
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     EditButton()
                 }
@@ -307,4 +318,5 @@ struct RestockCameraPickerView: UIViewControllerRepresentable {
 #Preview {
     RestockView()
         .environment(\.managedObjectContext, PersistenceController.preview.viewContext)
+        .environmentObject(CaregiverManager.shared)
 }

@@ -63,6 +63,17 @@ targets:
       - DoseTrackWidgets
       - path: DoseTrack/Resources/Assets.xcassets
         type: resource
+      - path: DoseTrack/Models/DoseTrack.xcdatamodeld
+        type: resource
+      # The model's entities use codeGenerationType="category" — Xcode auto-generates only the
+      # +CoreDataProperties.swift extension per target and expects these hand-written base
+      # NSManagedObject subclasses (which the properties extend) to already exist in that
+      # target. They're plain one-line declarations with no other dependencies, so it's safe
+      # to compile them into the widget target too, without pulling in Medication+Extensions.swift
+      # and friends (which reference SwiftUI/other main-app-only conveniences the widget doesn't need).
+      - path: DoseTrack/Models/Medication+CoreDataClass.swift
+      - path: DoseTrack/Models/Schedule+CoreDataClass.swift
+      - path: DoseTrack/Models/DoseLog+CoreDataClass.swift
     settings:
       base:
         INFOPLIST_FILE: DoseTrackWidgets/Info.plist

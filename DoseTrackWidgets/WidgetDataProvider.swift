@@ -1,6 +1,6 @@
 // DoseTrackWidgets/WidgetDataProvider.swift
 // Shared data-access layer for all widget types.
-// Reads from the App Group CoreData store — same store as the main app.
+// Reads from the App Group CoreData store — same store(s) as the main app.
 import Foundation
 import CoreData
 
@@ -14,34 +14,105 @@ struct WidgetDoseEntry {
     let scheduleId: String
 }
 
+/// A lightweight, Codable snapshot of who the widget can show data for: the signed-in user
+/// themselves, or a patient they oversee as a caregiver. The main app writes the current list
+/// of overseen patients into shared UserDefaults (see `CaregiverManager.publishOverseenPatientsForWidgets`)
+/// since the widget extension has no Supabase session of its own to fetch this live.
+struct WidgetAccountOption: Codable, Identifiable, Equatable {
+    /// nil represents "the signed-in user's own account".
+    let id: String?
+    let name: String
+
+    static let ownAccount = WidgetAccountOption(id: nil, name: "You")
+}
+
+enum WidgetAccountStore {
+    static let userDefaultsKey = "widgetOverseenPatients"
+    /// Matches `Constants.AppGroup.identifier` in the main app target. Kept as a local literal
+    /// here rather than sharing Constants.swift across targets, to avoid pulling unrelated
+    /// main-app-only enums (StoreKit product IDs, contraceptive presets, etc.) into the widget.
+    static let appGroupIdentifier = "group.com.robbrown.dosetrack"
+
+    private static var defaults: UserDefaults? {
+        UserDefaults(suiteName: appGroupIdentifier)
+    }
+
+    /// Called by the main app whenever the caregiver's list of overseen patients changes.
+    static func publish(_ patients: [WidgetAccountOption]) {
+        guard let data = try? JSONEncoder().encode(patients) else { return }
+        defaults?.set(data, forKey: userDefaultsKey)
+    }
+
+    /// Read by the widget extension when building the "which account?" configuration options.
+    static func overseenPatients() -> [WidgetAccountOption] {
+        guard let data = defaults?.data(forKey: userDefaultsKey),
+              let patients = try? JSONDecoder().decode([WidgetAccountOption].self, from: data)
+        else { return [] }
+        return patients
+    }
+}
+
 final class WidgetDataProvider {
 
     static let shared = WidgetDataProvider()
     private init() {}
 
-    private lazy var container: NSPersistentContainer = {
-        let container = NSPersistentContainer(name: "DoseTrack")
-        guard let groupURL = FileManager.default
-            .containerURL(forSecurityApplicationGroupIdentifier: "group.com.robbrown.dosetrack")?
-            .appendingPathComponent("DoseTrack.sqlite") else {
-            fatalError("Cannot locate App Group container")
+    /// Loaded once and reused by every container this class creates (the caregiver's own store
+    /// AND every per-patient store) — mirrors `PersistenceController.sharedModel` in the main
+    /// app for the same reason: multiple distinct model instances describing the same entities
+    /// causes Core Data's "Multiple NSEntityDescriptions" runtime confusion.
+    private static let sharedModel: NSManagedObjectModel = {
+        guard let modelURL = Bundle(for: WidgetDataProvider.self).url(forResource: "DoseTrack", withExtension: "momd"),
+              let model = NSManagedObjectModel(contentsOf: modelURL) else {
+            fatalError("Widget extension could not locate the DoseTrack Core Data model")
         }
-        let description = NSPersistentStoreDescription(url: groupURL)
+        return model
+    }()
+
+    private static func storeURL(filename: String) -> URL {
+        let groupURL = FileManager.default
+            .containerURL(forSecurityApplicationGroupIdentifier: WidgetAccountStore.appGroupIdentifier)
+        return (groupURL ?? URL.documentsDirectory).appendingPathComponent(filename)
+    }
+
+    private lazy var ownContainer: NSPersistentContainer = makeContainer(filename: "DoseTrack.sqlite")
+
+    /// One container per overseen-patient id, keyed by the patient's userId string — mirrors
+    /// `PersistenceController.context(forPatient:)`'s naming so the widget reads the exact same
+    /// file the main app already syncs a caregiver's overseen-patient data into.
+    private var patientContainers: [String: NSPersistentContainer] = [:]
+
+    private func makeContainer(filename: String) -> NSPersistentContainer {
+        let container = NSPersistentContainer(name: "DoseTrack", managedObjectModel: Self.sharedModel)
+        let description = NSPersistentStoreDescription(url: Self.storeURL(filename: filename))
         description.shouldMigrateStoreAutomatically = true
         description.shouldInferMappingModelAutomatically = true
         container.persistentStoreDescriptions = [description]
         container.loadPersistentStores { _, error in
-            if let error { print("Widget CoreData error: \(error)") }
+            if let error { print("Widget CoreData error (\(filename)): \(error)") }
         }
         return container
-    }()
+    }
 
-    var context: NSManagedObjectContext { container.viewContext }
+    /// `nil` = the signed-in user's own account. Otherwise, the overseen patient's userId string.
+    func context(for accountId: String?) -> NSManagedObjectContext {
+        guard let accountId else { return ownContainer.viewContext }
+        if let existing = patientContainers[accountId] { return existing.viewContext }
+        let container = makeContainer(filename: "DoseTrack-caregiver-\(accountId).sqlite")
+        patientContainers[accountId] = container
+        return container.viewContext
+    }
+
+    /// Convenience accessor used by `MarkDoseTakenIntent`, which always acts on the account the
+    /// widget it was tapped from is currently configured to show.
+    var context: NSManagedObjectContext { ownContainer.viewContext }
 
     // MARK: - Queries
 
-    /// All dose entries due today, sorted by scheduled time.
-    func todayEntries() -> [WidgetDoseEntry] {
+    /// All dose entries due today, sorted by scheduled time, for the given account
+    /// (`nil` = the signed-in user's own account).
+    func todayEntries(for accountId: String? = nil) -> [WidgetDoseEntry] {
+        let context = context(for: accountId)
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
         guard let tomorrow = calendar.date(byAdding: .day, value: 1, to: today) else { return [] }
@@ -111,10 +182,11 @@ final class WidgetDataProvider {
         return entries.sorted { $0.scheduledAt < $1.scheduledAt }
     }
 
-    /// Next upcoming dose (first untaken entry after now).
-    func nextDose() -> WidgetDoseEntry? {
-        todayEntries().first { !$0.isTaken && $0.scheduledAt > Date() }
-            ?? todayEntries().first { !$0.isTaken }
+    /// Next upcoming dose (first untaken entry after now) for the given account.
+    func nextDose(for accountId: String? = nil) -> WidgetDoseEntry? {
+        let entries = todayEntries(for: accountId)
+        return entries.first { !$0.isTaken && $0.scheduledAt > Date() }
+            ?? entries.first { !$0.isTaken }
     }
 
     // MARK: - Private

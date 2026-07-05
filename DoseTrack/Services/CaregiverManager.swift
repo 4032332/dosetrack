@@ -3,6 +3,7 @@
 
 import Foundation
 import Supabase
+import WidgetKit
 
 @MainActor
 final class CaregiverManager: ObservableObject {
@@ -11,7 +12,9 @@ final class CaregiverManager: ObservableObject {
 
     private var client: SupabaseClient { AuthManager.shared.client }
 
-    @Published var myRelationships: [CaregiverRelationshipRow] = []
+    @Published var myRelationships: [CaregiverRelationshipRow] = [] {
+        didSet { publishOverseenPatientsForWidgets() }
+    }
 
     /// Relationships where the signed-in user is the caregiver (active only) — drives the account switcher.
     var overseenPatients: [CaregiverRelationshipRow] {
@@ -62,6 +65,27 @@ final class CaregiverManager: ObservableObject {
             .eq("id", value: relationshipId.uuidString)
             .execute()
         await refresh()
+    }
+
+    // MARK: - Widget account selection
+
+    /// Mirrors `id`/`name` fields onto `WidgetAccountOption` in the widget extension target —
+    /// intentionally not shared code, since JSON shape (not Swift type identity) is what
+    /// Codable round-trips across the App Group. The widget extension has no Supabase session
+    /// of its own, so this is the only way it learns which patients exist to offer as
+    /// "Choose Account" configuration options.
+    private struct WidgetPatientOption: Codable {
+        let id: String?
+        let name: String
+    }
+
+    private func publishOverseenPatientsForWidgets() {
+        let options = overseenPatients.map {
+            WidgetPatientOption(id: $0.patientUserId.uuidString, name: $0.patientDisplayName)
+        }
+        guard let data = try? JSONEncoder().encode(options) else { return }
+        UserDefaults(suiteName: Constants.AppGroup.identifier)?.set(data, forKey: "widgetOverseenPatients")
+        WidgetCenter.shared.reloadAllTimelines()
     }
 
     #if DEBUG

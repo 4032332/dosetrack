@@ -1,6 +1,7 @@
 // DoseTrackWidgets/SmallWidget.swift
 import WidgetKit
 import SwiftUI
+import AppIntents
 
 // MARK: - Timeline Entry
 
@@ -13,31 +14,32 @@ struct SmallWidgetEntry: TimelineEntry {
 
 // MARK: - Timeline Provider
 
-struct SmallWidgetProvider: TimelineProvider {
+struct SmallWidgetProvider: AppIntentTimelineProvider {
     func placeholder(in context: Context) -> SmallWidgetEntry {
         SmallWidgetEntry(date: Date(), takenCount: 2, totalCount: 5, nextDose: nil)
     }
 
-    func getSnapshot(in context: Context, completion: @escaping (SmallWidgetEntry) -> Void) {
-        let entries = WidgetDataProvider.shared.todayEntries()
-        completion(SmallWidgetEntry(
-            date: Date(),
-            takenCount: entries.filter(\.isTaken).count,
-            totalCount: entries.count,
-            nextDose: WidgetDataProvider.shared.nextDose()
-        ))
+    func snapshot(for configuration: SelectDoseAccountIntent, in context: Context) async -> SmallWidgetEntry {
+        makeEntry(for: configuration)
     }
 
-    func getTimeline(in context: Context, completion: @escaping (Timeline<SmallWidgetEntry>) -> Void) {
-        let entries = WidgetDataProvider.shared.todayEntries()
-        let entry = SmallWidgetEntry(
+    func timeline(for configuration: SelectDoseAccountIntent, in context: Context) async -> Timeline<SmallWidgetEntry> {
+        let entry = makeEntry(for: configuration)
+        // Refresh at the next dose time, or fall back to a short interval so the widget keeps
+        // catching up even on days with no more doses due (rather than sitting stale for an hour).
+        let reloadDate = entry.nextDose?.scheduledAt ?? Date(timeIntervalSinceNow: 900)
+        return Timeline(entries: [entry], policy: .after(reloadDate))
+    }
+
+    private func makeEntry(for configuration: SelectDoseAccountIntent) -> SmallWidgetEntry {
+        let accountId = configuration.storageAccountId
+        let entries = WidgetDataProvider.shared.todayEntries(for: accountId)
+        return SmallWidgetEntry(
             date: Date(),
             takenCount: entries.filter(\.isTaken).count,
             totalCount: entries.count,
-            nextDose: WidgetDataProvider.shared.nextDose()
+            nextDose: WidgetDataProvider.shared.nextDose(for: accountId)
         )
-        let reloadDate = entry.nextDose?.scheduledAt ?? Date(timeIntervalSinceNow: 3600)
-        completion(Timeline(entries: [entry], policy: .after(reloadDate)))
     }
 }
 
@@ -146,11 +148,11 @@ struct SmallWidget: Widget {
     let kind: String = "SmallWidget"
 
     var body: some WidgetConfiguration {
-        StaticConfiguration(kind: kind, provider: SmallWidgetProvider()) { entry in
+        AppIntentConfiguration(kind: kind, intent: SelectDoseAccountIntent.self, provider: SmallWidgetProvider()) { entry in
             SmallWidgetView(entry: entry)
         }
         .configurationDisplayName("Milli Progress")
-        .description("Shows Milli gaining colour as you take your medications.")
+        .description("Shows Milli gaining colour as you take your medications. Caregivers can choose whose medications to show.")
         .supportedFamilies([.systemSmall])
     }
 }
