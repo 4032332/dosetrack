@@ -187,7 +187,7 @@ final class AddEditMedicationViewModel: ObservableObject {
             log.updatedAt = Date()
         }
 
-        try? context.save()
+        context.saveOrReport()
         WidgetCenter.shared.reloadAllTimelines()
         // Push to Supabase — photos uploaded separately if present
         let medCopy = med

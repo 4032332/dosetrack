@@ -114,6 +114,7 @@
 		CF78CFEB0883C456B2A70708 /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1BE89FDB7E4F9D9923C173E /* HistoryView.swift */; };
 		D76707027834FD6DCC843135 /* Products.storekit in Resources */ = {isa = PBXBuildFile; fileRef = 2F9FC8A28D3514A8AF3C2784 /* Products.storekit */; };
 		DB0B6E9160C204F15B1E8EED /* MissedDoseDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6EDB9C9C80FC6420898A0E4 /* MissedDoseDetector.swift */; };
+		DBEFB1A530C2EAD68DDEFD0B /* CoreDataSave.swift in Sources */ = {isa = PBXBuildFile; fileRef = B251F7099AC1614FB9283711 /* CoreDataSave.swift */; };
 		E1AF540A4687709CDA4F7AD6 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B436BDA5B0D210B8FED41FF /* main.swift */; };
 		E35266DAD547CD4379234877 /* ActiveAccountContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BC70C3842D9D6DF14B3CEDE /* ActiveAccountContext.swift */; };
 		E35828430637B5AA74FFD6B9 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 9B6C3AC9FF53C48EE22EB94C /* Assets.xcassets */; };
@@ -242,6 +243,7 @@
 		ADB416975961EB51DF364A82 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		AEBCBE124AF08FD49F0BE6BB /* AccountSwitcherPill.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountSwitcherPill.swift; sourceTree = "<group>"; };
 		B1BE89FDB7E4F9D9923C173E /* HistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryView.swift; sourceTree = "<group>"; };
+		B251F7099AC1614FB9283711 /* CoreDataSave.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreDataSave.swift; sourceTree = "<group>"; };
 		B749ED1A25939A9C5BED6313 /* DoseActionSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DoseActionSheet.swift; sourceTree = "<group>"; };
 		B8DB6178CE8B08859DAC559F /* AddEditMedicationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddEditMedicationView.swift; sourceTree = "<group>"; };
 		BA1090D2A5C494DAAB7160DC /* NotificationSchedulerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationSchedulerTests.swift; sourceTree = "<group>"; };
@@ -481,6 +483,7 @@
 				81DA062623FAFAD8798ED2BF /* CollapsiblePickers.swift */,
 				DB8881AEF9994F330EEA6BB1 /* ColorExtensions.swift */,
 				BBFCBCE0FBCEF7C83ABACD61 /* Constants.swift */,
+				B251F7099AC1614FB9283711 /* CoreDataSave.swift */,
 				45FE49CC7A35859480FBCB71 /* TimeFormatting.swift */,
 			);
 			path = Utilities;
@@ -842,6 +845,7 @@
 				0A20C2B5AEEBCA76A32C54AA /* Constants.swift in Sources */,
 				FF4F8AB24C069BA1A44BFE2B /* ContentView.swift in Sources */,
 				2CDA49F943EA08271F752313 /* ContraceptiveTrackerView.swift in Sources */,
+				DBEFB1A530C2EAD68DDEFD0B /* CoreDataSave.swift in Sources */,
 				B7BAA8EDEE4846F8F7FB6E5F /* DoseActionSheet.swift in Sources */,
 				6D92A43FEDE7869853A09B55 /* DoseLog+CoreDataClass.swift in Sources */,
 				2F4666001E67FF1A940B4CB1 /* DoseLog+Extensions.swift in Sources */,

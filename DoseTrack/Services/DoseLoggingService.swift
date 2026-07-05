@@ -53,7 +53,7 @@ final class DoseLoggingService {
             medication.updatedAt = now
         }
 
-        do { try context.save() } catch { assertionFailure("DoseLoggingService save failed: \(error)") }
+        context.saveOrReport()
 
         WidgetCenter.shared.reloadAllTimelines()
         Task { await SupabaseSyncManager.shared.pushDoseLog(doseLog, forUserId: pushUserId) }
