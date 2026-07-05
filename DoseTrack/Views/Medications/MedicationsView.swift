@@ -5,6 +5,7 @@ struct MedicationsView: View {
     @Environment(\.managedObjectContext) private var context
     @EnvironmentObject private var subscriptionManager: SubscriptionManager
     @EnvironmentObject private var caregiverManager: CaregiverManager
+    @EnvironmentObject private var activeAccount: ActiveAccountContext
     @StateObject private var viewModel = MedicationsViewModel(
         context: PersistenceController.shared.viewContext
     )
@@ -42,12 +43,14 @@ struct MedicationsView: View {
                         AccountSwitcherPill(isPresented: $showingAccountSwitcher)
                     }
                 }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        viewModel.requestAddMedication()
-                    } label: {
-                        Image(systemName: "plus")
-                            .accessibilityLabel("Add medication")
+                if !activeAccount.isViewingOtherAccount {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button {
+                            viewModel.requestAddMedication()
+                        } label: {
+                            Image(systemName: "plus")
+                                .accessibilityLabel("Add medication")
+                        }
                     }
                 }
                 if !viewModel.medications.isEmpty {
@@ -220,4 +223,5 @@ private struct MedicationRowView: View {
         .environment(\.managedObjectContext, PersistenceController.preview.viewContext)
         .environmentObject(SubscriptionManager())
         .environmentObject(CaregiverManager.shared)
+        .environmentObject(ActiveAccountContext(ownUserId: UUID(), ownDisplayName: "Preview User"))
 }

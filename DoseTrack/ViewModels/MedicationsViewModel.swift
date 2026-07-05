@@ -51,6 +51,11 @@ final class MedicationsViewModel: ObservableObject {
     /// Returns false and sets showingPaywall when the free-tier limit would be exceeded.
     @discardableResult
     func canAddMedication() -> Bool {
+        // A caregiver viewing an overseen patient shouldn't create medications in the
+        // patient's account from this UI — and without this guard, `medications.count` here
+        // would be the patient's count, not the signed-in user's own, making the free-tier
+        // check meaningless for whichever account happens to be active.
+        guard ActiveAccountResolver.shared.activeUserId == nil else { return false }
         if !isProSubscriber() && medications.count >= Constants.FreeTier.maxMedications {
             showingPaywall = true
             return false
