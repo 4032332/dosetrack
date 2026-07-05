@@ -5,9 +5,13 @@ import UIKit
 struct DoseActionSheet: View {
     let entry: DoseEntry
     let onTaken: () -> Void
-    let onSkipped: () -> Void
+    let onSkipped: (String?) -> Void
     let onSnooze: () -> Void
     @Environment(\.dismiss) private var dismiss
+
+    @State private var showingSkipReasonChoice = false
+    @State private var showingReasonEntry = false
+    @State private var skipReasonText = ""
 
     var body: some View {
         VStack(spacing: 0) {
@@ -45,7 +49,7 @@ struct DoseActionSheet: View {
             Divider().padding(.leading)
             actionButton(title: "Skip This Dose", icon: "arrow.right.circle.fill", color: .orange) {
                 haptic(.light)
-                onSkipped(); dismiss()
+                showingSkipReasonChoice = true
             }
             Divider().padding(.leading)
             actionButton(title: "Snooze 30 Minutes", icon: "clock.fill", color: .blue) {
@@ -64,6 +68,26 @@ struct DoseActionSheet: View {
         .background(.background)
         .presentationDetents([.height(320)])
         .presentationDragIndicator(.hidden)
+        .confirmationDialog(
+            "Record a reason for skipping?",
+            isPresented: $showingSkipReasonChoice,
+            titleVisibility: .visible
+        ) {
+            Button("Yes, Add a Reason") { showingReasonEntry = true }
+            Button("No, Just Skip") { onSkipped(nil); dismiss() }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("The reason is saved with this dose in your history — useful if you export a report later.")
+        }
+        .alert("Reason for Skipping", isPresented: $showingReasonEntry) {
+            TextField("e.g. Felt nauseous", text: $skipReasonText)
+            Button("Skip") {
+                let trimmed = skipReasonText.trimmingCharacters(in: .whitespacesAndNewlines)
+                onSkipped(trimmed.isEmpty ? nil : trimmed)
+                dismiss()
+            }
+            Button("Cancel", role: .cancel) {}
+        }
     }
 
     private func haptic(_ style: UIImpactFeedbackGenerator.FeedbackStyle) {

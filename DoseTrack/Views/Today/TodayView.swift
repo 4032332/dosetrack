@@ -98,7 +98,7 @@ struct TodayView: View {
                 DoseActionSheet(
                     entry: entry,
                     onTaken:   { viewModel.markTaken(entry) },
-                    onSkipped: { viewModel.markSkipped(entry) },
+                    onSkipped: { reason in viewModel.markSkipped(entry, reason: reason) },
                     onSnooze:  { viewModel.snooze(entry) }
                 )
             }

@@ -74,8 +74,8 @@ final class TodayViewModel: ObservableObject {
         log(entry: entry, status: .taken)
     }
 
-    func markSkipped(_ entry: DoseEntry) {
-        log(entry: entry, status: .skipped)
+    func markSkipped(_ entry: DoseEntry, reason: String? = nil) {
+        log(entry: entry, status: .skipped, notes: reason)
     }
 
     func snooze(_ entry: DoseEntry, minutes: Int = 30) {
@@ -102,11 +102,12 @@ final class TodayViewModel: ObservableObject {
 
     // MARK: - Private
 
-    private func log(entry: DoseEntry, status: DoseStatus) {
+    private func log(entry: DoseEntry, status: DoseStatus, notes: String? = nil) {
         let doseLog: DoseLog
         if let existing = entry.existingLog {
             existing.status = status.rawValue
             existing.loggedAt = Date()
+            if let notes { existing.notes = notes }
             doseLog = existing
         } else {
             doseLog = DoseLog.create(
@@ -115,6 +116,7 @@ final class TodayViewModel: ObservableObject {
                 scheduledAt: entry.scheduledAt,
                 status: status
             )
+            if let notes { doseLog.notes = notes }
         }
         // Decrement supply count when a dose is taken (not if we're un-taking/changing status)
         if status == .taken && entry.existingLog?.status != DoseStatus.taken.rawValue {
