@@ -15,6 +15,9 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         NotificationManager.shared.registerCategories()
         UNUserNotificationCenter.current().delegate = self
         registerBackgroundTasks()
+        // Without this, the task was registered but never actually submitted, so background
+        // refresh silently never ran.
+        scheduleBackgroundRefresh()
         return true
     }
 
@@ -87,10 +90,25 @@ class AppDelegate: NSObject, UIApplicationDelegate {
     }
 
     private func handleNotificationRefresh(task: BGAppRefreshTask) {
-        scheduleBackgroundRefresh()
-        let context = PersistenceController.shared.viewContext
-        NotificationScheduler.shared.refreshAll(context: context)
-        task.setTaskCompleted(success: true)
+        scheduleBackgroundRefresh() // re-arm for next time regardless of this run's outcome
+
+        var didComplete = false
+        task.expirationHandler = {
+            // The OS reclaimed our time before refreshAll's completion fired. Report failure
+            // rather than leaving the task hanging (which the OS would otherwise flag).
+            guard !didComplete else { return }
+            didComplete = true
+            task.setTaskCompleted(success: false)
+        }
+
+        let context = PersistenceController.shared.container.newBackgroundContext()
+        context.perform {
+            NotificationScheduler.shared.refreshAll(context: context) {
+                guard !didComplete else { return }
+                didComplete = true
+                task.setTaskCompleted(success: true)
+            }
+        }
     }
 }
 
