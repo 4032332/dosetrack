@@ -24,13 +24,15 @@ struct AdherenceChartView: View {
             }
         }
         .chartXAxis {
+            // `.month(.narrow)` renders as a single letter (e.g. "J" for both June and
+            // July), which is ambiguous — numeric day/month is unambiguous everywhere.
             if showXLabels {
                 AxisMarks(values: .stride(by: .day)) { value in
-                    AxisValueLabel(format: .dateTime.day().month(.narrow))
+                    AxisValueLabel(format: .dateTime.day().month(.defaultDigits))
                 }
             } else {
                 AxisMarks(values: .stride(by: .weekOfYear)) { value in
-                    AxisValueLabel(format: .dateTime.day().month(.abbreviated))
+                    AxisValueLabel(format: .dateTime.day().month(.defaultDigits))
                 }
             }
         }
