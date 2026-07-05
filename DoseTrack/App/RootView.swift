@@ -188,12 +188,17 @@ private struct ActiveSessionView: View {
             .environmentObject(activeAccount)
             .environment(\.managedObjectContext, activeContext)
             .onAppear {
+                ActiveAccountResolver.shared.set(
+                    activeUserId: activeAccount.isViewingOtherAccount ? activeAccount.activeUserId : nil
+                )
                 watchManager.syncTodayMedications(context: ownContext)
                 // Pull all user data from Supabase on first app open after sign-in
                 Task { await SupabaseSyncManager.shared.pullAll(context: ownContext) }
             }
             .onChange(of: activeAccount.activeUserId) { _, newUserId in
-                // Only fires on an actual account switch (own <-> patient, or patient A -> B),
+                let resolvedId: UUID? = (newUserId == activeAccount.ownUserId) ? nil : newUserId
+                ActiveAccountResolver.shared.set(activeUserId: resolvedId)
+                // Only pulls on an actual account switch (own <-> patient, or patient A -> B),
                 // never on redraws, since `onChange` only triggers when the value differs.
                 guard newUserId != activeAccount.ownUserId else { return }
                 let patientContext = PersistenceController.shared.context(forPatient: newUserId)
