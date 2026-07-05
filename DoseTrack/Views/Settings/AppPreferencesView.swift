@@ -8,10 +8,8 @@ struct AppPreferencesView: View {
     @AppStorage("hapticsEnabled")    private var hapticsEnabled: Bool = true
     @AppStorage("showDoseBadge")     private var showDoseBadge: Bool = true
     @AppStorage("compactRows")       private var compactRows: Bool = false
-    @AppStorage("healthKitEnabled")  private var healthKitEnabled: Bool = false
 
     @AppStorage("appearanceOverride") private var appearanceOverride: String = "system"
-    @StateObject private var healthKit = HealthKitManager.shared
 
     var body: some View {
         List {
@@ -54,24 +52,6 @@ struct AppPreferencesView: View {
                 }
             }
 
-            // MARK: Apple Health
-            if healthKit.isAvailable {
-                Section {
-                    Toggle(isOn: $healthKitEnabled) {
-                        Label("Sync to Apple Health", systemImage: "heart.fill")
-                    }
-                    .onChange(of: healthKitEnabled) { _, enabled in
-                        if enabled && !healthKit.isAuthorized {
-                            Task { await healthKit.requestAuthorization() }
-                        }
-                    }
-                } header: {
-                    Text("Apple Health")
-                } footer: {
-                    Text("When enabled, each dose you mark as taken is logged to Apple Health as a mindfulness session tagged with the medication name.")
-                        .font(.caption)
-                }
-            }
         }
         .scrollIndicators(.visible)
         .navigationTitle("Preferences")

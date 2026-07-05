@@ -20,10 +20,6 @@
     <array>
         <string>UIInterfaceOrientationPortrait</string>
     </array>
-    <key>NSHealthShareUsageDescription</key>
-    <string>DoseTrack can read your health data to cross-reference medication schedules.</string>
-    <key>NSHealthUpdateUsageDescription</key>
-    <string>DoseTrack can log medication events to Apple Health.</string>
     <key>NSCameraUsageDescription</key>
     <string>DoseTrack uses your camera to photograph medication bottles for easy identification.</string>
     <key>NSPhotoLibraryUsageDescription</key>

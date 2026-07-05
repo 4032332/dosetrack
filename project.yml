@@ -41,8 +41,6 @@ targets:
         com.apple.developer.usernotifications.critical-alerts: true
         com.apple.security.application-groups:
           - group.com.robbrown.dosetrack
-        com.apple.developer.healthkit: true
-        com.apple.developer.healthkit.access: []
     dependencies:
       - target: DoseTrackWidgets
         embed: true
@@ -52,7 +50,6 @@ targets:
         product: GoogleSignIn
       - package: GoogleSignIn
         product: GoogleSignInSwift
-      - sdk: HealthKit.framework
       - sdk: Vision.framework
 
   DoseTrackWidgets:
