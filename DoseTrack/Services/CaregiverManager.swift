@@ -68,24 +68,31 @@ final class CaregiverManager: ObservableObject {
     // MARK: - Debug-only caregiver mode preview
     //
     // Lets a developer preview the caregiver-side UI (account switcher, "viewing
-    // another account" capsule) without a second Supabase account and a real
-    // invite/accept round-trip. Injects a synthetic relationship pointing the
-    // "patient" back at the developer's own account, so switching to it still
-    // shows real local data. Never present in release builds (#if DEBUG).
+    // another account" capsule, empty-patient-store screens) without a second
+    // Supabase account and a real invite/accept round-trip. The fake patient id
+    // is deliberately DIFFERENT from the developer's own user id — `RootView`
+    // only swaps to the separate per-patient CoreData store (and only shows a
+    // single checkmark in the switcher) when `activeUserId != ownUserId`. Using
+    // the same id here silently no-ops the switch (same store, same data, both
+    // rows checked) — a bug caught during manual testing. Because this fake id
+    // has no real Supabase-side data, switching to it correctly lands on an
+    // empty patient store; that's the honest state for a fabricated
+    // relationship, not a bug. Never present in release builds (#if DEBUG).
 
-    private static let debugPatientId = UUID(uuidString: "00000000-0000-0000-0000-00000000DEBB")!
+    private static let debugRelationshipId = UUID(uuidString: "00000000-0000-0000-0000-00000000DEBB")!
+    private static let debugPatientId = UUID(uuidString: "00000000-0000-0000-0000-0000000DEB17")!
 
     var isDebugCaregiverModeActive: Bool {
-        myRelationships.contains { $0.id == Self.debugPatientId }
+        myRelationships.contains { $0.id == Self.debugRelationshipId }
     }
 
     func setDebugCaregiverModeActive(_ active: Bool) {
         if active {
             guard let userId = AuthManager.shared.session?.user.id, !isDebugCaregiverModeActive else { return }
             let fake = CaregiverRelationshipRow(
-                id: Self.debugPatientId,
+                id: Self.debugRelationshipId,
                 caregiverUserId: userId,
-                patientUserId: userId,
+                patientUserId: Self.debugPatientId,
                 patientDisplayName: "Test Patient (Debug)",
                 caregiverDisplayName: nil,
                 status: "active",
@@ -97,7 +104,7 @@ final class CaregiverManager: ObservableObject {
             )
             myRelationships.append(fake)
         } else {
-            myRelationships.removeAll { $0.id == Self.debugPatientId }
+            myRelationships.removeAll { $0.id == Self.debugRelationshipId }
         }
     }
     #endif

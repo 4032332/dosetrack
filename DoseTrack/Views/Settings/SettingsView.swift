@@ -296,7 +296,7 @@ struct SettingsView: View {
                 } header: {
                     Text("Debug")
                 } footer: {
-                    Text("Subscription override lets you test Pro-gated features without a real purchase. Caregiver Mode Preview adds a fake \"Test Patient\" to the account switcher (top of the tab bar) pointing at your own data, so you can see the caregiver interface without a second account. Only compiled into debug builds.")
+                    Text("Subscription override lets you test Pro-gated features without a real purchase. Caregiver Mode Preview adds a fake \"Test Patient\" to the account switcher (top of the tab bar) so you can see the caregiver interface without a second account — since it's not a real relationship, switching to it shows an empty patient view rather than real data. Only compiled into debug builds.")
                 }
                 #endif
 
