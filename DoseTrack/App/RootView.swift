@@ -67,17 +67,6 @@ struct RootView: View {
         }
     }
 
-    /// Resolves which `NSManagedObjectContext` the main app UI should read/write against for
-    /// the currently active account: the caregiver's own context (injected by SceneDelegate,
-    /// captured in `context` above) when viewing themselves, or a distinct per-patient context
-    /// (backed by its own SQLite file — see `PersistenceController.context(forPatient:)`) when
-    /// a caregiver has switched to viewing an overseen patient. Keeping these stores physically
-    /// separate is what prevents caregiver and patient data from ever blending in one store.
-    private func activeContext(for account: ActiveAccountContext) -> NSManagedObjectContext {
-        guard account.isViewingOtherAccount else { return context }
-        return PersistenceController.shared.context(forPatient: account.activeUserId)
-    }
-
     private func dismissSplash() {
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.6) {
             showSplash = false
@@ -95,24 +84,8 @@ struct RootView: View {
                 OnboardingView()
                     .transition(.opacity)
             } else if let activeAccount {
-                MainTabView()
-                    .environmentObject(activeAccount)
-                    .environment(\.managedObjectContext, activeContext(for: activeAccount))
+                ActiveSessionView(activeAccount: activeAccount, ownContext: context)
                     .transition(.opacity)
-                    .onAppear {
-                        watchManager.syncTodayMedications(context: context)
-                        // Pull all user data from Supabase on first app open after sign-in
-                        Task { await SupabaseSyncManager.shared.pullAll(context: context) }
-                    }
-                    .onChange(of: activeAccount.activeUserId) { _, newUserId in
-                        // Only fires on an actual account switch (own <-> patient, or patient A -> B),
-                        // never on redraws, since `onChange` only triggers when the value differs.
-                        guard newUserId != activeAccount.ownUserId else { return }
-                        let patientContext = PersistenceController.shared.context(forPatient: newUserId)
-                        Task {
-                            await SupabaseSyncManager.shared.pullAll(context: patientContext, forUserId: newUserId)
-                        }
-                    }
             }
 
             // Splash overlay — shown briefly on every launch
@@ -184,6 +157,54 @@ struct RootView: View {
         } message: {
             Text(revocationMessage ?? "")
         }
+    }
+}
+
+// MARK: - Active session host
+
+/// Mounts `MainTabView` and resolves which `NSManagedObjectContext` it reads/writes against.
+///
+/// This is a separate view (rather than inline in `RootView.body`) specifically so that
+/// `activeAccount` can be held as `@ObservedObject` here. `RootView` only holds it as
+/// `@State`, which does NOT re-run `RootView.body` when `ActiveAccountContext`'s `@Published
+/// activeUserId` changes internally (only reassigning the `@State` var itself would). Views
+/// further down that declare `@EnvironmentObject`/`@ObservedObject` for it (like this one, and
+/// `MainTabView`'s capsule/switcher) DO get notified and re-render — which is exactly why the
+/// switcher's label and checkmark used to update correctly while the actual CoreData context
+/// silently stayed pinned to the caregiver's own store: nothing was recomputing it. `@ObservedObject`
+/// here is what makes the context (and the Supabase pull below) actually follow the switch.
+private struct ActiveSessionView: View {
+    @ObservedObject var activeAccount: ActiveAccountContext
+    let ownContext: NSManagedObjectContext
+    @EnvironmentObject private var watchManager: WatchConnectivityManager
+
+    /// The caregiver's own context when viewing themselves, or a distinct per-patient context
+    /// (backed by its own SQLite file — see `PersistenceController.context(forPatient:)`) when
+    /// viewing an overseen patient. Keeping these stores physically separate is what prevents
+    /// caregiver and patient data from ever blending in one store.
+    private var activeContext: NSManagedObjectContext {
+        guard activeAccount.isViewingOtherAccount else { return ownContext }
+        return PersistenceController.shared.context(forPatient: activeAccount.activeUserId)
+    }
+
+    var body: some View {
+        MainTabView()
+            .environmentObject(activeAccount)
+            .environment(\.managedObjectContext, activeContext)
+            .onAppear {
+                watchManager.syncTodayMedications(context: ownContext)
+                // Pull all user data from Supabase on first app open after sign-in
+                Task { await SupabaseSyncManager.shared.pullAll(context: ownContext) }
+            }
+            .onChange(of: activeAccount.activeUserId) { _, newUserId in
+                // Only fires on an actual account switch (own <-> patient, or patient A -> B),
+                // never on redraws, since `onChange` only triggers when the value differs.
+                guard newUserId != activeAccount.ownUserId else { return }
+                let patientContext = PersistenceController.shared.context(forPatient: newUserId)
+                Task {
+                    await SupabaseSyncManager.shared.pullAll(context: patientContext, forUserId: newUserId)
+                }
+            }
     }
 }
 
