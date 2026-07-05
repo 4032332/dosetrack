@@ -147,6 +147,15 @@ final class SupabaseSyncManager: ObservableObject {
             let req = Medication.fetchRequest()
             req.predicate = NSPredicate(format: "id == %@", uuid as CVarArg)
             let existing = (try? context.fetch(req))?.first
+
+            // Newer-wins conflict resolution: if the local record was touched more recently
+            // than this remote row, keep it as-is rather than blindly overwriting from a stale
+            // pull — this is what previously let a stale remote row resurrect a medication the
+            // user had just soft-deleted, and more generally clobbered any offline edit.
+            if let existing, let localUpdatedAt = existing.updatedAt, localUpdatedAt >= row.updatedAt {
+                continue
+            }
+
             let med = existing ?? Medication(context: context)
             med.id           = uuid
             med.name         = row.name
@@ -154,16 +163,11 @@ final class SupabaseSyncManager: ObservableObject {
             med.unit         = row.unit
             med.colorHex     = row.colorHex
             med.notes        = row.notes
-            // Never let a stale remote row reactivate a medication we've locally soft-deleted.
-            // (A follow-up conflict-resolution pass adds updated_at comparison for the general
-            // case; this interim rule covers the specific resurrection bug.) A remote row CAN
-            // still deactivate a locally-active medication.
-            if !(existing != nil && existing!.isActive == false && row.isActive == true) {
-                med.isActive = row.isActive
-            }
+            med.isActive     = row.isActive
             med.currentCount = Int32(row.currentCount)
             med.refillThreshold = Int32(row.refillThreshold)
             med.sortOrder    = Int32(row.sortOrder)
+            med.updatedAt    = row.updatedAt
             // Download photos lazily — store path in a transient or re-download on demand
             if let path = row.photoPath {
                 Task {
@@ -200,6 +204,11 @@ final class SupabaseSyncManager: ObservableObject {
             let req = Schedule.fetchRequest()
             req.predicate = NSPredicate(format: "id == %@", uuid as CVarArg)
             let existing = (try? context.fetch(req))?.first
+
+            if let existing, let localUpdatedAt = existing.updatedAt, localUpdatedAt >= row.updatedAt {
+                continue
+            }
+
             let sched = existing ?? Schedule(context: context)
             sched.id           = uuid
             sched.hour         = row.hour
@@ -209,6 +218,7 @@ final class SupabaseSyncManager: ObservableObject {
             sched.intervalDays = row.intervalDays
             sched.isEnabled    = row.isEnabled
             sched.medication   = med
+            sched.updatedAt    = row.updatedAt
         }
     }
 
@@ -223,6 +233,11 @@ final class SupabaseSyncManager: ObservableObject {
             let req = DoseLog.fetchRequest()
             req.predicate = NSPredicate(format: "id == %@", uuid as CVarArg)
             let existing = (try? context.fetch(req))?.first
+
+            if let existing, let localUpdatedAt = existing.updatedAt, localUpdatedAt >= row.updatedAt {
+                continue
+            }
+
             let log = existing ?? DoseLog(context: context)
             log.id          = uuid
             log.scheduledAt = row.scheduledAt
@@ -230,6 +245,7 @@ final class SupabaseSyncManager: ObservableObject {
             log.status      = row.status
             log.notes       = row.notes
             log.medication  = med
+            log.updatedAt   = row.updatedAt
         }
     }
 
@@ -281,6 +297,7 @@ struct MedicationRow: Codable {
     var sortOrder: Int
     var photoPath: String?
     var escriptPath: String?
+    var updatedAt: Date
 
     enum CodingKeys: String, CodingKey {
         case id, name, dosage, unit, notes
@@ -292,6 +309,7 @@ struct MedicationRow: Codable {
         case sortOrder = "sort_order"
         case photoPath = "photo_path"
         case escriptPath = "escript_path"
+        case updatedAt = "updated_at"
     }
 
     init(medication: Medication, userId: UUID) {
@@ -308,31 +326,30 @@ struct MedicationRow: Codable {
         sortOrder      = Int(medication.sortOrder)
         photoPath      = nil   // set separately after upload
         escriptPath    = nil
+        updatedAt      = medication.updatedAt ?? Date()
     }
 
     #if DEBUG
     /// Test-only factory — lets merge-logic tests construct a remote row without a real
     /// Medication/upload round-trip. Never compiled into release builds.
-    static func testRow(id: String, isActive: Bool, name: String = "Remote") -> MedicationRow {
-        var row = MedicationRow(
+    static func testRow(id: String, isActive: Bool, name: String = "Remote", updatedAt: Date = Date()) -> MedicationRow {
+        MedicationRow(
             id: id, userId: UUID().uuidString, name: name, dosage: "1", unit: "pill",
             colorHex: "#000000", notes: "", isActive: isActive, currentCount: 0,
-            refillThreshold: 7, sortOrder: 0
+            refillThreshold: 7, sortOrder: 0, updatedAt: updatedAt
         )
-        row.photoPath = nil
-        row.escriptPath = nil
-        return row
     }
 
     private init(
         id: String, userId: String, name: String, dosage: String, unit: String,
         colorHex: String, notes: String, isActive: Bool, currentCount: Int,
-        refillThreshold: Int, sortOrder: Int
+        refillThreshold: Int, sortOrder: Int, updatedAt: Date
     ) {
         self.id = id; self.userId = userId; self.name = name; self.dosage = dosage
         self.unit = unit; self.colorHex = colorHex; self.notes = notes; self.isActive = isActive
         self.currentCount = currentCount; self.refillThreshold = refillThreshold
         self.sortOrder = sortOrder; self.photoPath = nil; self.escriptPath = nil
+        self.updatedAt = updatedAt
     }
     #endif
 }
@@ -347,6 +364,7 @@ struct ScheduleRow: Codable {
     var daysOfWeek: [Int]
     var intervalDays: Int16
     var isEnabled: Bool
+    var updatedAt: Date
 
     enum CodingKeys: String, CodingKey {
         case id, hour, minute, frequency
@@ -355,6 +373,7 @@ struct ScheduleRow: Codable {
         case daysOfWeek = "days_of_week"
         case intervalDays = "interval_days"
         case isEnabled = "is_enabled"
+        case updatedAt = "updated_at"
     }
 
     init(schedule: Schedule, medicationId: UUID, userId: UUID) {
@@ -367,6 +386,7 @@ struct ScheduleRow: Codable {
         daysOfWeek       = schedule.daysOfWeekArray
         intervalDays     = schedule.intervalDays
         isEnabled        = schedule.isEnabled
+        updatedAt        = schedule.updatedAt ?? Date()
     }
 }
 
@@ -378,6 +398,7 @@ struct DoseLogRow: Codable {
     var loggedAt: Date
     var status: String
     var notes: String
+    var updatedAt: Date
 
     enum CodingKeys: String, CodingKey {
         case id, status, notes
@@ -385,6 +406,7 @@ struct DoseLogRow: Codable {
         case medicationId = "medication_id"
         case scheduledAt = "scheduled_at"
         case loggedAt = "logged_at"
+        case updatedAt = "updated_at"
     }
 
     init(log: DoseLog, userId: UUID) {
@@ -395,6 +417,7 @@ struct DoseLogRow: Codable {
         loggedAt     = log.loggedAt ?? Date()
         status       = log.status ?? "taken"
         notes        = log.notes ?? ""
+        updatedAt    = log.updatedAt ?? Date()
     }
 }
 
