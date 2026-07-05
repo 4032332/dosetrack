@@ -35,7 +35,10 @@ struct SupplyWheelPicker: View {
                 .disabled(value <= 0)
 
                 Button {
-                    manualText = "\(value)"
+                    // Blank, not pre-filled with the current value — pre-filling forced the
+                    // user to backspace before typing a new number, adding friction to what's
+                    // meant to be a quick "type the number" entry point.
+                    manualText = ""
                     showingManualEntry = true
                 } label: {
                     Text("\(value)")
