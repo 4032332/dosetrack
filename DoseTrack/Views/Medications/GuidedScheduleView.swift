@@ -198,10 +198,9 @@ struct GuidedScheduleView: View {
             Picker("", selection: $spacingChoice) {
                 Text("Fixed intervals").tag(SpacingChoice.fixedInterval)
                 Text("Tied to meals").tag(SpacingChoice.meals)
-                Text("Set each manually").tag(SpacingChoice.manual)
+                Text("Set manually").tag(SpacingChoice.manual)
             }
-            .pickerStyle(.inline)
-            .labelsHidden()
+            .pickerStyle(.segmented)
             Button("Next") {
                 switch spacingChoice {
                 case .fixedInterval: step = .intervalDetails
