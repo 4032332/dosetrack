@@ -37,6 +37,7 @@ struct CalendarView: View {
                 } label: {
                     Image(systemName: "chevron.left")
                 }
+                .accessibilityLabel("Previous month")
 
                 Spacer()
 
@@ -54,6 +55,7 @@ struct CalendarView: View {
                     Image(systemName: "chevron.right")
                 }
                 .disabled(isSameMonth(displayedMonth, as: Date()))
+                .accessibilityLabel("Next month")
             }
             .padding(.horizontal, 4)
 

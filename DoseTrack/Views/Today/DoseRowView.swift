@@ -68,7 +68,10 @@ struct StatusChip: View {
             Image(systemName: chipIcon)
                 .font(.system(size: 9, weight: .bold))
             Text(label)
-                .font(.system(size: 10, weight: .semibold))
+                // Was a fixed size 10 that never scaled with Dynamic Type — status text
+                // ("Taken"/"Skipped"/"Missed") is exactly the kind of small readable label
+                // where that matters most for low-vision users.
+                .font(.caption2.weight(.semibold))
         }
         .padding(.horizontal, 7)
         .padding(.vertical, 3)

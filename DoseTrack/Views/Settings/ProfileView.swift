@@ -68,6 +68,7 @@ struct ProfileView: View {
                                 .background(Circle().fill(.white).padding(2))
                                 .offset(x: 4, y: 4)
                         }
+                        .accessibilityLabel("Change profile photo")
                     }
                     Spacer()
                 }

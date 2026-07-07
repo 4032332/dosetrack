@@ -187,6 +187,7 @@ struct ContraceptiveTrackerView: View {
                                     .foregroundStyle(.secondary)
                             }
                             .buttonStyle(.plain)
+                            .accessibilityLabel("Decrease duration")
 
                             Text("\(durationValue)")
                                 .font(.title3.monospacedDigit())
@@ -199,6 +200,7 @@ struct ContraceptiveTrackerView: View {
                                     .foregroundStyle(Color.accentColor)
                             }
                             .buttonStyle(.plain)
+                            .accessibilityLabel("Increase duration")
                         }
 
                         Divider()

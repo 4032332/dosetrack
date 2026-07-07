@@ -33,6 +33,7 @@ struct SupplyWheelPicker: View {
                 }
                 .buttonStyle(.plain)
                 .disabled(value <= 0)
+                .accessibilityLabel("Decrease supply")
 
                 Button {
                     // Blank, not pre-filled with the current value — pre-filling forced the
@@ -58,6 +59,7 @@ struct SupplyWheelPicker: View {
                 }
                 .buttonStyle(.plain)
                 .disabled(value >= maxValue)
+                .accessibilityLabel("Increase supply")
             }
             .frame(maxWidth: .infinity)
 
