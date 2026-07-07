@@ -18,9 +18,10 @@ packages:
 settings:
   base:
     SWIFT_VERSION: "5.9"
-    DEVELOPMENT_TEAM: ""
+    DEVELOPMENT_TEAM: "9VY7RCG6Y4"
     MARKETING_VERSION: "1.0.0"
     CURRENT_PROJECT_VERSION: "1"
+    CODE_SIGN_STYLE: Automatic
 
 targets:
   DoseTrack:
@@ -38,7 +39,8 @@ targets:
       path: DoseTrack/Resources/DoseTrack.entitlements
       properties:
         aps-environment: development
-        com.apple.developer.usernotifications.critical-alerts: true
+        com.apple.developer.applesignin:
+          - Default
         com.apple.security.application-groups:
           - group.com.robbrown.dosetrack
     dependencies:
