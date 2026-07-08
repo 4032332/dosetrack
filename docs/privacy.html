@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Privacy Policy — DoseTrack</title>
+<style>
+  :root {
+    --blue: #5B8AF0;
+    --blue-dark: #3E68C9;
+    --bg: #F5F7FB;
+    --card: #FFFFFF;
+    --text: #1C1F26;
+    --text-secondary: #5B6270;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+  }
+
+  .hero {
+    background: linear-gradient(135deg, var(--blue) 0%, var(--blue-dark) 100%);
+    padding: 56px 24px 72px;
+    text-align: center;
+    color: white;
+  }
+
+  .hero img {
+    width: 96px;
+    height: 96px;
+    border-radius: 24px;
+    box-shadow: 0 12px 30px rgba(0,0,0,0.25);
+    margin-bottom: 20px;
+  }
+
+  .hero h1 {
+    margin: 0 0 6px;
+    font-size: 2rem;
+    font-weight: 800;
+  }
+
+  .hero p {
+    margin: 0;
+    opacity: 0.9;
+    font-size: 1.05rem;
+  }
+
+  .container {
+    max-width: 720px;
+    margin: -40px auto 60px;
+    padding: 0 20px;
+  }
+
+  .card {
+    background: var(--card);
+    border-radius: 20px;
+    padding: 36px 32px;
+    box-shadow: 0 10px 40px rgba(20, 30, 60, 0.08);
+  }
+
+  .updated {
+    display: inline-block;
+    background: rgba(91, 138, 240, 0.12);
+    color: var(--blue-dark);
+    font-size: 0.85rem;
+    font-weight: 600;
+    padding: 6px 14px;
+    border-radius: 999px;
+    margin-bottom: 24px;
+  }
+
+  h2 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin-top: 36px;
+    margin-bottom: 12px;
+    color: var(--text);
+  }
+
+  h2:first-of-type { margin-top: 0; }
+
+  h3 {
+    font-size: 1.05rem;
+    font-weight: 700;
+    margin-top: 22px;
+    margin-bottom: 8px;
+  }
+
+  p, li {
+    color: var(--text-secondary);
+    font-size: 0.98rem;
+  }
+
+  ul { padding-left: 22px; }
+  li { margin-bottom: 8px; }
+
+  strong { color: var(--text); }
+
+  .summary-box {
+    background: linear-gradient(135deg, rgba(91,138,240,0.08), rgba(91,138,240,0.03));
+    border: 1px solid rgba(91,138,240,0.18);
+    border-radius: 14px;
+    padding: 20px 22px;
+    margin-bottom: 8px;
+  }
+
+  .summary-box ul { margin: 0; padding-left: 20px; }
+
+  hr {
+    border: none;
+    border-top: 1px solid rgba(0,0,0,0.08);
+    margin: 32px 0 20px;
+  }
+
+  .disclaimer {
+    text-align: center;
+    font-size: 0.85rem;
+    font-style: italic;
+    color: var(--text-secondary);
+  }
+
+  a { color: var(--blue-dark); }
+
+  footer {
+    text-align: center;
+    padding: 24px;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+  }
+</style>
+</head>
+<body>
+
+  <div class="hero">
+    <img src="assets/milli.png" alt="DoseTrack — Milli the pill bottle mascot">
+    <h1>DoseTrack</h1>
+    <p>Never miss a dose.</p>
+  </div>
+
+  <div class="container">
+    <div class="card">
+      <span class="updated">Last updated: July 8, 2026</span>
+
+      <p>DoseTrack ("we," "us," "the app") is a medication reminder app made by an independent developer. This policy explains what information DoseTrack collects, how it's used, and the choices you have. We wrote it in plain language on purpose — no legal filler.</p>
+
+      <h2>The short version</h2>
+      <div class="summary-box">
+        <ul>
+          <li>DoseTrack works fully <strong>without an account</strong>. If you never sign in, your medication data never leaves your device.</li>
+          <li>Creating an account is optional and only needed for sync across devices, caregiver sharing, or missed-dose push alerts.</li>
+          <li>We never sell your data, and we don't use advertising or tracking SDKs of any kind.</li>
+          <li>You can delete all your data, at any time, from Settings → Delete All Data.</li>
+        </ul>
+      </div>
+
+      <h2>Information we collect</h2>
+
+      <h3>If you don't create an account</h3>
+      <p>Nothing leaves your device. Your medications, schedules, dose history, notes, and any bottle photos you add are stored only in the app's local database on your iPhone.</p>
+
+      <h3>If you create an account (optional)</h3>
+      <p>Creating an account — via email/password, Sign in with Apple, or Sign in with Google — lets you sync your data across devices and unlock optional features. When you do, we (through our backend provider, Supabase) store:</p>
+      <ul>
+        <li><strong>Account information</strong>: your email address and, if provided, your display name.</li>
+        <li><strong>Medication data</strong>: medication names, dosages, schedules, and your dose history (taken/skipped/missed), so it can sync across your devices.</li>
+        <li><strong>Bottle photos</strong>, if you choose to attach one to a medication.</li>
+        <li><strong>A push notification device token</strong>, so we can deliver missed-dose reminder alerts to your device. This token identifies your device to Apple's push notification service — it doesn't identify you personally beyond that.</li>
+        <li><strong>Caregiver sharing information</strong>, if you use that feature (see below).</li>
+      </ul>
+      <p>We do <strong>not</strong> collect your location, contacts, browsing history, or any data from Apple Health/HealthKit — DoseTrack does not use HealthKit.</p>
+
+      <h2>Caregiver sharing</h2>
+      <p>DoseTrack lets an account holder invite another DoseTrack user to act as a caregiver — for example, an adult child helping a parent manage medications. If you use this feature:</p>
+      <ul>
+        <li>You generate an invite code and choose to share it with someone.</li>
+        <li>Once accepted, the caregiver can view and help manage the medications and schedules on the linked account.</li>
+        <li>Either person can end the caregiver relationship at any time from within the app, which immediately revokes the caregiver's access.</li>
+      </ul>
+      <p>This sharing only happens if you explicitly set it up. We never share your data with a caregiver, or anyone else, without your direct action.</p>
+
+      <h2>How we use your information</h2>
+      <p>We use the information above only to operate the app's features:</p>
+      <ul>
+        <li>Syncing your medication data across your own devices.</li>
+        <li>Sending you medication reminders and missed-dose alerts.</li>
+        <li>Enabling caregiver sharing, if you turn it on.</li>
+        <li>Basic customer support, if you contact us.</li>
+      </ul>
+      <p>We do not use your data for advertising, and we do not sell, rent, or trade your information to third parties for any purpose.</p>
+
+      <h2>Third-party services we use</h2>
+      <p>DoseTrack relies on a small number of service providers to operate account-based features:</p>
+      <ul>
+        <li><strong>Supabase</strong> — our backend database and authentication provider. Supabase stores account and medication data on our behalf, under their own security and privacy safeguards.</li>
+        <li><strong>Apple</strong> — Sign in with Apple (optional login method) and Apple Push Notification service (for reminders).</li>
+        <li><strong>Google</strong> — Sign in with Google (optional login method).</li>
+      </ul>
+      <p>None of these providers are permitted to use your DoseTrack data for their own advertising or independent purposes.</p>
+
+      <h2>Data retention and deletion</h2>
+      <p>You can permanently delete all of your data — both on-device and, if you have an account, on our servers — at any time from <strong>Settings → Delete All Data</strong>. This action is immediate and cannot be undone. If you'd like help deleting your data or have questions about what we store, contact us below.</p>
+
+      <h2>Children's privacy</h2>
+      <p>DoseTrack is rated 4+ and is not directed at children. We do not knowingly collect personal information from children under 13. If you believe a child has provided us with personal information, please contact us and we will delete it.</p>
+
+      <h2>Security</h2>
+      <p>We use industry-standard practices to protect your information, including encrypted network connections (HTTPS/TLS) for all data sent to our servers, and Supabase's built-in access controls to keep your account data isolated from other users.</p>
+      <p>No method of electronic storage or transmission is 100% secure, and we can't guarantee absolute security — but we don't ask for or store more than what's needed to run the app.</p>
+
+      <h2>Changes to this policy</h2>
+      <p>If we make material changes to this policy, we'll update the "Last updated" date above and, where appropriate, notify you within the app.</p>
+
+      <h2>Contact us</h2>
+      <p>Questions about this policy or your data? Email us at <a href="mailto:4032332@gmail.com">4032332@gmail.com</a>.</p>
+
+      <hr>
+      <p class="disclaimer">DoseTrack is a reminder tool, not medical advice. Always follow your healthcare provider's instructions.</p>
+    </div>
+  </div>
+
+  <footer>&copy; 2026 DoseTrack. All rights reserved.</footer>
+
+</body>
+</html>
