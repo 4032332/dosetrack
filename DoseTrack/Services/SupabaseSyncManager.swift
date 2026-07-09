@@ -469,7 +469,7 @@ struct DoseLogRow: Codable {
     init(log: DoseLog, userId: UUID) {
         id           = log.id?.uuidString ?? UUID().uuidString
         self.userId  = userId.uuidString
-        medicationId = (log.medication as? Medication)?.id?.uuidString ?? ""
+        medicationId = log.medication?.id?.uuidString ?? ""
         scheduledAt  = log.scheduledAt ?? Date()
         loggedAt     = log.loggedAt ?? Date()
         status       = log.status ?? "taken"

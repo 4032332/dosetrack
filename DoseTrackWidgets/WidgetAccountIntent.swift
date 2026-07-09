@@ -38,11 +38,17 @@ struct SelectDoseAccountIntent: WidgetConfigurationIntent {
     static var title: LocalizedStringResource = "Choose Account"
     static var description = IntentDescription("Show your own medications, or a patient you're overseeing as a caregiver.")
 
-    // No compile-time `default:` — AppIntents only allows that for literal types. Falls back to
-    // `WidgetAccountQuery.defaultResult()` ("You") when nothing has been configured yet.
+    // Optional rather than a non-optional `WidgetAccountEntity` with no compile-time default:
+    // AppIntents only allows a literal `default:` for simple types, and warns on a non-optional
+    // custom AppEntity parameter with none. `WidgetAccountQuery.defaultResult()` ("You") still
+    // supplies the initial value shown in the "Edit Widget" UI; `storageAccountId` below treats
+    // an unconfigured/nil parameter the same as "self".
     @Parameter(title: "Show")
-    var account: WidgetAccountEntity
+    var account: WidgetAccountEntity?
 
     /// `nil` = the signed-in user's own account, matching `WidgetDataProvider.context(for:)`.
-    var storageAccountId: String? { account.id == "self" ? nil : account.id }
+    var storageAccountId: String? {
+        guard let account, account.id != "self" else { return nil }
+        return account.id
+    }
 }

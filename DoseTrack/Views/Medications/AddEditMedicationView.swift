@@ -215,14 +215,22 @@ struct AddEditMedicationView: View {
                         .font(.caption)
                 }
                 .onChange(of: escriptPickerItem) { _, item in
-                    Task { viewModel.escriptData = try? await item?.loadTransferable(type: Data.self) }
+                    Task { @MainActor in
+                        viewModel.escriptData = try? await item?.loadTransferable(type: Data.self)
+                    }
                 }
 
                 // MARK: Bottle Photo
                 Section("Bottle Photo (optional)") {
+                    // PhotosPicker's `label` ViewBuilder closure isn't itself MainActor-isolated
+                    // in the current SDK, so reading the MainActor-isolated `viewModel.photoData`
+                    // directly inside it is flagged under strict concurrency checking. Hoisting
+                    // it to a local value here (in body, which is MainActor-isolated) sidesteps
+                    // that — the closure captures a plain Data?, not the actor-isolated property.
+                    let currentPhotoData = viewModel.photoData
                     PhotosPicker(selection: $photoPickerItem, matching: .images) {
                         HStack {
-                            if let data = viewModel.photoData, let img = UIImage(data: data) {
+                            if let data = currentPhotoData, let img = UIImage(data: data) {
                                 Image(uiImage: img)
                                     .resizable().scaledToFill()
                                     .frame(width: 60, height: 60)
@@ -234,12 +242,14 @@ struct AddEditMedicationView: View {
                                     .background(Color.secondary.opacity(0.1))
                                     .clipShape(RoundedRectangle(cornerRadius: 8))
                             }
-                            Text(viewModel.photoData == nil ? "Add bottle photo" : "Change photo")
+                            Text(currentPhotoData == nil ? "Add bottle photo" : "Change photo")
                                 .foregroundStyle(Color.accentColor)
                         }
                     }
                     .onChange(of: photoPickerItem) { _, item in
-                        Task { viewModel.photoData = try? await item?.loadTransferable(type: Data.self) }
+                        Task { @MainActor in
+                            viewModel.photoData = try? await item?.loadTransferable(type: Data.self)
+                        }
                     }
                     if viewModel.photoData != nil {
                         Button("Remove Photo", role: .destructive) {

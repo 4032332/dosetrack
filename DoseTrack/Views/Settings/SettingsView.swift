@@ -165,7 +165,10 @@ struct SettingsView: View {
                     } else if status == .notDetermined {
                         Button {
                             Task {
-                                await NotificationManager.shared.requestAuthorization()
+                                // Result unused deliberately — refreshAll runs regardless, and
+                                // NotificationManager's own @Published authorizationStatus is
+                                // what this screen observes to reflect granted/denied.
+                                _ = await NotificationManager.shared.requestAuthorization()
                                 NotificationScheduler.shared.refreshAll(context: context)
                             }
                         } label: {

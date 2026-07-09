@@ -14,7 +14,7 @@ struct OnboardingView: View {
         VStack(spacing: 0) {
             // Page indicator
             HStack(spacing: 8) {
-                ForEach(0..<totalPages) { i in
+                ForEach(0..<totalPages, id: \.self) { i in
                     Capsule()
                         .fill(i == page ? Color.accentColor : Color.secondary.opacity(0.3))
                         .frame(width: i == page ? 20 : 8, height: 8)
@@ -89,7 +89,10 @@ struct OnboardingView: View {
 
     private func requestNotifications() {
         Task {
-            await NotificationManager.shared.requestAuthorization()
+            // The granted/denied result isn't needed here — onboarding advances either way,
+            // and NotificationManager's own @Published authorizationStatus (refreshed inside
+            // requestAuthorization) is what the rest of the app observes.
+            _ = await NotificationManager.shared.requestAuthorization()
             notificationAuthRequested = true
             withAnimation { page += 1 }
         }
