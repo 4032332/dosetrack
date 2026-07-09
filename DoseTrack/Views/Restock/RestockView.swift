@@ -93,7 +93,14 @@ struct RestockView: View {
                     Label("Choose from Photo Library", systemImage: "photo.on.rectangle")
                 }
                 Button("Take Photo with Camera") {
-                    showingCameraPicker = true
+                    // Presenting a new sheet in the same run-loop turn as this
+                    // confirmationDialog dismisses can be silently dropped by SwiftUI — the
+                    // dialog animates away and the camera sheet just never appears, which
+                    // looked exactly like "the button does nothing." Deferring to the next
+                    // run loop turn lets the dialog's dismissal complete first.
+                    DispatchQueue.main.async {
+                        showingCameraPicker = true
+                    }
                 }
                 Button("Cancel", role: .cancel) {
                     escriptUploadTarget = nil

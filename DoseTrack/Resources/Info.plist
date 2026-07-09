@@ -2,89 +2,85 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <key>CFBundleName</key>
-    <string>DoseTrack</string>
-    <key>CFBundleDisplayName</key>
-    <string>DoseTrack</string>
-    <key>CFBundleIdentifier</key>
-    <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
-    <key>CFBundleVersion</key>
-    <string>$(CURRENT_PROJECT_VERSION)</string>
-    <key>CFBundleShortVersionString</key>
-    <string>$(MARKETING_VERSION)</string>
-    <key>CFBundlePackageType</key>
-    <string>APPL</string>
-    <key>CFBundleExecutable</key>
-    <string>$(EXECUTABLE_NAME)</string>
-    <key>UISupportedInterfaceOrientations</key>
-    <array>
-        <string>UIInterfaceOrientationPortrait</string>
-    </array>
-    <key>NSCameraUsageDescription</key>
-    <string>DoseTrack uses your camera to photograph medication bottles for easy identification.</string>
-    <key>NSPhotoLibraryUsageDescription</key>
-    <string>DoseTrack accesses your photo library so you can attach a bottle photo to a medication.</string>
-    <key>UIBackgroundModes</key>
-    <array>
-        <string>fetch</string>
-        <string>processing</string>
-        <string>remote-notification</string>
-    </array>
-    <key>CFBundleURLTypes</key>
-    <array>
-        <!-- Google Sign-In callback: replace with reversed client ID once configured -->
-        <dict>
-            <key>CFBundleURLSchemes</key>
-            <array>
-                <string>com.googleusercontent.apps.966032740426-c3q9ch2p73oempc80h83rlkekbrl6788</string>
-            </array>
-        </dict>
-        <!-- Supabase auth callback (email confirm, password reset, magic link) -->
-        <dict>
-            <key>CFBundleURLSchemes</key>
-            <array>
-                <string>com.robbrown.dosetrack</string>
-            </array>
-        </dict>
-    </array>
-    <!-- Alternate/switchable app icon feature was removed — it didn't reliably apply the
-         selected icon in testing, and rather than debug a UIKit/asset-catalog quirk for a
-         cosmetic feature, it was dropped outright per direct instruction. -->
-    <key>CFBundleIcons</key>
-    <dict>
-        <key>CFBundlePrimaryIcon</key>
-        <dict>
-            <key>CFBundleIconFiles</key>
-            <array>
-                <string>AppIcon</string>
-            </array>
-        </dict>
-    </dict>
-
-    <key>UILaunchScreen</key>
-    <dict/>
-    <key>UIRequiresFullScreen</key>
-    <true/>
-    <key>UIApplicationSceneManifest</key>
-    <dict>
-        <key>UIApplicationSupportsMultipleScenes</key>
-        <false/>
-        <key>UISceneConfigurations</key>
-        <dict>
-            <key>UIWindowSceneSessionRoleApplication</key>
-            <array>
-                <dict>
-                    <key>UISceneConfigurationName</key>
-                    <string>Default Configuration</string>
-                    <key>UISceneDelegateClassName</key>
-                    <string>SceneDelegate</string>
-                </dict>
-            </array>
-        </dict>
-    </dict>
-    <key>BGTaskSchedulerPermittedIdentifiers</key>
-    <array>
-        <string>com.robbrown.dosetrack.refresh</string>
-    </array>
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>com.robbrown.dosetrack.refresh</string>
+	</array>
+	<key>CFBundleDisplayName</key>
+	<string>DoseTrack</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIcons</key>
+	<dict>
+		<key>CFBundlePrimaryIcon</key>
+		<dict>
+			<key>CFBundleIconFiles</key>
+			<array>
+				<string>AppIcon</string>
+			</array>
+		</dict>
+	</dict>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleName</key>
+	<string>DoseTrack</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>$(MARKETING_VERSION)</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.966032740426-c3q9ch2p73oempc80h83rlkekbrl6788</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.robbrown.dosetrack</string>
+			</array>
+		</dict>
+	</array>
+	<key>CFBundleVersion</key>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>NSCameraUsageDescription</key>
+	<string>DoseTrack uses your camera to photograph E-Script Codes and medication images for easy identification.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>DoseTrack accesses your photo library so you can attach E-Script Codes and medication images for easy identification.</string>
+	<key>UIApplicationSceneManifest</key>
+	<dict>
+		<key>UIApplicationSupportsMultipleScenes</key>
+		<false/>
+		<key>UISceneConfigurations</key>
+		<dict>
+			<key>UIWindowSceneSessionRoleApplication</key>
+			<array>
+				<dict>
+					<key>UISceneConfigurationName</key>
+					<string>Default Configuration</string>
+					<key>UISceneDelegateClassName</key>
+					<string>SceneDelegate</string>
+				</dict>
+			</array>
+		</dict>
+	</dict>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>fetch</string>
+		<string>processing</string>
+		<string>remote-notification</string>
+	</array>
+	<key>UILaunchScreen</key>
+	<dict/>
+	<key>UIRequiresFullScreen</key>
+	<true/>
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+	</array>
 </dict>
 </plist>

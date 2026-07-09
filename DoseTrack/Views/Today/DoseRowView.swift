@@ -36,7 +36,11 @@ struct DoseRowView: View {
                 Text(TimeFormatPreference.string(for: entry.scheduledAt, preference: timeFormat))
                     .font(.caption.monospacedDigit())
                     .foregroundStyle(.secondary)
-                StatusChip(status: entry.status)
+                if entry.isUpcoming {
+                    UpcomingChip()
+                } else {
+                    StatusChip(status: entry.status)
+                }
             }
         }
         .padding(.vertical, compactRows ? 2 : 6)
@@ -44,7 +48,7 @@ struct DoseRowView: View {
         .accessibilityLabel(
             "\(entry.medication.wrappedName), \(entry.medication.wrappedDosage), " +
             "due at \(TimeFormatPreference.string(for: entry.scheduledAt, preference: timeFormat)), " +
-            "\(entry.status.displayName)"
+            "\(entry.isUpcoming ? "upcoming" : entry.status.displayName)"
         )
     }
 
@@ -102,6 +106,24 @@ struct StatusChip: View {
         case .skipped: return .orange
         case .missed:  return .red
         }
+    }
+}
+
+/// Neutral chip for a future dose that hasn't been logged yet — deliberately distinct from
+/// the green "Taken" chip so an un-taken upcoming dose is never mistaken for a taken one.
+struct UpcomingChip: View {
+    var body: some View {
+        HStack(spacing: 3) {
+            Image(systemName: "clock")
+                .font(.system(size: 9, weight: .bold))
+            Text("Upcoming")
+                .font(.caption2.weight(.semibold))
+        }
+        .padding(.horizontal, 7)
+        .padding(.vertical, 3)
+        .background(Color.blue.opacity(0.15))
+        .foregroundStyle(Color.blue)
+        .clipShape(Capsule())
     }
 }
 

@@ -26,6 +26,11 @@ struct DoseEntry: Identifiable {
     let scheduledAt: Date
     var status: DoseStatus
     var existingLog: DoseLog?
+    /// True for a future dose that hasn't been logged yet. Such a dose has no real status —
+    /// it's neither taken nor missed — so the UI shows a neutral "Upcoming" chip and the
+    /// adherence count excludes it. Previously these were assigned `.taken` purely for
+    /// display, which both rendered a misleading green "Taken" chip and inflated takenCount.
+    var isUpcoming: Bool = false
 }
 
 @MainActor
@@ -66,7 +71,9 @@ final class TodayViewModel: ObservableObject {
         let entries = buildTodayEntries()
         doseEntries = entries.sorted { $0.scheduledAt < $1.scheduledAt }
         totalCount = entries.count
-        takenCount = entries.filter { $0.status == .taken }.count
+        // Exclude upcoming (not-yet-taken future) doses — only doses actually logged as taken
+        // count toward the daily adherence total.
+        takenCount = entries.filter { !$0.isUpcoming && $0.status == .taken }.count
         medicationAlerts = buildAlerts()
     }
 
@@ -76,6 +83,32 @@ final class TodayViewModel: ObservableObject {
 
     func markSkipped(_ entry: DoseEntry, reason: String? = nil) {
         log(entry: entry, status: .skipped, notes: reason)
+    }
+
+    /// Marks every not-yet-taken entry in `entries` as taken in one pass — used for the
+    /// "mark all taken" action on a group of doses due at the same time. Refreshes once at
+    /// the end rather than once per entry, so the celebration pulse (and any UI observing
+    /// `doseEntries`) doesn't flicker through intermediate partial states.
+    func markAllTaken(_ entries: [DoseEntry]) {
+        for entry in entries where entry.status != .taken {
+            DoseLoggingService.shared.log(
+                medication: entry.medication,
+                schedule: entry.schedule,
+                scheduledAt: entry.scheduledAt,
+                status: .taken,
+                existingLog: entry.existingLog,
+                notes: nil,
+                context: context,
+                pushUserId: ActiveAccountResolver.shared.activeUserId
+            )
+        }
+        refresh()
+        if totalCount > 0 && takenCount == totalCount {
+            celebrateNow = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+                self?.celebrateNow = false
+            }
+        }
     }
 
     private func log(entry: DoseEntry, status: DoseStatus, notes: String? = nil) {
@@ -157,13 +190,17 @@ final class TodayViewModel: ObservableObject {
                 }
 
                 let displayStatus: DoseStatus
+                var isUpcoming = false
                 if let log = existing {
                     displayStatus = log.doseStatus
                 } else if scheduledAt <= Date() {
                     displayStatus = .missed
                 } else {
-                    // Future dose — show as "taken" visually so it stands out as upcoming (not missed)
+                    // Future dose with no log yet — a distinct "upcoming" state. The status
+                    // value here is a placeholder that the UI never renders (it keys off
+                    // isUpcoming instead); it's excluded from the taken count in refresh().
                     displayStatus = .taken
+                    isUpcoming = true
                 }
 
                 entries.append(DoseEntry(
@@ -172,7 +209,8 @@ final class TodayViewModel: ObservableObject {
                     schedule: schedule,
                     scheduledAt: scheduledAt,
                     status: displayStatus,
-                    existingLog: existing
+                    existingLog: existing,
+                    isUpcoming: isUpcoming
                 ))
             }
         }

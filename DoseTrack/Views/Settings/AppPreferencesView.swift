@@ -9,7 +9,7 @@ struct AppPreferencesView: View {
     @AppStorage("showDoseBadge")     private var showDoseBadge: Bool = true
     @AppStorage("compactRows")       private var compactRows: Bool = false
 
-    @AppStorage("appearanceOverride") private var appearanceOverride: String = "system"
+    @AppStorage("appearanceOverride") private var appearanceOverride: String = "light"
 
     var body: some View {
         List {

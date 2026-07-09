@@ -69,7 +69,7 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     }
 
     private func applyAppearanceOverride() {
-        let value = UserDefaults.standard.string(forKey: "appearanceOverride") ?? "system"
+        let value = UserDefaults.standard.string(forKey: "appearanceOverride") ?? "light"
         let style: UIUserInterfaceStyle
         switch value {
         case "light": style = .light

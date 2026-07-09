@@ -104,11 +104,21 @@ private struct WelcomePage: View {
             VStack(spacing: 28) {
                 Spacer().frame(height: 24)
 
-                Image("OnboardingWelcome")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 200, height: 200)
-                    .padding(.bottom, 4)
+                // OnboardingWelcome.png has an opaque *white* background baked in — a white card
+                // behind it is invisible, so the backdrop needs an actual contrasting colour.
+                ZStack {
+                    Circle()
+                        .fill(LinearGradient(colors: [.blue.opacity(0.35), .blue.opacity(0.15)],
+                                              startPoint: .topLeading, endPoint: .bottomTrailing))
+                        .frame(width: 212, height: 212)
+                        .shadow(color: .black.opacity(0.25), radius: 18, y: 8)
+                    Image("OnboardingWelcome")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 156, height: 156)
+                        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+                }
+                .padding(.bottom, 4)
 
                 VStack(spacing: 6) {
                     Text("Meet Milli! 💊")
@@ -158,11 +168,20 @@ private struct NotificationsPage: View {
             VStack(spacing: 28) {
                 Spacer().frame(height: 24)
 
-                Image("OnboardingNotification")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 180, height: 180)
-                    .padding(.bottom, 4)
+                // OnboardingNotification.png has an opaque background baked in — see AuthView.
+                ZStack {
+                    Circle()
+                        .fill(LinearGradient(colors: [.blue.opacity(0.35), .blue.opacity(0.15)],
+                                              startPoint: .topLeading, endPoint: .bottomTrailing))
+                        .frame(width: 192, height: 192)
+                        .shadow(color: .black.opacity(0.25), radius: 18, y: 8)
+                    Image("OnboardingNotification")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 140, height: 140)
+                        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+                }
+                .padding(.bottom, 4)
 
                 VStack(spacing: 8) {
                     Text("Stay on Track")
@@ -182,8 +201,8 @@ private struct NotificationsPage: View {
                                title: "Apple Watch",
                                subtitle: "Mark doses taken from your wrist with action buttons")
                     FeatureRow(icon: "moon.zzz.fill", color: .purple,
-                               title: "Critical alerts (optional)",
-                               subtitle: "Medication alerts can break through Do Not Disturb")
+                               title: "Works with Focus modes",
+                               subtitle: "Reminders still reach you as configured in Do Not Disturb")
                 }
                 .padding(.horizontal, 28)
 
@@ -313,10 +332,18 @@ private struct AddFirstMedPage: View {
             VStack(spacing: 24) {
                 Spacer().frame(height: 24)
 
-                Image("OnboardingWelcome")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 160, height: 160)
+                ZStack {
+                    Circle()
+                        .fill(LinearGradient(colors: [.blue.opacity(0.35), .blue.opacity(0.15)],
+                                              startPoint: .topLeading, endPoint: .bottomTrailing))
+                        .frame(width: 172, height: 172)
+                        .shadow(color: .black.opacity(0.25), radius: 18, y: 8)
+                    Image("OnboardingWelcome")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 124, height: 124)
+                        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+                }
 
                 VStack(spacing: 8) {
                     Text("Add Your First\nMedication")

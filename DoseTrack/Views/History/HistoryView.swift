@@ -149,7 +149,7 @@ struct HistoryView: View {
                     .environmentObject(subscriptionManager)
             }
             .sheet(item: $exportItem) { item in
-                ActivityView(activityItems: [item.data as Any, item.filename])
+                ActivityView(activityItems: [item.url])
             }
             .refreshable {
                 viewModel.refresh()
@@ -176,7 +176,9 @@ struct HistoryView: View {
         let logs = ExportManager.shared.fetchAllLogs(context: context, in: interval)
         let data = ExportManager.shared.generateCSV(from: logs, dateRange: interval)
         let filename = "dosetrack-export-\(Date().formatted(.dateTime.year().month().day())).csv"
-        exportItem = ExportItem(data: data, filename: filename)
+        if let url = ExportManager.shared.writeTemporaryFile(data: data, filename: filename) {
+            exportItem = ExportItem(url: url)
+        }
     }
 
     private func exportPDF() {
@@ -201,17 +203,19 @@ struct HistoryView: View {
             logs: logs, medications: meds, dateRange: interval, patientName: patientName
         )
         let filename = "dosetrack-report-\(Date().formatted(.dateTime.year().month().day())).pdf"
-        exportItem = ExportItem(data: data, filename: filename)
+        if let url = ExportManager.shared.writeTemporaryFile(data: data, filename: filename) {
+            exportItem = ExportItem(url: url)
+        }
     }
 }
 
 // MARK: - Supporting types
 
-/// Wraps export data for `.sheet(item:)` presentation.
+/// Wraps an on-disk export file for `.sheet(item:)` presentation. Carries a file URL (not raw
+/// Data) so `UIActivityViewController` shares a correctly-named, correctly-typed document.
 struct ExportItem: Identifiable {
     let id = UUID()
-    let data: Data
-    let filename: String
+    let url: URL
 }
 
 // MARK: - Subviews

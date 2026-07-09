@@ -3,9 +3,11 @@ import SwiftUI
 import CoreData
 import UserNotifications
 import WidgetKit
+import StoreKit
 
 struct SettingsView: View {
     @Environment(\.managedObjectContext) private var context
+    @Environment(\.requestReview) private var requestReview
     @EnvironmentObject private var subscriptionManager: SubscriptionManager
     @EnvironmentObject private var auth: AuthManager
     @EnvironmentObject private var caregiverManager: CaregiverManager
@@ -17,7 +19,6 @@ struct SettingsView: View {
         customAvatarDataBase64.isEmpty ? nil : Data(base64Encoded: customAvatarDataBase64)
     }
     @AppStorage("defaultSnoozeDuration") private var defaultSnoozeDuration: Int = 30
-    @AppStorage("criticalAlertsEnabled") private var criticalAlertsEnabled: Bool = true
 
     @State private var showingPaywall = false
     @State private var showingDeleteConfirm = false
@@ -199,13 +200,6 @@ struct SettingsView: View {
                     }
                     .disabled(status == .denied)
 
-                    Toggle(isOn: $criticalAlertsEnabled) {
-                        Label("Critical Alerts", systemImage: "exclamationmark.triangle.fill")
-                    }
-                    .onChange(of: criticalAlertsEnabled) { _, _ in
-                        NotificationScheduler.shared.refreshAll(context: context)
-                    }
-
                     HStack {
                         Label("Default Snooze", systemImage: "clock.fill")
                         Spacer()
@@ -266,6 +260,10 @@ struct SettingsView: View {
                     } label: {
                         Label("Privacy & Disclaimer", systemImage: "hand.raised.fill")
                     }
+
+                    Link(destination: Constants.ExternalLinks.privacyPolicy) {
+                        Label("Privacy Policy", systemImage: "doc.text.fill")
+                    }
                 }
 
                 // MARK: About
@@ -278,9 +276,11 @@ struct SettingsView: View {
                     }
 
                     Button {
-                        if let url = URL(string: "https://apps.apple.com/") {
-                            UIApplication.shared.open(url)
-                        }
+                        // Native in-app rating prompt (previously this opened apps.apple.com's
+                        // home page, which did nothing useful). Apple rate-limits how often the
+                        // prompt actually appears; the write-review deep link is used post-launch
+                        // once the App Store ID is known.
+                        requestReview()
                     } label: {
                         Label("Rate DoseTrack", systemImage: "star.bubble.fill")
                             .foregroundStyle(.primary)

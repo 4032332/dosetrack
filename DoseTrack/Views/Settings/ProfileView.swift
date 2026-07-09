@@ -17,8 +17,7 @@ struct ProfileView: View {
 
     @State private var showingAvatarPicker = false
     @State private var isSaving = false
-    @State private var saveError: String? = nil
-    @State private var saveSuccess = false
+    @State private var toast: ToastMessage? = nil
     @State private var countryInput: String = ""
     @State private var countryFocused = false
 
@@ -199,7 +198,7 @@ struct ProfileView: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
-                    Task { await saveToSupabase() }
+                    Task { await saveToSupabase(showToast: true) }
                 } label: {
                     if isSaving {
                         ProgressView().scaleEffect(0.8)
@@ -213,24 +212,23 @@ struct ProfileView: View {
         .sheet(isPresented: $showingAvatarPicker) {
             AvatarPickerView(selectedKey: $selectedAvatar, customPhotoData: customPhotoData)
         }
-        .alert("Saved", isPresented: $saveSuccess) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text("Your profile has been updated.")
-        }
-        .alert("Save Failed", isPresented: Binding(get: { saveError != nil }, set: { if !$0 { saveError = nil } })) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text(saveError ?? "")
+        .toast($toast)
+        // Local fields (@AppStorage) save instantly as the user types, but the remote
+        // Supabase copy only updated on an explicit tap of the toolbar Save button — so
+        // if a user edited a field and just navigated back, the next pull-on-launch would
+        // silently overwrite their edit with the stale remote value (this is exactly how
+        // Date of Birth kept reverting). Saving on disappear closes that gap.
+        .onDisappear {
+            Task { await saveToSupabase(showToast: true) }
         }
     }
 
     // MARK: - Supabase sync
 
-    private func saveToSupabase() async {
+    private func saveToSupabase(showToast: Bool) async {
         guard auth.isSignedIn, !auth.isGuest else {
             // Guest mode — data is local only, that's fine
-            saveSuccess = true
+            if showToast { toast = ToastMessage(text: "Saved", systemImage: "checkmark.circle.fill") }
             return
         }
         isSaving = true
@@ -253,9 +251,11 @@ struct ProfileView: View {
             try await auth.client.auth.update(user: UserAttributes(data: metadata))
             // Also persist all settings to Supabase user_settings table
             await SupabaseSyncManager.shared.pushSettings()
-            saveSuccess = true
+            if showToast { toast = ToastMessage(text: "Saved", systemImage: "checkmark.circle.fill") }
         } catch {
-            saveError = error.localizedDescription
+            if showToast {
+                toast = ToastMessage(text: "Save failed", systemImage: "exclamationmark.triangle.fill", isError: true)
+            }
         }
     }
 }

@@ -545,7 +545,7 @@ struct UserSettingsRow: Codable {
         let d = UserDefaults.standard
         self.userId      = userId.uuidString
         colorTheme       = d.string(forKey: "colorTheme") ?? "Ocean Blue"
-        appearance       = d.string(forKey: "appearanceOverride") ?? "system"
+        appearance       = d.string(forKey: "appearanceOverride") ?? "light"
         timeFormat       = d.string(forKey: "timeFormat") ?? "system"
         snoozeDuration   = d.integer(forKey: "defaultSnoozeDuration").nonZeroOr(30)
         hapticsEnabled   = d.bool(forKey: "hapticsEnabled")

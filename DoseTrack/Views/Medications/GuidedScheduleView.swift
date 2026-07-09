@@ -272,12 +272,16 @@ struct GuidedScheduleView: View {
 
     private var manualTimesQuestion: some View {
         VStack(alignment: .leading, spacing: 16) {
+            // `.id(timesPerDay)` forces SwiftUI to discard cached row identity when the array
+            // is resized (see the `$schedules` comment in reviewStep above for the underlying
+            // stale-DatePicker-state bug this prevents).
             ForEach(manualTimes.indices, id: \.self) { i in
                 DatePicker("Dose \(i + 1) time", selection: Binding(
                     get: { manualTimes[i] },
                     set: { manualTimes[i] = $0 }
                 ), displayedComponents: .hourAndMinute)
             }
+            .id(timesPerDay)
             Button("Next") { applyGeneratedSchedulesFromManual(); step = .review }
         }
     }
@@ -294,18 +298,25 @@ struct GuidedScheduleView: View {
     private var reviewStep: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Schedule").font(.headline)
-            ForEach(schedules.indices, id: \.self) { i in
+            // `ForEach($schedules)` keyed by `ScheduleDraft.id` (not `schedules.indices, id:
+            // \.self`) — index-based identity let SwiftUI reuse a DatePicker's internal wheel
+            // state across renders whenever the array was regenerated (interval/meal presets,
+            // or re-adding a schedule after Change Schedule Type), so the picker sometimes kept
+            // showing a stale cached time instead of the fresh value — this is the "sometimes
+            // defaults back to 08:00 no matter what you enter" bug. A stable per-row identity
+            // forces SwiftUI to treat a regenerated array as genuinely new rows.
+            ForEach($schedules) { $draft in
                 HStack {
                     DatePicker("", selection: Binding(
                         get: {
                             var c = Calendar.current.dateComponents([.year, .month, .day], from: Date())
-                            c.hour = schedules[i].hour; c.minute = schedules[i].minute
+                            c.hour = draft.hour; c.minute = draft.minute
                             return Calendar.current.date(from: c) ?? Date()
                         },
                         set: { date in
                             let c = Calendar.current.dateComponents([.hour, .minute], from: date)
-                            schedules[i].hour = c.hour ?? 8
-                            schedules[i].minute = c.minute ?? 0
+                            draft.hour = c.hour ?? 8
+                            draft.minute = c.minute ?? 0
                         }
                     ), displayedComponents: .hourAndMinute)
                     .labelsHidden()

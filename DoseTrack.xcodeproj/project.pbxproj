@@ -17,6 +17,7 @@
 		1E6D95CE6D459A3E57CC30D7 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAB551C1FB8D1EA35972B282 /* OnboardingView.swift */; };
 		22EE2C8CD64A1DBD581B3AAA /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0092AEE5F32DECE392F1FBC5 /* PaywallView.swift */; };
 		252DA2BBDFE91030C731389E /* PersistenceController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 783256424249ECF294A3B6D3 /* PersistenceController.swift */; };
+		26BC87026854219658BB7EE9 /* ToastView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CFE3723DC3C2AED5E91CF7BC /* ToastView.swift */; };
 		2B031CC8817D8E6AD49EA624 /* TimeFormatting.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45FE49CC7A35859480FBCB71 /* TimeFormatting.swift */; };
 		2C98FE3103EBB26D84D66BB2 /* DoseTrackApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C581B6A1682A93A48B3FCC0 /* DoseTrackApp.swift */; };
 		2CDA49F943EA08271F752313 /* ContraceptiveTrackerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9BC6878833AE5C45FC5BA65 /* ContraceptiveTrackerView.swift */; };
@@ -66,6 +67,7 @@
 		78FAE557FEF7921B969432DD /* WidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = D281D1F2A82F1A73F9F256A5 /* WidgetBundle.swift */; };
 		7C00E007E2353BCE3881C073 /* MedicationsViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14894400AD92BDDA5EEA2A18 /* MedicationsViewModelTests.swift */; };
 		7C8FB0932E6F3F34D16EE7A4 /* MealTimesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5ADB75D545FA339E11BBD39 /* MealTimesTests.swift */; };
+		7CC696B13398EAFDB98EFAB5 /* ScreenshotSeeder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2571226635CA7DB491925B1A /* ScreenshotSeeder.swift */; };
 		7DE4589978C2550373CAD8E8 /* ActiveAccountContextTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACABF038925D50BED3918261 /* ActiveAccountContextTests.swift */; };
 		7F5377E26E907D675E2182C0 /* PushTokenManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A56A87A1C5B6E9F4E003903F /* PushTokenManager.swift */; };
 		7FBD95C52FDB4CE14634CB1E /* ScheduleGeneratorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD01A0081D63EFC4FF3B1510 /* ScheduleGeneratorTests.swift */; };
@@ -100,6 +102,7 @@
 		B88C9038817C7EB6A325029B /* HistoryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF2BEF367E2B42E12D66BD9B /* HistoryViewModel.swift */; };
 		BA89B46643B897C978D12388 /* RestockView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71760DE73620AFD90CB106C5 /* RestockView.swift */; };
 		BABB26DA058420EBB0B1D916 /* NotificationController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A50BE4785E63F56B342BE48B /* NotificationController.swift */; };
+		BBC2E9A73D557921B5AFA478 /* SupplyMath.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17A75568414E936D13FACEEF /* SupplyMath.swift */; };
 		BC56C6A9A93C59C8711F695F /* ReportGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB4EAC2257487A3F340D6310 /* ReportGenerator.swift */; };
 		BC601149CDF3569D6DD837A0 /* GuidedScheduleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A75207F9029E62A3CEDDA679 /* GuidedScheduleView.swift */; };
 		BCB4379E53AC435DDF9DD4A4 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 565A84AEE813DED51223FB82 /* Supabase */; };
@@ -176,6 +179,7 @@
 		1B9416BCF667D44B1B1CCB75 /* TodayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayView.swift; sourceTree = "<group>"; };
 		1F9568B988B88A0C6E1034A3 /* Secrets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Secrets.swift; sourceTree = "<group>"; };
 		1FA89388364D687BFC710600 /* SubscriptionManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionManagerTests.swift; sourceTree = "<group>"; };
+		2571226635CA7DB491925B1A /* ScreenshotSeeder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenshotSeeder.swift; sourceTree = "<group>"; };
 		2D2674E5A99319CB33B5C5B6 /* AddEditMedicationViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddEditMedicationViewModel.swift; sourceTree = "<group>"; };
 		2F20E87845CCE9E5F84D954F /* LockScreenWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LockScreenWidget.swift; sourceTree = "<group>"; };
 		2F9FC8A28D3514A8AF3C2784 /* Products.storekit */ = {isa = PBXFileReference; path = Products.storekit; sourceTree = "<group>"; };
@@ -257,6 +261,7 @@
 		C8CD6CA5C53F86C4B81BF09D /* CalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarView.swift; sourceTree = "<group>"; };
 		C984C953B3380BEBE5D370EA /* DoseTrack.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = DoseTrack.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		CD41BB94C55051360C9BC444 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		CFE3723DC3C2AED5E91CF7BC /* ToastView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToastView.swift; sourceTree = "<group>"; };
 		D281D1F2A82F1A73F9F256A5 /* WidgetBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetBundle.swift; sourceTree = "<group>"; };
 		D882B65CF2991AA971D2DF0D /* SupabaseSyncManagerTargetUserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseSyncManagerTargetUserTests.swift; sourceTree = "<group>"; };
 		D8F0A5CF3936D62E1ED5B2EF /* SupabaseSyncManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseSyncManager.swift; sourceTree = "<group>"; };
@@ -356,6 +361,7 @@
 				783256424249ECF294A3B6D3 /* PersistenceController.swift */,
 				58A9A5F0AF20BE1EEE3AC7D9 /* RootView.swift */,
 				88CBDE8FA9B0BA4DD62E2B41 /* SceneDelegate.swift */,
+				2571226635CA7DB491925B1A /* ScreenshotSeeder.swift */,
 				11A7EC4C5C94FE23E59262D0 /* TabNavigator.swift */,
 			);
 			path = App;
@@ -487,6 +493,7 @@
 				BBFCBCE0FBCEF7C83ABACD61 /* Constants.swift */,
 				B251F7099AC1614FB9283711 /* CoreDataSave.swift */,
 				45FE49CC7A35859480FBCB71 /* TimeFormatting.swift */,
+				CFE3723DC3C2AED5E91CF7BC /* ToastView.swift */,
 			);
 			path = Utilities;
 			sourceTree = "<group>";
@@ -819,6 +826,7 @@
 				37BC34AB00889BC038C55C6E /* MediumWidget.swift in Sources */,
 				534FD80F4CFFF910BDF66FE3 /* Schedule+CoreDataClass.swift in Sources */,
 				62DEC3A7AF026355FB049F44 /* SmallWidget.swift in Sources */,
+				BBC2E9A73D557921B5AFA478 /* SupplyMath.swift in Sources */,
 				55331B4EF02E4F3200990986 /* WidgetAccountIntent.swift in Sources */,
 				78FAE557FEF7921B969432DD /* WidgetBundle.swift in Sources */,
 				C02195D91642F8D7E77AE383 /* WidgetColorExtension.swift in Sources */,
@@ -889,6 +897,7 @@
 				FB10E263F64A40D6F09922AB /* Schedule+CoreDataClass.swift in Sources */,
 				5779CA573B4CF9E77729B6C5 /* Schedule+Extensions.swift in Sources */,
 				0506750C0692CB8F16ED0F57 /* ScheduleGenerator.swift in Sources */,
+				7CC696B13398EAFDB98EFAB5 /* ScreenshotSeeder.swift in Sources */,
 				1158F9B3D8437466D48B2052 /* Secrets.swift in Sources */,
 				6C986A2D0DFCBCC472B41B60 /* SettingsView.swift in Sources */,
 				2E3B16F548370D35434679C9 /* SubscriptionManager.swift in Sources */,
@@ -897,6 +906,7 @@
 				93FF0F39C336E9618A5DB9BC /* SupplyWheelPicker.swift in Sources */,
 				495721E2FC0B4A6C27C3932A /* TabNavigator.swift in Sources */,
 				2B031CC8817D8E6AD49EA624 /* TimeFormatting.swift in Sources */,
+				26BC87026854219658BB7EE9 /* ToastView.swift in Sources */,
 				69A9CC9A6BCDF42A46280271 /* TodayView.swift in Sources */,
 				AB9F67B2E65BA6CEFE554DB2 /* TodayViewModel.swift in Sources */,
 				4D78F29D27AEDC042E91D7EF /* WatchConnectivityManager.swift in Sources */,
@@ -1008,9 +1018,10 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 4;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = 9VY7RCG6Y4;
+				ENABLE_DEBUG_DYLIB = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
@@ -1068,7 +1079,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.robbrown.dosetrack;
 				SDKROOT = iphoneos;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;
 		};
@@ -1107,9 +1118,10 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 4;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = 9VY7RCG6Y4;
+				ENABLE_DEBUG_DYLIB = NO;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
@@ -1163,7 +1175,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.robbrown.dosetrack;
 				SDKROOT = iphoneos;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Debug;
 		};

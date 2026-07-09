@@ -24,10 +24,21 @@ struct AuthView: View {
             VStack(spacing: 20) {
                 // MARK: Hero character — Milli the pill bottle
                 VStack(spacing: 6) {
-                    Image("OnboardingWelcome")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 160, height: 160)
+                    // OnboardingWelcome.png has an opaque *white* background baked in. A white
+                    // card behind it is invisible (white-on-white has no edge to see), so the
+                    // backdrop must be a colour that actually contrasts with the artwork.
+                    ZStack {
+                        Circle()
+                            .fill(LinearGradient(colors: [.blue.opacity(0.35), .blue.opacity(0.15)],
+                                                  startPoint: .topLeading, endPoint: .bottomTrailing))
+                            .frame(width: 172, height: 172)
+                            .shadow(color: .black.opacity(0.25), radius: 18, y: 8)
+                        Image("OnboardingWelcome")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 124, height: 124)
+                            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+                    }
 
                     VStack(spacing: 2) {
                         Text("DoseTrack")

@@ -43,10 +43,18 @@ struct TodayView: View {
                 if viewModel.doseEntries.isEmpty {
                     Section {
                         VStack(spacing: 12) {
-                            Image("OnboardingAllDone")
-                                .resizable()
-                                .scaledToFit()
-                                .frame(width: 100, height: 100)
+                            // OnboardingAllDone.png has an opaque background baked in — see AuthView.
+                            ZStack {
+                                Circle()
+                                    .fill(LinearGradient(colors: [.green.opacity(0.3), .green.opacity(0.12)],
+                                                          startPoint: .topLeading, endPoint: .bottomTrailing))
+                                    .frame(width: 108, height: 108)
+                                Image("OnboardingAllDone")
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: 76, height: 76)
+                                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                            }
                             Text("No medications scheduled today")
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
@@ -64,14 +72,21 @@ struct TodayView: View {
                     }
 
                     if !past.isEmpty {
-                        Section {
-                            ForEach(past) { entry in
-                                DoseRowView(entry: entry)
-                                    .contentShape(Rectangle())
-                                    .onTapGesture { selectedEntry = entry }
+                        let pastGroups = groupedByTime(past)
+                        ForEach(Array(pastGroups.enumerated()), id: \.element.time) { index, group in
+                            Section {
+                                ForEach(group.entries) { entry in
+                                    DoseRowView(entry: entry)
+                                        .contentShape(Rectangle())
+                                        .onTapGesture { selectedEntry = entry }
+                                }
+                            } header: {
+                                TimeGroupHeader(
+                                    title: index == 0 ? "Due / Past" : nil,
+                                    entries: group.entries,
+                                    onMarkAllTaken: { viewModel.markAllTaken(group.entries) }
+                                )
                             }
-                        } header: {
-                            SectionHeader("Due / Past")
                         }
                     }
 
@@ -130,6 +145,66 @@ struct TodayView: View {
                     .transition(.opacity)
             }
         }
+    }
+
+    /// Groups entries that share an exact scheduled hour/minute — e.g. three medications
+    /// all due at 08:00 — so the UI can offer a single "Mark all taken" action for the
+    /// whole group instead of requiring one tap per medication.
+    private func groupedByTime(_ entries: [DoseEntry]) -> [(time: Date, entries: [DoseEntry])] {
+        let calendar = Calendar.current
+        let buckets = Dictionary(grouping: entries) { entry in
+            calendar.date(bySettingHour: calendar.component(.hour, from: entry.scheduledAt),
+                          minute: calendar.component(.minute, from: entry.scheduledAt),
+                          second: 0, of: entry.scheduledAt) ?? entry.scheduledAt
+        }
+        return buckets.keys.sorted().map { time in
+            (time: time, entries: buckets[time]!.sorted { $0.medication.wrappedName < $1.medication.wrappedName })
+        }
+    }
+}
+
+// MARK: - Time Group Header
+
+/// Section header for a group of doses due at the same time. Shows an optional section
+/// title (only on the first group, so "Due / Past" still reads as one section visually)
+/// plus a "Mark all taken" button when 2+ medications share this time slot and at least
+/// one hasn't been logged as taken yet.
+private struct TimeGroupHeader: View {
+    let title: String?
+    let entries: [DoseEntry]
+    let onMarkAllTaken: () -> Void
+
+    @AppStorage("timeFormat") private var timeFormat: String = "system"
+
+    private var allTaken: Bool {
+        entries.allSatisfy { $0.status == .taken }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            if let title {
+                Text(title)
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.secondary)
+            }
+            if entries.count > 1 {
+                HStack {
+                    Text(TimeFormatPreference.string(for: entries[0].scheduledAt, preference: timeFormat))
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    if !allTaken {
+                        Button(action: onMarkAllTaken) {
+                            Label("Mark all \(entries.count) taken", systemImage: "checkmark.circle.fill")
+                                .font(.caption.weight(.semibold))
+                        }
+                        .buttonStyle(.plain)
+                        .foregroundStyle(Color.accentColor)
+                    }
+                }
+            }
+        }
+        .textCase(nil)
     }
 }
 

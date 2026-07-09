@@ -24,6 +24,9 @@ enum Constants {
     enum ExternalLinks {
         /// Pre-launch placeholder — swap for the real App Store listing URL once live.
         static let appStoreFallback = URL(string: "https://dosetrack.app/get-the-app")!
+
+        /// Hosted privacy policy (GitHub Pages) — same URL registered in App Store Connect.
+        static let privacyPolicy = URL(string: "https://4032332.github.io/dosetrack/privacy.html")!
     }
 
     enum Notification {

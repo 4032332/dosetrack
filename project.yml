@@ -19,8 +19,15 @@ settings:
   base:
     SWIFT_VERSION: "5.9"
     DEVELOPMENT_TEAM: "9VY7RCG6Y4"
+    # Xcode 16's "debug dylib" acceleration only loads correctly when Xcode's own debugger
+    # attaches the launched process. Building/running from the command line (xcodebuild +
+    # simctl launch, as used for local screenshot generation) skips that attach step, so the
+    # app silently keeps running old code with no error. Disabling it makes command-line
+    # builds behave like a normal statically-linked binary. Archive/Release builds were never
+    # affected by this (the acceleration is Debug-only).
+    ENABLE_DEBUG_DYLIB: NO
     MARKETING_VERSION: "1.0.0"
-    CURRENT_PROJECT_VERSION: "1"
+    CURRENT_PROJECT_VERSION: "4"
     CODE_SIGN_STYLE: Automatic
 
 targets:
@@ -35,6 +42,9 @@ targets:
         INFOPLIST_FILE: DoseTrack/Resources/Info.plist
         PRODUCT_BUNDLE_IDENTIFIER: com.robbrown.dosetrack
         CODE_SIGN_ENTITLEMENTS: DoseTrack/Resources/DoseTrack.entitlements
+        # iPhone only — daily medication reminders aren't an iPad use case, and this
+        # removes the need for iPad-specific screenshots/icons on submission.
+        TARGETED_DEVICE_FAMILY: "1"
     entitlements:
       path: DoseTrack/Resources/DoseTrack.entitlements
       properties:
@@ -73,6 +83,9 @@ targets:
       - path: DoseTrack/Models/Medication+CoreDataClass.swift
       - path: DoseTrack/Models/Schedule+CoreDataClass.swift
       - path: DoseTrack/Models/DoseLog+CoreDataClass.swift
+      # Pure, dependency-free supply arithmetic — shared with the main app so a dose marked
+      # taken from the widget decrements supply identically to one marked in the app.
+      - path: DoseTrack/Services/SupplyMath.swift
     settings:
       base:
         INFOPLIST_FILE: DoseTrackWidgets/Info.plist

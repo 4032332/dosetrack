@@ -7,6 +7,28 @@ final class ExportManager {
     static let shared = ExportManager()
     private init() {}
 
+    // MARK: - File writing
+
+    /// Writes export data to a uniquely-named temporary file and returns its URL.
+    ///
+    /// Sharing raw `Data` through `UIActivityViewController` produces a generically-named,
+    /// untyped attachment (and pairing it with a separate filename String just shares that
+    /// string as plain text). Sharing a real file URL instead gives AirDrop / Files / Mail a
+    /// correctly-named, correctly-typed `.csv` / `.pdf`.
+    func writeTemporaryFile(data: Data, filename: String) -> URL? {
+        // Namespace under a subfolder so repeated exports with the same filename don't collide.
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("DoseTrackExports/\(UUID().uuidString)", isDirectory: true)
+        do {
+            try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+            let url = dir.appendingPathComponent(filename)
+            try data.write(to: url, options: .atomic)
+            return url
+        } catch {
+            return nil
+        }
+    }
+
     // MARK: - CSV Export (always free)
 
     func generateCSV(from logs: [DoseLog], dateRange: DateInterval) -> Data {

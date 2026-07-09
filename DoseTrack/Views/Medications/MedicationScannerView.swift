@@ -123,7 +123,19 @@ struct MedicationScannerView: View {
 
         let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
         DispatchQueue.global(qos: .userInitiated).async {
-            try? handler.perform([request])
+            do {
+                try handler.perform([request])
+            } catch {
+                // `perform` throwing (as opposed to the request completion handler reporting
+                // an error) never invokes VNRecognizeTextRequest's completion block at all —
+                // silently swallowing this with `try?` left the UI stuck on the "Reading
+                // medication details…" spinner forever with no feedback, which is exactly
+                // what looked like "the photo does nothing."
+                DispatchQueue.main.async {
+                    isProcessing = false
+                    errorMessage = "Couldn't read this image. Please try again with better lighting."
+                }
+            }
         }
     }
 

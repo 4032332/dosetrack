@@ -82,7 +82,7 @@ final class MedicationsViewModel: ObservableObject {
         guard let med = medicationToDelete else { return }
         med.isActive = false
         med.updatedAt = Date()
-        try? context.save()
+        context.saveOrReport()
         WidgetCenter.shared.reloadAllTimelines()
         // Push the tombstone, or a stale remote row keeps this medication looking active on
         // the next pull. Capture the account id/med before clearing state below.
@@ -101,10 +101,21 @@ final class MedicationsViewModel: ObservableObject {
     func moveItems(from source: IndexSet, to destination: Int) {
         var reordered = medications
         reordered.move(fromOffsets: source, toOffset: destination)
+        let now = Date()
         for (index, med) in reordered.enumerated() {
             med.sortOrder = Int32(index)
+            med.updatedAt = now
         }
-        try? context.save()
+        context.saveOrReport()
         medications = reordered
+        // Without pushing, the new order saves locally but silently resets on the next pull
+        // (remote rows still carry the old sortOrder). Stamp updatedAt + push each row.
+        let pushUserId = ActiveAccountResolver.shared.activeUserId
+        let toPush = reordered
+        Task {
+            for med in toPush {
+                await SupabaseSyncManager.shared.pushMedication(med, forUserId: pushUserId)
+            }
+        }
     }
 }

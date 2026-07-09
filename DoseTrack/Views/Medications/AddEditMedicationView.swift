@@ -316,8 +316,11 @@ struct AddEditMedicationView: View {
                 }
             }
             .confirmationDialog("Add E-Script", isPresented: $showingEscriptSourcePicker) {
-                Button("Take Photo") { showingEscriptCamera = true }
-                Button("Choose from Photo Library") { showingEscriptLibrary = true }
+                // Deferred to the next run loop turn — presenting a sheet in the same turn
+                // as this dialog's dismissal can be silently dropped by SwiftUI (see the
+                // matching fix/comment in RestockView).
+                Button("Take Photo") { DispatchQueue.main.async { showingEscriptCamera = true } }
+                Button("Choose from Photo Library") { DispatchQueue.main.async { showingEscriptLibrary = true } }
                 Button("Cancel", role: .cancel) {}
             } message: {
                 Text("Save your QR code to show at the pharmacy.")

@@ -89,6 +89,26 @@ final class TodayViewModelTests: XCTestCase {
         XCTAssertEqual(logs.first?.doseStatus, .skipped)
     }
 
+    func testUpcomingDose_isMarkedUpcoming_andNotCountedAsTaken() throws {
+        let cal = Calendar.current
+        let currentHour = cal.component(.hour, from: Date())
+        // Need at least one clear hour left in the day to schedule a deterministically-future
+        // dose; skip in the last hour rather than risk a wall-clock flake.
+        try XCTSkipIf(currentHour >= 23, "Too close to midnight to schedule a future dose deterministically")
+
+        let med = Medication.create(in: context, name: "Evening Med", dosage: "10mg")
+        _ = Schedule.create(in: context, medication: med, hour: Int16(currentHour + 1), minute: 0)
+        try context.save()
+
+        sut.refresh()
+
+        let entry = sut.doseEntries.first { $0.medication == med }
+        XCTAssertNotNil(entry)
+        XCTAssertTrue(entry?.isUpcoming == true, "A future un-logged dose should be upcoming")
+        XCTAssertEqual(sut.takenCount, 0, "Upcoming doses must not count toward taken")
+        XCTAssertEqual(sut.totalCount, 1)
+    }
+
     func testMarkTaken_updatesExistingLog_doesNotCreateDuplicate() throws {
         let med = Medication.create(in: context, name: "Ibuprofen", dosage: "200mg")
         let schedule = Schedule.create(in: context, medication: med)

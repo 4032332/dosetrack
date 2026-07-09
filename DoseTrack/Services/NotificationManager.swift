@@ -16,7 +16,10 @@ final class NotificationManager: NSObject, ObservableObject {
     func requestAuthorization() async -> Bool {
         let center = UNUserNotificationCenter.current()
         do {
-            let granted = try await center.requestAuthorization(options: [.alert, .sound, .badge, .criticalAlert])
+            // .criticalAlert deliberately omitted: it requires a separate Apple-approved
+            // entitlement we don't have (see project.yml), and requesting it anyway triggers
+            // the "Would Like to Send You Critical Alerts" system prompt for no benefit.
+            let granted = try await center.requestAuthorization(options: [.alert, .sound, .badge])
             await refreshStatus()
             return granted
         } catch {

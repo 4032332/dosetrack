@@ -12,6 +12,10 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
+        #if DEBUG
+        ScreenshotSeeder.seedIfRequested()
+        ScreenshotSeeder.selectTabIfRequested()
+        #endif
         NotificationManager.shared.registerCategories()
         UNUserNotificationCenter.current().delegate = self
         registerBackgroundTasks()

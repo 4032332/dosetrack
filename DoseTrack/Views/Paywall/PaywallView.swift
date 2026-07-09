@@ -47,17 +47,19 @@ struct PaywallView: View {
                         }
 
                         if subscriptionManager.availableProducts.isEmpty {
-                            // Shown in simulator where StoreKit config isn't attached
+                            // These rows used to render as plain, non-interactive Text
+                            // styled to look exactly like the real tappable price buttons
+                            // above — so when real StoreKit products aren't configured yet
+                            // (e.g. Pro isn't live in App Store Connect), tapping them did
+                            // nothing, which looked like a broken paywall rather than an
+                            // honestly-labelled "not available yet" state.
                             VStack(spacing: 8) {
-                                Text("Pro Monthly — $3.99/mo")
-                                    .padding()
+                                Label("Pro pricing is coming soon", systemImage: "hourglass")
+                                    .font(.subheadline.weight(.medium))
+                                    .foregroundStyle(.secondary)
                                     .frame(maxWidth: .infinity)
-                                    .background(Color.accentColor.opacity(0.1))
-                                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                                Text("Pro Annual — $29.99/yr  ·  Best Value")
                                     .padding()
-                                    .frame(maxWidth: .infinity)
-                                    .background(Color.accentColor.opacity(0.1))
+                                    .background(Color.secondary.opacity(0.08))
                                     .clipShape(RoundedRectangle(cornerRadius: 12))
                             }
                         }
