@@ -32,6 +32,9 @@ final class SupabaseSyncManager: ObservableObject {
             mergeMedications(m, context: context)
             mergeSchedules(s, context: context)
             mergeDoseLogs(l, context: context)
+            // Heal any duplicate schedules that a past edit left behind before orphan cleanup
+            // existed — collapses same-signature schedules so Today stops showing repeats.
+            dedupeSchedules(context: context)
             // Only apply settings when syncing the signed-in user's own account — applying a
             // linked patient's UserDefaults onto the caregiver's own device would silently
             // overwrite the caregiver's theme/name/preferences. See risk note above.
@@ -70,10 +73,54 @@ final class SupabaseSyncManager: ObservableObject {
         let row = MedicationRow(medication: med, userId: targetUserId)
         do {
             try await client.from("medications").upsert(row).execute()
+            let currentIds = med.schedulesArray.compactMap { $0.id?.uuidString }
             for schedule in med.schedulesArray {
                 await pushSchedule(schedule, medicationId: id, userId: targetUserId)
             }
+            // Delete any remote schedule rows for this medication that no longer exist locally.
+            // Editing a medication replaces its schedules with new-UUID rows; without this the
+            // old rows were left orphaned in Supabase and re-materialized as DUPLICATE schedules
+            // on the next pull (one extra Today row per past edit, and stale-time reminders).
+            var deleteQuery = client.from("schedules").delete().eq("medication_id", value: id.uuidString)
+            if !currentIds.isEmpty {
+                deleteQuery = deleteQuery.not("id", operator: .in, value: "(\(currentIds.joined(separator: ",")))")
+            }
+            try await deleteQuery.execute()
         } catch { print("pushMedication error: \(error)") }
+    }
+
+    /// Deletes a single schedule row remotely (best-effort; guests/unauth'd are no-ops).
+    func deleteSchedule(id: UUID) async {
+        guard AuthManager.shared.isSignedIn, !AuthManager.shared.isGuest else { return }
+        do {
+            try await client.from("schedules").delete().eq("id", value: id.uuidString).execute()
+        } catch { print("deleteSchedule error: \(error)") }
+    }
+
+    /// Collapses duplicate schedules — same time / frequency / days / interval on one medication —
+    /// that accumulated before orphaned remote rows were cleaned up. Keeps one per signature and
+    /// deletes the rest locally and remotely. Idempotent; safe to run on every pull.
+    @discardableResult
+    func dedupeSchedules(context: NSManagedObjectContext) -> Int {
+        let req = Medication.fetchRequest()
+        guard let meds = try? context.fetch(req) else { return 0 }
+        var removedRemoteIds: [UUID] = []
+        for med in meds {
+            var seen = Set<String>()
+            for sched in med.schedulesArray {
+                let key = "\(sched.hour):\(sched.minute):\(sched.wrappedFrequency):\(sched.daysOfWeekArray.sorted())\(sched.intervalDays):\(sched.isEnabled)"
+                if seen.contains(key) {
+                    if let sid = sched.id { removedRemoteIds.append(sid) }
+                    context.delete(sched)
+                } else {
+                    seen.insert(key)
+                }
+            }
+        }
+        guard !removedRemoteIds.isEmpty else { return 0 }
+        if context.hasChanges { try? context.save() }
+        Task { for sid in removedRemoteIds { await deleteSchedule(id: sid) } }
+        return removedRemoteIds.count
     }
 
     func pushSchedule(_ schedule: Schedule, medicationId: UUID, userId: UUID) async {

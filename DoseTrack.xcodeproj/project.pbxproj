@@ -94,6 +94,7 @@
 		A268478FCA48D8A108362FF6 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = ABAACB239219E084D4E75FD2 /* GoogleSignIn */; };
 		A281A80A50F5524437F5AD94 /* CollapsiblePickers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81DA062623FAFAD8798ED2BF /* CollapsiblePickers.swift */; };
 		A7BF7E3D338864668FBF87CE /* AdherenceCalculatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3C137AE71909B05AA99C229 /* AdherenceCalculatorTests.swift */; };
+		A909A426B5CE460F3BF32C03 /* DoseTrackWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 73C68DD81F8003DB39C9A4E5 /* DoseTrackWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		AA59320BDF49357220E95DB9 /* MealTimes.swift in Sources */ = {isa = PBXBuildFile; fileRef = A06BB85DFE0B688F4E9B7EE9 /* MealTimes.swift */; };
 		AAFD22374BC98407BFF8AA1A /* CaregiverRelationshipRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E8539B8E908D6EE13B45C02 /* CaregiverRelationshipRow.swift */; };
 		AB9F67B2E65BA6CEFE554DB2 /* TodayViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5010CFC8C3F763A36668FE2C /* TodayViewModel.swift */; };
@@ -139,6 +140,13 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		6F351EA395E7253FFD4BCDFB /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 6315B9B4813F5F27900F9403 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = CB19F450A645193836BF07DD;
+			remoteInfo = DoseTrackWatch;
+		};
 		AC31DAED931B9BB3D324DEB9 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 6315B9B4813F5F27900F9403 /* Project object */;
@@ -165,6 +173,17 @@
 				9F8C388D5ADC9D1FADE1F537 /* DoseTrackWidgets.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F11614CAD7840A81EBB9158E /* Embed Watch Content */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
+			dstSubfolderSpec = 16;
+			files = (
+				A909A426B5CE460F3BF32C03 /* DoseTrackWatch.app in Embed Watch Content */,
+			);
+			name = "Embed Watch Content";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXCopyFilesBuildPhase section */
@@ -674,11 +693,13 @@
 				FDBEC95A4DCCD07DA5E96067 /* Resources */,
 				90195143BDEDD82E2DCFB102 /* Frameworks */,
 				60446C80854DE12B4CEEBBC2 /* Embed Foundation Extensions */,
+				F11614CAD7840A81EBB9158E /* Embed Watch Content */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 				4EF66A68E3F0425643691621 /* PBXTargetDependency */,
+				7CCCB6963F6E59F22DED28B0 /* PBXTargetDependency */,
 			);
 			name = DoseTrack;
 			packageProductDependencies = (
@@ -950,6 +971,11 @@
 			isa = PBXTargetDependency;
 			target = 0FF49BA416B8F8951167A4F6 /* DoseTrackWidgets */;
 			targetProxy = EAA4C9D25F4B6AA766999F43 /* PBXContainerItemProxy */;
+		};
+		7CCCB6963F6E59F22DED28B0 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = CB19F450A645193836BF07DD /* DoseTrackWatch */;
+			targetProxy = 6F351EA395E7253FFD4BCDFB /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 

@@ -63,6 +63,11 @@ targets:
     dependencies:
       - target: DoseTrackWidgets
         embed: true
+      # Embeds the watchOS app inside the iOS app so it actually ships. Without this the watch
+      # app built as its own target but was never bundled into the archive, so TestFlight never
+      # delivered it to a paired watch (it never appeared in the Watch app's app list).
+      - target: DoseTrackWatch
+        embed: true
       - package: Supabase
         product: Supabase
       - package: GoogleSignIn
