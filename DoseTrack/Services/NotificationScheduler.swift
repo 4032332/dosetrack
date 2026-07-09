@@ -128,6 +128,36 @@ final class NotificationScheduler {
         }
     }
 
+    /// Whether a taken/skipped DoseLog already exists for this medication at (approximately)
+    /// the given fire time — matched to the minute so a logged dose suppresses its reminder.
+    static func doseAlreadyLogged(medication: Medication, at fireDate: Date, calendar: Calendar) -> Bool {
+        medication.doseLogsArray.contains { log in
+            guard let scheduledAt = log.scheduledAt,
+                  log.doseStatus == .taken || log.doseStatus == .skipped else { return false }
+            return calendar.isDate(scheduledAt, equalTo: fireDate, toGranularity: .minute)
+        }
+    }
+
+    /// Cancel the pending scheduled reminder for a medication+schedule on a given day — called
+    /// the moment a dose is logged taken/skipped so a reminder marked done early never fires.
+    /// Matches on the `dt.<medId>.<schId>.` id prefix plus the trigger's own fire day, so it's
+    /// robust to any sub-minute mismatch between the logged `scheduledAt` and the built fire date.
+    func cancelScheduledNotification(medicationId: String, scheduleId: String, on day: Date) {
+        guard !medicationId.isEmpty, !scheduleId.isEmpty else { return }
+        let calendar = Calendar.current
+        let prefix = "dt.\(medicationId).\(scheduleId)."
+        center.getPendingNotificationRequests { [weak self] pending in
+            let ids = pending.compactMap { req -> String? in
+                guard req.identifier.hasPrefix(prefix),
+                      let trigger = req.trigger as? UNCalendarNotificationTrigger,
+                      let next = trigger.nextTriggerDate(),
+                      calendar.isDate(next, inSameDayAs: day) else { return nil }
+                return req.identifier
+            }
+            if !ids.isEmpty { self?.center.removePendingNotificationRequests(withIdentifiers: ids) }
+        }
+    }
+
     /// Schedule a one-time snooze notification for `minutes` from now.
     func scheduleSnooze(
         medicationId: String,
@@ -178,6 +208,15 @@ final class NotificationScheduler {
 
                 guard let fireDate = calendar.date(from: components),
                       fireDate > start else {
+                    cursor = calendar.date(byAdding: .day, value: 1, to: cursor) ?? end
+                    continue
+                }
+
+                // Don't (re)schedule a reminder for a dose that's already been logged taken or
+                // skipped for this exact slot. Without this, a dose marked taken early still had
+                // its reminder fire at the due time, and any refresh (app launch) would re-create
+                // a reminder that was just cancelled on logging.
+                if Self.doseAlreadyLogged(medication: medication, at: fireDate, calendar: calendar) {
                     cursor = calendar.date(byAdding: .day, value: 1, to: cursor) ?? end
                     continue
                 }

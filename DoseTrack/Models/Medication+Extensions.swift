@@ -36,7 +36,12 @@ extension Medication {
     }
 
     var isRefillWarning: Bool {
-        currentCount > 0 && currentCount <= refillThreshold
+        // Warn at or below the refill threshold, INCLUDING 0 (out of stock). The previous
+        // `currentCount > 0` guard suppressed the warning at exactly 0 — the single most
+        // urgent state — so a depleted medication showed no flag at all. Gated on the med
+        // actually being consumed on a schedule (totalDosesPerDay > 0) so as-needed items
+        // that don't track a running count don't nag.
+        totalDosesPerDay > 0 && currentCount <= refillThreshold
     }
 
     var wrappedName: String { name ?? "" }

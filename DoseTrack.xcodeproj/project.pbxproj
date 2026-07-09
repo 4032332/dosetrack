@@ -134,6 +134,7 @@
 		FB10E263F64A40D6F09922AB /* Schedule+CoreDataClass.swift in Sources */ = {isa = PBXBuildFile; fileRef = 659421C828B6315E4C40041A /* Schedule+CoreDataClass.swift */; };
 		FE3369F99BF36FC26E5BFE59 /* AddEditMedicationViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56B5E2D8D1A525B4D9624923 /* AddEditMedicationViewModelTests.swift */; };
 		FF4F8AB24C069BA1A44BFE2B /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62B58FEC4F155887E0B66ABB /* ContentView.swift */; };
+		FF79D251AEE66C4E0E8E6410 /* RegressionFixTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86B90B563094F8A79551AC1B /* RegressionFixTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -223,6 +224,7 @@
 		822594ED54F9EFC6980C7E5D /* WidgetColorExtension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetColorExtension.swift; sourceTree = "<group>"; };
 		856E2087A98DF1DC78EE02F0 /* SyncMergeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncMergeTests.swift; sourceTree = "<group>"; };
 		862F377A339FECEE7C6CCC43 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		86B90B563094F8A79551AC1B /* RegressionFixTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RegressionFixTests.swift; sourceTree = "<group>"; };
 		878B68C292228E0060558260 /* MedicationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MedicationsView.swift; sourceTree = "<group>"; };
 		88CBDE8FA9B0BA4DD62E2B41 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
 		8B436BDA5B0D210B8FED41FF /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
@@ -581,6 +583,7 @@
 				0642B52A4FE3BAEB0C80CDEC /* MissedDoseDetectorTests.swift */,
 				BA1090D2A5C494DAAB7160DC /* NotificationSchedulerTests.swift */,
 				1334F53F193DF18162FD3082 /* Placeholder.swift */,
+				86B90B563094F8A79551AC1B /* RegressionFixTests.swift */,
 				F0867072E3E54124F243E04E /* ReportGeneratorTests.swift */,
 				DD01A0081D63EFC4FF3B1510 /* ScheduleGeneratorTests.swift */,
 				1FA89388364D687BFC710600 /* SubscriptionManagerTests.swift */,
@@ -817,6 +820,7 @@
 				33962C7BDA120E5FC8E3CC75 /* MissedDoseDetectorTests.swift in Sources */,
 				6F0BF41105812A2D4130060F /* NotificationSchedulerTests.swift in Sources */,
 				758648FC943D5E93E40B4D86 /* Placeholder.swift in Sources */,
+				FF79D251AEE66C4E0E8E6410 /* RegressionFixTests.swift in Sources */,
 				A1D43B576119BC84DECA642C /* ReportGeneratorTests.swift in Sources */,
 				7FBD95C52FDB4CE14634CB1E /* ScheduleGeneratorTests.swift in Sources */,
 				CC32A8FABA8182BE6986EDB8 /* SubscriptionManagerTests.swift in Sources */,

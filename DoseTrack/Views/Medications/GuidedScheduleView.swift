@@ -24,6 +24,12 @@ struct GuidedScheduleView: View {
 
     @AppStorage("timeFormat") private var timeFormat: String = "system"
     @State private var step: Step = .collapsed
+    /// Guards `seedStateFromExistingSchedules()` so it runs exactly once. `.onAppear` can fire
+    /// repeatedly (row scrolling on/off screen, DatePicker popovers re-laying-out the row); the
+    /// seed unconditionally forced `step = .collapsed`, so every re-fire yanked the user out of
+    /// the review editor the instant they tried to change a time — this was why editing an
+    /// existing medication's schedule "did nothing."
+    @State private var hasSeeded = false
     @State private var everyDay = true
     @State private var daysOfWeek: [Int] = []
     @State private var timesPerDay = 1
@@ -354,6 +360,8 @@ struct GuidedScheduleView: View {
     /// seed the local flow state and jump straight to the collapsed summary per the
     /// spec's re-entry rule — never restart at Q1 for an existing schedule.
     private func seedStateFromExistingSchedules() {
+        guard !hasSeeded else { return }
+        hasSeeded = true
         guard isEditingExistingMedication, let first = schedules.first else { return }
         everyDay = first.daysOfWeek.isEmpty
         daysOfWeek = first.daysOfWeek

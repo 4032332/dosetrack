@@ -55,6 +55,16 @@ final class DoseLoggingService {
 
         context.saveOrReport()
 
+        // A dose logged (taken or skipped) shouldn't still buzz at its due time — cancel the
+        // pending reminder for this exact slot. Handles "I took it early, it reminded me anyway."
+        if status == .taken || status == .skipped {
+            NotificationScheduler.shared.cancelScheduledNotification(
+                medicationId: medication.id?.uuidString ?? "",
+                scheduleId: schedule.id?.uuidString ?? "",
+                on: scheduledAt
+            )
+        }
+
         WidgetCenter.shared.reloadAllTimelines()
         Task { await SupabaseSyncManager.shared.pushDoseLog(doseLog, forUserId: pushUserId) }
     }

@@ -321,8 +321,14 @@ final class SupabaseSyncManager: ObservableObject {
         d.set(row.patientPhone,    forKey: "patientPhone")
         d.set(row.patientCountry,  forKey: "patientCountry")
         d.set(row.patientState,    forKey: "patientState")
-        if let dob = row.patientDob {
-            let ts = ISO8601DateFormatter().date(from: dob)?.timeIntervalSince1970 ?? 0
+        // `patient_dob` is a Postgres `date`, so it comes back as "yyyy-MM-dd" — NOT a full
+        // ISO8601 timestamp. The previous code parsed it with ISO8601DateFormatter (which
+        // returns nil for a date-only string) and then wrote `?? 0`, zeroing out the saved
+        // date of birth on every pull. That was the DOB "won't save" bug: the save worked
+        // fine, but the very next launch's pull clobbered it. Parse date-only (with an
+        // ISO8601 fallback for any legacy full-timestamp rows), and if it somehow still
+        // can't be parsed, leave the existing local value untouched rather than wiping it.
+        if let dob = row.patientDob, let ts = DOBFormat.timestamp(from: dob) {
             d.set(ts, forKey: "patientDOBInterval")
         }
         let meals = MealTimes(
@@ -559,7 +565,10 @@ struct UserSettingsRow: Codable {
         patientState     = d.string(forKey: "patientState") ?? ""
         let dobInterval  = d.double(forKey: "patientDOBInterval")
         if dobInterval > 0 {
-            patientDob = ISO8601DateFormatter().string(from: Date(timeIntervalSince1970: dobInterval))
+            // Write "yyyy-MM-dd" to match the Postgres `date` column. Writing a full ISO8601
+            // timestamp here previously let the day drift by one across the UTC boundary and
+            // couldn't be parsed back (see applySettings).
+            patientDob = DOBFormat.string(from: Date(timeIntervalSince1970: dobInterval))
         }
         let meals = MealTimes.load(from: d)
         mealBreakfastHour = meals.breakfast.hour
@@ -581,4 +590,29 @@ struct UserSettingsRow: Codable {
 
 private extension Int {
     func nonZeroOr(_ fallback: Int) -> Int { self == 0 ? fallback : self }
+}
+
+/// Date-of-birth <-> string conversion for the Postgres `date` column `user_settings.patient_dob`.
+/// A birth date is a calendar day, not an instant, so it's stored/parsed as "yyyy-MM-dd" in the
+/// device's current calendar/timezone (so the day the user picked is the day that round-trips).
+enum DOBFormat {
+    private static let dateOnly: DateFormatter = {
+        let f = DateFormatter()
+        f.calendar = Calendar(identifier: .gregorian)
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.dateFormat = "yyyy-MM-dd"
+        return f
+    }()
+
+    static func string(from date: Date) -> String {
+        dateOnly.string(from: date)
+    }
+
+    /// Parses a stored value, tolerating both the current "yyyy-MM-dd" form and any legacy
+    /// full ISO8601 timestamp. Returns nil (rather than a bogus 0) if neither parses.
+    static func timestamp(from string: String) -> Double? {
+        if let d = dateOnly.date(from: string) { return d.timeIntervalSince1970 }
+        if let d = ISO8601DateFormatter().date(from: string) { return d.timeIntervalSince1970 }
+        return nil
+    }
 }

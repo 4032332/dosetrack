@@ -99,6 +99,18 @@ final class AddEditMedicationViewModel: ObservableObject {
             }
             if schedules.isEmpty { schedules = [ScheduleDraft()] }
 
+            // Reconstruct per-dose quantity. It isn't stored on its own — only baked into
+            // totalDosesPerDay (= quantityAmount × enabled schedule count) — so the stepper
+            // previously reset to its default of 1 every time an existing medication was
+            // edited. Saving again then wrote totalDosesPerDay = 1 × scheduleCount, silently
+            // dropping e.g. "2 tablets per dose" back to 1 and corrupting the supply/days-left
+            // maths. Derive it back the same way SupplyMath consumes it.
+            let enabledScheduleCount = med.schedulesArray.filter { $0.isEnabled }.count
+            quantityAmount = SupplyMath.quantityPerDose(
+                totalDosesPerDay: Int(med.totalDosesPerDay),
+                enabledScheduleCount: enabledScheduleCount
+            )
+
             if isContraceptive, let lastLog = med.doseLogsArray.last {
                 lastAdministeredDate = lastLog.loggedAt ?? Date()
             }
@@ -189,6 +201,13 @@ final class AddEditMedicationViewModel: ObservableObject {
 
         context.saveOrReport()
         WidgetCenter.shared.reloadAllTimelines()
+        // Rebuild the notification queue immediately so any schedule/time change takes effect
+        // now. Previously save() never touched notifications, so an edited dose time only
+        // applied after the next app launch (when refreshAll runs on foreground) — meanwhile
+        // the OLD time's already-scheduled reminders kept firing. This was the root cause of
+        // reminders arriving at a stale time (e.g. 08:00) despite the schedule showing a new
+        // one. refreshAll cancels all dt.* pending requests and rebuilds from current data.
+        NotificationScheduler.shared.refreshAll(context: context)
         // Push to Supabase — photos uploaded separately if present
         let medCopy = med
         let pushUserId = ActiveAccountResolver.shared.activeUserId
