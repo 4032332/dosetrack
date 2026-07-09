@@ -21,6 +21,16 @@ enum Constants {
         static let maxMedications = 5
     }
 
+    enum DeveloperOptions {
+        /// Tap the Settings > About > Version row this many times to reveal the passcode
+        /// prompt for the hidden Developer Options screen (Pro / caregiver override toggles).
+        static let unlockTapCount = 7
+        /// Not meant to be cryptographically secure — this only needs to keep casual
+        /// TestFlight testers and App Review from stumbling into dev-only toggles, not
+        /// resist a determined attacker. Change it if it leaks.
+        static let passcode = "milli2026"
+    }
+
     enum ExternalLinks {
         /// Pre-launch placeholder — swap for the real App Store listing URL once live.
         static let appStoreFallback = URL(string: "https://dosetrack.app/get-the-app")!

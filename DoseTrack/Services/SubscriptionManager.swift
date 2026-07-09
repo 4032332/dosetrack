@@ -26,9 +26,7 @@ final class SubscriptionManager: ObservableObject {
         startListeningForTransactionUpdates()
         Task { await loadProducts() }
         Task { await refreshEntitlement() }
-        #if DEBUG
         applyDebugOverrideIfNeeded()
-        #endif
     }
 
     deinit {
@@ -81,12 +79,10 @@ final class SubscriptionManager: ObservableObject {
 
     @discardableResult
     private func refreshEntitlement() async -> Bool {
-        #if DEBUG
         if let override = debugForceProOverride {
             isProSubscriber = override
             return override
         }
-        #endif
         var hasPro = false
         for await result in Transaction.currentEntitlements {
             if case .verified(let transaction) = result,
@@ -122,24 +118,31 @@ final class SubscriptionManager: ObservableObject {
         }
     }
 
-    #if DEBUG
-    // MARK: - Debug-only Pro override
+    // MARK: - Dev/TestFlight Pro override
     //
-    // Lets a developer test Pro-gated features without a real purchase or a
-    // sandbox StoreKit account. Compiled only into DEBUG builds via #if DEBUG —
-    // never present in TestFlight/App Store release builds. There is no
-    // equivalent Supabase-side flag: subscription status isn't stored in
-    // Supabase at all today, only cached locally from StoreKit's own
-    // entitlement check, so this override is the only way to force it.
+    // Lets Pro-gated features be tested without a real purchase — either during
+    // local development or on a TestFlight build (where sandbox StoreKit purchases
+    // are awkward to set up repeatedly). Gated by BuildEnvironment.isTestFlightOrDebug
+    // rather than #if DEBUG so it survives into TestFlight archives; it self-disables
+    // on a real App Store build (detected via the receipt filename), so it's safe to
+    // ship without manual removal. The only way to reach the UI that flips this is the
+    // hidden, passcode-gated Developer Options screen in Settings — see SettingsView.
+    // There is no equivalent Supabase-side flag: subscription status isn't stored in
+    // Supabase at all today, only cached locally from StoreKit's own entitlement check,
+    // so this override is the only way to force it.
 
     private static let debugOverrideKey = "debugForceProOverride"
 
     /// `nil` = use the real StoreKit entitlement (default). `true`/`false` forces
     /// `isProSubscriber` to that value and skips the real entitlement check
-    /// until cleared.
+    /// until cleared. No-ops on a real App Store build even if somehow invoked.
     var debugForceProOverride: Bool? {
-        get { UserDefaults.standard.object(forKey: Self.debugOverrideKey) as? Bool }
+        get {
+            guard BuildEnvironment.isTestFlightOrDebug else { return nil }
+            return UserDefaults.standard.object(forKey: Self.debugOverrideKey) as? Bool
+        }
         set {
+            guard BuildEnvironment.isTestFlightOrDebug else { return }
             if let newValue {
                 UserDefaults.standard.set(newValue, forKey: Self.debugOverrideKey)
             } else {
@@ -153,6 +156,7 @@ final class SubscriptionManager: ObservableObject {
     }
 
     private func applyDebugOverrideIfNeeded() {
+        guard BuildEnvironment.isTestFlightOrDebug else { return }
         if let override = debugForceProOverride {
             isProSubscriber = override
             // Several other places in the app (e.g. MedicationsViewModel's default
@@ -166,5 +170,4 @@ final class SubscriptionManager: ObservableObject {
             UserDefaults.standard.set(override, forKey: Constants.UserDefaultsKeys.isProSubscriber)
         }
     }
-    #endif
 }

@@ -88,20 +88,21 @@ final class CaregiverManager: ObservableObject {
         WidgetCenter.shared.reloadAllTimelines()
     }
 
-    #if DEBUG
-    // MARK: - Debug-only caregiver mode preview
+    // MARK: - Dev/TestFlight caregiver mode preview
     //
-    // Lets a developer preview the caregiver-side UI (account switcher, "viewing
-    // another account" capsule, empty-patient-store screens) without a second
-    // Supabase account and a real invite/accept round-trip. The fake patient id
-    // is deliberately DIFFERENT from the developer's own user id — `RootView`
-    // only swaps to the separate per-patient CoreData store (and only shows a
-    // single checkmark in the switcher) when `activeUserId != ownUserId`. Using
-    // the same id here silently no-ops the switch (same store, same data, both
-    // rows checked) — a bug caught during manual testing. Because this fake id
-    // has no real Supabase-side data, switching to it correctly lands on an
-    // empty patient store; that's the honest state for a fabricated
-    // relationship, not a bug. Never present in release builds (#if DEBUG).
+    // Lets caregiver-side UI (account switcher, "viewing another account" capsule,
+    // empty-patient-store screens) be previewed without a second Supabase account
+    // and a real invite/accept round-trip. The fake patient id is deliberately
+    // DIFFERENT from the developer's own user id — `RootView` only swaps to the
+    // separate per-patient CoreData store (and only shows a single checkmark in
+    // the switcher) when `activeUserId != ownUserId`. Using the same id here
+    // silently no-ops the switch (same store, same data, both rows checked) — a
+    // bug caught during manual testing. Because this fake id has no real
+    // Supabase-side data, switching to it correctly lands on an empty patient
+    // store; that's the honest state for a fabricated relationship, not a bug.
+    // Gated by BuildEnvironment.isTestFlightOrDebug (not #if DEBUG) so it survives
+    // into TestFlight archives but self-disables on a real App Store build; only
+    // reachable via the hidden, passcode-gated Developer Options screen in Settings.
 
     private static let debugRelationshipId = UUID(uuidString: "00000000-0000-0000-0000-00000000DEBB")!
     private static let debugPatientId = UUID(uuidString: "00000000-0000-0000-0000-0000000DEB17")!
@@ -111,6 +112,7 @@ final class CaregiverManager: ObservableObject {
     }
 
     func setDebugCaregiverModeActive(_ active: Bool) {
+        guard BuildEnvironment.isTestFlightOrDebug else { return }
         if active {
             guard let userId = AuthManager.shared.session?.user.id, !isDebugCaregiverModeActive else { return }
             let fake = CaregiverRelationshipRow(
@@ -131,5 +133,4 @@ final class CaregiverManager: ObservableObject {
             myRelationships.removeAll { $0.id == Self.debugRelationshipId }
         }
     }
-    #endif
 }

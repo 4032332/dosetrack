@@ -64,6 +64,7 @@
 		75788434334E446254CBC72A /* WidgetDataProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = F85B31DF4FE76BC475F9D0CC /* WidgetDataProvider.swift */; };
 		758648FC943D5E93E40B4D86 /* Placeholder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1334F53F193DF18162FD3082 /* Placeholder.swift */; };
 		75B9910FFB2E8BD1C78E4BFC /* DoseTrack.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = D4341C7F0E59FA9C0240094D /* DoseTrack.xcdatamodeld */; };
+		7821D30439E5415C0F8D0D72 /* BuildEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E76F20C497B1349FE92ADF /* BuildEnvironment.swift */; };
 		78E1CEACF8B5258CF4F98F5C /* DoseTrackWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB37B24455EDD3E856F140EB /* DoseTrackWatchApp.swift */; };
 		78FAE557FEF7921B969432DD /* WidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = D281D1F2A82F1A73F9F256A5 /* WidgetBundle.swift */; };
 		7C00E007E2353BCE3881C073 /* MedicationsViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14894400AD92BDDA5EEA2A18 /* MedicationsViewModelTests.swift */; };
@@ -128,6 +129,7 @@
 		F24737D9C6039DF5252A4B6C /* AuthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E39FEC22DAEF5212C58A309 /* AuthView.swift */; };
 		F8006B9A85465BE6239634E3 /* DoseLog+CoreDataClass.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80992CD6D8F672994CF27502 /* DoseLog+CoreDataClass.swift */; };
 		F8AD1AB23B97957617500CC6 /* ExportManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 326537A1EABFA4A5B04DE7DA /* ExportManagerTests.swift */; };
+		FADA491B44B539FAAE135CCA /* DeveloperOptionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F28589A481525FC1CCB3CD11 /* DeveloperOptionsView.swift */; };
 		FB10E263F64A40D6F09922AB /* Schedule+CoreDataClass.swift in Sources */ = {isa = PBXBuildFile; fileRef = 659421C828B6315E4C40041A /* Schedule+CoreDataClass.swift */; };
 		FE3369F99BF36FC26E5BFE59 /* AddEditMedicationViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56B5E2D8D1A525B4D9624923 /* AddEditMedicationViewModelTests.swift */; };
 		FF4F8AB24C069BA1A44BFE2B /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62B58FEC4F155887E0B66ABB /* ContentView.swift */; };
@@ -264,6 +266,7 @@
 		C984C953B3380BEBE5D370EA /* DoseTrack.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = DoseTrack.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		CD41BB94C55051360C9BC444 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		CFE3723DC3C2AED5E91CF7BC /* ToastView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToastView.swift; sourceTree = "<group>"; };
+		D0E76F20C497B1349FE92ADF /* BuildEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BuildEnvironment.swift; sourceTree = "<group>"; };
 		D281D1F2A82F1A73F9F256A5 /* WidgetBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetBundle.swift; sourceTree = "<group>"; };
 		D882B65CF2991AA971D2DF0D /* SupabaseSyncManagerTargetUserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseSyncManagerTargetUserTests.swift; sourceTree = "<group>"; };
 		D8F0A5CF3936D62E1ED5B2EF /* SupabaseSyncManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseSyncManager.swift; sourceTree = "<group>"; };
@@ -281,6 +284,7 @@
 		EFBF2F1DB4EE6C1B60AB2673 /* MedicationScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MedicationScannerView.swift; sourceTree = "<group>"; };
 		F0867072E3E54124F243E04E /* ReportGeneratorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportGeneratorTests.swift; sourceTree = "<group>"; };
 		F15771DBF13A86D21DFD3720 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		F28589A481525FC1CCB3CD11 /* DeveloperOptionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeveloperOptionsView.swift; sourceTree = "<group>"; };
 		F2C5A665408198A48126D5B9 /* DoseTrackWidgets.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = DoseTrackWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		F4A5D3091DF9FA6B51262E03 /* TodayViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayViewModelTests.swift; sourceTree = "<group>"; };
 		F5ADB75D545FA339E11BBD39 /* MealTimesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealTimesTests.swift; sourceTree = "<group>"; };
@@ -490,6 +494,7 @@
 		A014992D42ABF467D8150491 /* Utilities */ = {
 			isa = PBXGroup;
 			children = (
+				D0E76F20C497B1349FE92ADF /* BuildEnvironment.swift */,
 				81DA062623FAFAD8798ED2BF /* CollapsiblePickers.swift */,
 				DB8881AEF9994F330EEA6BB1 /* ColorExtensions.swift */,
 				BBFCBCE0FBCEF7C83ABACD61 /* Constants.swift */,
@@ -508,6 +513,7 @@
 				F94A8FE73284D8CC6C89EC51 /* AvatarPickerView.swift */,
 				74716822DA208FC0B80FAC07 /* CaregiverInviteView.swift */,
 				E9BC6878833AE5C45FC5BA65 /* ContraceptiveTrackerView.swift */,
+				F28589A481525FC1CCB3CD11 /* DeveloperOptionsView.swift */,
 				029DF751591E2CD71D187974 /* MealTimesView.swift */,
 				A1A152E48F7A10E094FB3B37 /* ProfileView.swift */,
 				020BE8E8783CD63DD6223C2A /* SettingsView.swift */,
@@ -855,6 +861,7 @@
 				6FF0D471179DFC7041436CFF /* AuthManager.swift in Sources */,
 				F24737D9C6039DF5252A4B6C /* AuthView.swift in Sources */,
 				5A7538647F5CCCB06CAB664F /* AvatarPickerView.swift in Sources */,
+				7821D30439E5415C0F8D0D72 /* BuildEnvironment.swift in Sources */,
 				625A5FD00337A7B9592D47AB /* CalendarView.swift in Sources */,
 				335912EEB4077A23F3E0700A /* CaregiverInviteView.swift in Sources */,
 				8B48DF3CE85DB538565ECD06 /* CaregiverManager.swift in Sources */,
@@ -866,6 +873,7 @@
 				FF4F8AB24C069BA1A44BFE2B /* ContentView.swift in Sources */,
 				2CDA49F943EA08271F752313 /* ContraceptiveTrackerView.swift in Sources */,
 				DBEFB1A530C2EAD68DDEFD0B /* CoreDataSave.swift in Sources */,
+				FADA491B44B539FAAE135CCA /* DeveloperOptionsView.swift in Sources */,
 				B7BAA8EDEE4846F8F7FB6E5F /* DoseActionSheet.swift in Sources */,
 				6D92A43FEDE7869853A09B55 /* DoseLog+CoreDataClass.swift in Sources */,
 				2F4666001E67FF1A940B4CB1 /* DoseLog+Extensions.swift in Sources */,

@@ -26,32 +26,16 @@ struct SettingsView: View {
     @State private var showingSignUp = false
     @Binding var showingAccountSwitcher: Bool
 
+    // Hidden Developer Options unlock: tap the version row 7x, then enter the passcode.
+    @State private var versionTapCount = 0
+    @State private var showingDevPasscodePrompt = false
+    @State private var devPasscodeEntry = ""
+    @State private var devPasscodeError = false
+    @State private var showingDeveloperOptions = false
+
     init(showingAccountSwitcher: Binding<Bool> = .constant(false)) {
         self._showingAccountSwitcher = showingAccountSwitcher
     }
-
-    #if DEBUG
-    private enum DebugProOption: Hashable { case real, forceFree, forcePro }
-
-    private var debugProOverrideBinding: Binding<DebugProOption> {
-        Binding(
-            get: {
-                switch subscriptionManager.debugForceProOverride {
-                case .some(true):  return .forcePro
-                case .some(false): return .forceFree
-                case .none:        return .real
-                }
-            },
-            set: { option in
-                switch option {
-                case .real:      subscriptionManager.debugForceProOverride = nil
-                case .forceFree: subscriptionManager.debugForceProOverride = false
-                case .forcePro:  subscriptionManager.debugForceProOverride = true
-                }
-            }
-        )
-    }
-    #endif
 
     var body: some View {
         NavigationStack {
@@ -277,6 +261,17 @@ struct SettingsView: View {
                         Text(Bundle.main.appVersion)
                             .foregroundStyle(.secondary)
                     }
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        guard BuildEnvironment.isTestFlightOrDebug else { return }
+                        versionTapCount += 1
+                        if versionTapCount >= Constants.DeveloperOptions.unlockTapCount {
+                            versionTapCount = 0
+                            devPasscodeEntry = ""
+                            devPasscodeError = false
+                            showingDevPasscodePrompt = true
+                        }
+                    }
 
                     Button {
                         // Native in-app rating prompt (previously this opened apps.apple.com's
@@ -295,26 +290,6 @@ struct SettingsView: View {
                         Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
                     }
                 }
-
-                #if DEBUG
-                // MARK: Debug (DEBUG builds only — never present in release/TestFlight/App Store)
-                Section {
-                    Picker("Subscription (debug)", selection: debugProOverrideBinding) {
-                        Text("Real StoreKit status").tag(DebugProOption.real)
-                        Text("Force Free").tag(DebugProOption.forceFree)
-                        Text("Force Pro").tag(DebugProOption.forcePro)
-                    }
-
-                    Toggle("Caregiver Mode Preview", isOn: Binding(
-                        get: { caregiverManager.isDebugCaregiverModeActive },
-                        set: { caregiverManager.setDebugCaregiverModeActive($0) }
-                    ))
-                } header: {
-                    Text("Debug")
-                } footer: {
-                    Text("Subscription override lets you test Pro-gated features without a real purchase. Caregiver Mode Preview adds a fake \"Test Patient\" to the account switcher (top of the tab bar) so you can see the caregiver interface without a second account — since it's not a real relationship, switching to it shows an empty patient view rather than real data. Only compiled into debug builds.")
-                }
-                #endif
 
                 // MARK: Danger zone
                 Section {
@@ -347,6 +322,29 @@ struct SettingsView: View {
             }
             .sheet(isPresented: $showingPaywall) { PaywallView() }
             .sheet(isPresented: $showingSignUp) { AuthView().environmentObject(auth) }
+            .navigationDestination(isPresented: $showingDeveloperOptions) {
+                DeveloperOptionsView()
+                    .environmentObject(subscriptionManager)
+                    .environmentObject(caregiverManager)
+            }
+            .alert("Developer Options", isPresented: $showingDevPasscodePrompt) {
+                SecureField("Passcode", text: $devPasscodeEntry)
+                Button("Cancel", role: .cancel) {}
+                Button("Unlock") {
+                    if devPasscodeEntry == Constants.DeveloperOptions.passcode {
+                        showingDeveloperOptions = true
+                    } else {
+                        devPasscodeError = true
+                        devPasscodeEntry = ""
+                        // Re-present the alert on the next run loop turn so the user can
+                        // retry — setting isPresented back to true in the same turn a
+                        // SwiftUI alert dismisses from is unreliable.
+                        DispatchQueue.main.async { showingDevPasscodePrompt = true }
+                    }
+                }
+            } message: {
+                Text(devPasscodeError ? "Incorrect passcode." : "Enter the developer passcode.")
+            }
             .confirmationDialog(
                 "Delete All Data?",
                 isPresented: $showingDeleteConfirm,
