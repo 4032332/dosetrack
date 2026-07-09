@@ -78,16 +78,6 @@ struct MedicationsView: View {
             .sheet(isPresented: $viewModel.showingPaywall) {
                 PaywallView()
             }
-            .confirmationDialog(
-                "Delete \(viewModel.medicationToDelete?.wrappedName ?? "medication")?",
-                isPresented: $viewModel.showingDeleteConfirm,
-                titleVisibility: .visible
-            ) {
-                Button("Delete", role: .destructive) { viewModel.confirmSoftDelete() }
-                Button("Cancel", role: .cancel) { viewModel.cancelDelete() }
-            } message: {
-                Text("This removes the medication from your active list. History is preserved.")
-            }
         }
         .onAppear {
             viewModel.updateContext(context)

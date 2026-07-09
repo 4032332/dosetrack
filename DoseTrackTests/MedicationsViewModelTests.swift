@@ -61,32 +61,18 @@ final class MedicationsViewModelTests: XCTestCase {
         XCTAssertFalse(proSut.showingPaywall)
     }
 
-    func testConfirmSoftDelete_setsIsActiveToFalse() throws {
+    func testRequestDelete_setsIsActiveToFalseImmediately() throws {
+        // No confirmation step — reaching this action already requires a deliberate two-step
+        // gesture (swipe + tap, or Edit mode + tap the minus button), so requestDelete performs
+        // the soft-delete directly rather than needing an intermediate "Are you sure?" dialog.
         let med = Medication.create(in: context, name: "To Delete", dosage: "5mg")
         try context.save()
         sut.fetchMedications()
 
         sut.requestDelete(med)
-        sut.confirmSoftDelete()
 
         XCTAssertFalse(med.isActive)
         XCTAssertEqual(sut.medications.count, 0)
-        XCTAssertNil(sut.medicationToDelete)
-        XCTAssertFalse(sut.showingDeleteConfirm)
-    }
-
-    func testCancelDelete_clearsState() throws {
-        let med = Medication.create(in: context, name: "Keep Me", dosage: "10mg")
-        try context.save()
-
-        sut.requestDelete(med)
-        XCTAssertNotNil(sut.medicationToDelete)
-        XCTAssertTrue(sut.showingDeleteConfirm)
-
-        sut.cancelDelete()
-
-        XCTAssertNil(sut.medicationToDelete)
-        XCTAssertFalse(sut.showingDeleteConfirm)
     }
 
     func testMoveItems_updatesSortOrder() throws {

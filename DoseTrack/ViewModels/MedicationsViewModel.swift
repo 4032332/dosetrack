@@ -10,8 +10,6 @@ final class MedicationsViewModel: ObservableObject {
     @Published var showingPaywall: Bool = false
     @Published var showingAddForm: Bool = false
     @Published var medicationToEdit: Medication?
-    @Published var medicationToDelete: Medication?
-    @Published var showingDeleteConfirm: Bool = false
 
     private var context: NSManagedObjectContext
     private let isProSubscriber: () -> Bool
@@ -72,30 +70,21 @@ final class MedicationsViewModel: ObservableObject {
         medicationToEdit = medication
     }
 
+    /// Soft-deletes immediately: sets isActive = false, preserving history. No extra
+    /// confirmation dialog — reaching this action already requires either swiping on a row
+    /// and tapping the destructive "Delete" action, or entering Edit mode and tapping the red
+    /// minus button, both of which are themselves a deliberate two-step gesture. An additional
+    /// "Are you sure?" dialog on top of that was judged clunky rather than protective.
     func requestDelete(_ medication: Medication) {
-        medicationToDelete = medication
-        showingDeleteConfirm = true
-    }
-
-    /// Soft-delete: sets isActive = false, preserving history.
-    func confirmSoftDelete() {
-        guard let med = medicationToDelete else { return }
-        med.isActive = false
-        med.updatedAt = Date()
+        medication.isActive = false
+        medication.updatedAt = Date()
         context.saveOrReport()
         WidgetCenter.shared.reloadAllTimelines()
         // Push the tombstone, or a stale remote row keeps this medication looking active on
-        // the next pull. Capture the account id/med before clearing state below.
+        // the next pull.
         let pushUserId = ActiveAccountResolver.shared.activeUserId
-        Task { await SupabaseSyncManager.shared.pushMedication(med, forUserId: pushUserId) }
+        Task { await SupabaseSyncManager.shared.pushMedication(medication, forUserId: pushUserId) }
         fetchMedications()
-        medicationToDelete = nil
-        showingDeleteConfirm = false
-    }
-
-    func cancelDelete() {
-        medicationToDelete = nil
-        showingDeleteConfirm = false
     }
 
     func moveItems(from source: IndexSet, to destination: Int) {

@@ -137,7 +137,7 @@ struct MedicationDetailView: View {
     }
 
     /// Soft-delete (isActive = false, preserving history — same convention as
-    /// MedicationsViewModel.confirmSoftDelete), then pop back to the list, whose
+    /// MedicationsViewModel.requestDelete), then pop back to the list, whose
     /// own .onAppear re-fetches and reflects the removal.
     private func softDeleteAndDismiss() {
         medication.isActive = false

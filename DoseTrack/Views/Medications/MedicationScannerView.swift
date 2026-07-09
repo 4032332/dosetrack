@@ -30,6 +30,9 @@ struct MedicationScannerView: View {
     @State private var isProcessing = false
     @State private var showingCamera = true
     @State private var errorMessage: String? = nil
+    /// Identifies the in-flight scan so a stale watchdog/completion from a previous
+    /// (already-retried) scan can't clobber the state of a newer one.
+    @State private var currentScanToken: UUID? = nil
 
     var body: some View {
         NavigationStack {
@@ -95,6 +98,8 @@ struct MedicationScannerView: View {
     private func processImage(_ image: UIImage) {
         isProcessing = true
         errorMessage = nil
+        let scanToken = UUID()
+        currentScanToken = scanToken
 
         guard let cgImage = image.cgImage else {
             isProcessing = false
@@ -102,8 +107,19 @@ struct MedicationScannerView: View {
             return
         }
 
+        // Watchdog: if Vision hasn't called back within 10s (device stall, huge image, or a
+        // failure mode neither the completion handler's error path nor the `perform` catch
+        // below happens to cover), surface an error instead of leaving the spinner stuck
+        // forever — that indefinite hang is exactly what earlier looked like "does nothing."
+        DispatchQueue.main.asyncAfter(deadline: .now() + 10) { [self] in
+            guard currentScanToken == scanToken, isProcessing else { return }
+            isProcessing = false
+            errorMessage = "Taking longer than expected. Please try again."
+        }
+
         let request = VNRecognizeTextRequest { request, error in
             DispatchQueue.main.async {
+                guard currentScanToken == scanToken else { return }
                 isProcessing = false
                 if let error {
                     errorMessage = error.localizedDescription
@@ -132,6 +148,7 @@ struct MedicationScannerView: View {
                 // medication details…" spinner forever with no feedback, which is exactly
                 // what looked like "the photo does nothing."
                 DispatchQueue.main.async {
+                    guard currentScanToken == scanToken else { return }
                     isProcessing = false
                     errorMessage = "Couldn't read this image. Please try again with better lighting."
                 }
