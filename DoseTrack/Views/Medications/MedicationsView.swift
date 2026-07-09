@@ -27,6 +27,18 @@ struct MedicationsView: View {
         return contraceptiveStartInterval == 0 || contraceptiveMethod.isEmpty
     }
 
+    /// True when the signed-in user is a patient whose caregiver relationship is active — their
+    /// caregiver's Pro plan covers them, so the free-tier medication cap shouldn't apply.
+    private var patientHasActiveCaregiver: Bool {
+        caregiverManager.ownPatientRelationship?.isActive == true
+    }
+
+    /// The own-account medication cap is lifted for Pro subscribers and for patients covered by
+    /// an active caregiver. (Caregivers viewing a patient are always Pro, handled separately.)
+    private var effectivelyUnlimited: Bool {
+        subscriptionManager.isProSubscriber || patientHasActiveCaregiver
+    }
+
     var body: some View {
         NavigationStack {
             Group {
@@ -43,14 +55,16 @@ struct MedicationsView: View {
                         AccountSwitcherPill(isPresented: $showingAccountSwitcher)
                     }
                 }
-                if !activeAccount.isViewingOtherAccount {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button {
-                            viewModel.requestAddMedication()
-                        } label: {
-                            Image(systemName: "plus")
-                                .accessibilityLabel("Add medication")
-                        }
+                // Shown on the caregiver's own account AND while a caregiver is viewing an
+                // overseen patient — managing the patient's medications (including adding new
+                // ones) is the point of caregiver mode. Writes go to the patient's own store
+                // and sync under the patient's userId; see AddEditMedicationViewModel.save.
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        viewModel.requestAddMedication()
+                    } label: {
+                        Image(systemName: "plus")
+                            .accessibilityLabel("Add medication")
                     }
                 }
                 if !viewModel.medications.isEmpty {
@@ -138,7 +152,10 @@ struct MedicationsView: View {
                 .listRowBackground(Color.purple.opacity(0.08))
             }
 
-            if !subscriptionManager.isProSubscriber {
+            // Free-tier counter only applies to an uncovered user viewing their own account.
+            // Hidden for Pro users, for patients covered by an active caregiver, and while a
+            // caregiver is viewing a patient (whose meds aren't bound by the caregiver's own cap).
+            if !effectivelyUnlimited && !activeAccount.isViewingOtherAccount {
                 Section {
                     HStack {
                         Image(systemName: "info.circle")

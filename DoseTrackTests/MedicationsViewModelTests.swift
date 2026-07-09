@@ -61,6 +61,24 @@ final class MedicationsViewModelTests: XCTestCase {
         XCTAssertFalse(proSut.showingPaywall)
     }
 
+    func testCanAddMedication_trueForPatientWithActiveCaregiverAtLimit() throws {
+        // A patient covered by an active (therefore Pro) caregiver is not their own subscriber,
+        // but must not hit the free-tier wall — their caregiver's plan covers them.
+        let coveredSut = MedicationsViewModel(
+            context: context,
+            isProSubscriber: { false },
+            hasActiveCaregiver: { true }
+        )
+        for i in 1...5 {
+            Medication.create(in: context, name: "Med \(i)", dosage: "10mg")
+        }
+        try context.save()
+        coveredSut.fetchMedications()
+
+        XCTAssertTrue(coveredSut.canAddMedication())
+        XCTAssertFalse(coveredSut.showingPaywall)
+    }
+
     func testRequestDelete_setsIsActiveToFalseImmediately() throws {
         // No confirmation step — reaching this action already requires a deliberate two-step
         // gesture (swipe + tap, or Edit mode + tap the minus button), so requestDelete performs

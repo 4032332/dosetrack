@@ -13,16 +13,33 @@ final class MedicationsViewModel: ObservableObject {
 
     private var context: NSManagedObjectContext
     private let isProSubscriber: () -> Bool
+    /// Test-only override. When nil, `hasActiveCaregiver()` reads the live `CaregiverManager`.
+    /// Kept optional (rather than a MainActor-touching default closure) because default
+    /// argument expressions are evaluated in a nonisolated context and can't reference
+    /// `@MainActor CaregiverManager.shared`.
+    private let hasActiveCaregiverOverride: (() -> Bool)?
 
     init(
         context: NSManagedObjectContext,
         isProSubscriber: @escaping () -> Bool = {
             UserDefaults.standard.bool(forKey: Constants.UserDefaultsKeys.isProSubscriber)
-        }
+        },
+        hasActiveCaregiver: (() -> Bool)? = nil
     ) {
         self.context = context
         self.isProSubscriber = isProSubscriber
+        self.hasActiveCaregiverOverride = hasActiveCaregiver
         fetchMedications()
+    }
+
+    /// Whether the signed-in user is a patient with an active caregiver. Because accepting a
+    /// caregiver invite is itself Pro-gated, an active caregiver relationship implies a paying
+    /// caregiver — so the patient is covered by that plan and should never hit the free-tier
+    /// wall. (Subscription status isn't stored server-side, so an active relationship is the
+    /// best proxy the patient's own device has for "my caregiver is Pro.")
+    private func hasActiveCaregiver() -> Bool {
+        if let hasActiveCaregiverOverride { return hasActiveCaregiverOverride() }
+        return CaregiverManager.shared.ownPatientRelationship?.isActive == true
     }
 
     // MARK: - Public
@@ -49,12 +66,18 @@ final class MedicationsViewModel: ObservableObject {
     /// Returns false and sets showingPaywall when the free-tier limit would be exceeded.
     @discardableResult
     func canAddMedication() -> Bool {
-        // A caregiver viewing an overseen patient shouldn't create medications in the
-        // patient's account from this UI — and without this guard, `medications.count` here
-        // would be the patient's count, not the signed-in user's own, making the free-tier
-        // check meaningless for whichever account happens to be active.
-        guard ActiveAccountResolver.shared.activeUserId == nil else { return false }
-        if !isProSubscriber() && medications.count >= Constants.FreeTier.maxMedications {
+        // A caregiver viewing an overseen patient: only a Pro subscriber can reach this state
+        // (accepting an invite is Pro-gated), and doing the med management for the patient is
+        // the whole point of caregiver mode — allow unlimited adds to the patient's account.
+        // (`medications` here is the patient's list, written into the patient's separate store
+        // and pushed with the patient's userId; see AddEditMedicationViewModel.save.)
+        if ActiveAccountResolver.shared.activeUserId != nil { return true }
+
+        // Own account. Unlimited if this user is Pro themselves, OR is a patient with an active
+        // caregiver — a covered patient must never be blocked from adding their own medications.
+        if isProSubscriber() || hasActiveCaregiver() { return true }
+
+        if medications.count >= Constants.FreeTier.maxMedications {
             showingPaywall = true
             return false
         }
