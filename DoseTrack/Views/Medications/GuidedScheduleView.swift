@@ -105,6 +105,12 @@ struct GuidedScheduleView: View {
                 Image(systemName: "chevron.right")
                     .foregroundStyle(.tertiary)
             }
+            // .buttonStyle(.plain) drops the implicit "whole row is tappable" hit-testing a
+            // List row normally gets — without this, only the rendered text/icon glyphs are
+            // tappable, and the Spacer gap between them (most of the row, visually) is dead
+            // space. That's exactly what made this look broken: tapping the row anywhere
+            // except directly on the text or chevron did nothing.
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }

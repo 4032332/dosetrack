@@ -345,6 +345,7 @@ private struct CountryAutocompleteField: View {
                             }
                         }
                         .padding(.vertical, 6)
+                        .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
                     if country != suggestions.last {
