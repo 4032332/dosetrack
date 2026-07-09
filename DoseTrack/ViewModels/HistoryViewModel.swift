@@ -41,6 +41,16 @@ struct MedicationAdherence: Identifiable {
     }
 }
 
+/// A single logged dose, for the drill-down detail views (per medication / per day).
+struct DoseHistoryEntry: Identifiable {
+    let id: NSManagedObjectID
+    let medicationName: String
+    let colorHex: String
+    let scheduledAt: Date
+    let loggedAt: Date?
+    let status: DoseStatus
+}
+
 @MainActor
 final class HistoryViewModel: ObservableObject {
 
@@ -95,6 +105,35 @@ final class HistoryViewModel: ObservableObject {
 
     var effectiveStart: Date { rangeMode == .custom ? customStart : startDate }
     var effectiveEnd: Date { rangeMode == .custom ? customEnd : endDate }
+
+    // MARK: - Drill-down detail
+
+    /// Every logged dose for one medication over the current range, newest first — used by the
+    /// per-medication detail so the user can see exactly when each dose was taken/skipped/missed.
+    func entries(forMedication objectID: NSManagedObjectID) -> [DoseHistoryEntry] {
+        guard let med = try? context.existingObject(with: objectID) as? Medication else { return [] }
+        return fetchLogs(in: effectiveDateInterval())
+            .filter { $0.medication == med }
+            .sorted { ($0.scheduledAt ?? .distantPast) > ($1.scheduledAt ?? .distantPast) }
+            .map {
+                DoseHistoryEntry(id: $0.objectID, medicationName: med.wrappedName, colorHex: med.wrappedColorHex,
+                                 scheduledAt: $0.scheduledAt ?? Date(), loggedAt: $0.loggedAt, status: $0.doseStatus)
+            }
+    }
+
+    /// Every logged dose on a single calendar day, earliest first — used by the calendar day tap.
+    func entries(forDay day: Date) -> [DoseHistoryEntry] {
+        let calendar = Calendar.current
+        let start = calendar.startOfDay(for: day)
+        let end = calendar.date(byAdding: .day, value: 1, to: start) ?? start
+        return fetchLogs(in: DateInterval(start: start, end: end))
+            .sorted { ($0.scheduledAt ?? .distantPast) < ($1.scheduledAt ?? .distantPast) }
+            .map { log in
+                DoseHistoryEntry(id: log.objectID, medicationName: log.medication?.wrappedName ?? "—",
+                                 colorHex: log.medication?.wrappedColorHex ?? "#5B8AF0",
+                                 scheduledAt: log.scheduledAt ?? Date(), loggedAt: log.loggedAt, status: log.doseStatus)
+            }
+    }
 
     // MARK: - Private: date range
 

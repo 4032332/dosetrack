@@ -5,6 +5,8 @@ import SwiftUI
 struct CalendarView: View {
     let days: [DayAdherence]
     @Binding var displayedMonth: Date
+    /// Called when a non-future day is tapped, so the History screen can show that day's doses.
+    var onSelectDay: (Date) -> Void = { _ in }
 
     private let columns = Array(repeating: GridItem(.flexible()), count: 7)
     private let weekdaySymbols = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"]
@@ -108,6 +110,11 @@ struct CalendarView: View {
             }
         }
         .frame(maxWidth: .infinity)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            guard !isFuture else { return }
+            onSelectDay(dayStart)
+        }
     }
 
     private func isSameMonth(_ a: Date, as b: Date) -> Bool {

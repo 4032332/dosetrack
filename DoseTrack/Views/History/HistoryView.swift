@@ -15,6 +15,7 @@ struct HistoryView: View {
     @State private var showingExportSheet = false
     @State private var exportItem: ExportItem? = nil
     @State private var showingPaywall = false
+    @State private var daySelection: DaySelection? = nil
     @Binding var showingAccountSwitcher: Bool
 
     init(showingAccountSwitcher: Binding<Bool> = .constant(false)) {
@@ -69,7 +70,8 @@ struct HistoryView: View {
                     }
 
                     if showingCalendar {
-                        CalendarView(days: viewModel.dayAdherences, displayedMonth: $calendarMonth)
+                        CalendarView(days: viewModel.dayAdherences, displayedMonth: $calendarMonth,
+                                     onSelectDay: { day in daySelection = DaySelection(day: day) })
                             .padding(.vertical, 4)
                     } else {
                         if viewModel.dayAdherences.isEmpty {
@@ -86,11 +88,19 @@ struct HistoryView: View {
                     }
                 }
 
-                // Per-medication breakdown
+                // Per-medication breakdown — tap through to each medication's logged doses
                 if !viewModel.medicationAdherences.isEmpty {
                     Section("By Medication") {
                         ForEach(viewModel.medicationAdherences) { item in
-                            MedicationAdherenceRow(item: item)
+                            NavigationLink {
+                                HistoryEntriesView(
+                                    title: item.name,
+                                    showMedicationName: false,
+                                    entries: viewModel.entries(forMedication: item.id)
+                                )
+                            } label: {
+                                MedicationAdherenceRow(item: item)
+                            }
                         }
                     }
                 }
@@ -150,6 +160,15 @@ struct HistoryView: View {
             }
             .sheet(item: $exportItem) { item in
                 ActivityView(activityItems: [item.url])
+            }
+            .sheet(item: $daySelection) { sel in
+                NavigationStack {
+                    HistoryEntriesView(
+                        title: sel.day.formatted(date: .complete, time: .omitted),
+                        showMedicationName: true,
+                        entries: viewModel.entries(forDay: sel.day)
+                    )
+                }
             }
             .refreshable {
                 viewModel.refresh()
@@ -216,6 +235,87 @@ struct HistoryView: View {
 struct ExportItem: Identifiable {
     let id = UUID()
     let url: URL
+}
+
+/// Identifiable wrapper so a tapped calendar day can drive `.sheet(item:)`.
+struct DaySelection: Identifiable {
+    let id = UUID()
+    let day: Date
+}
+
+// MARK: - History detail (per medication / per day)
+
+/// Lists individual logged doses with the time each was actually taken/skipped/missed.
+/// Reused for both the per-medication drill-down and the calendar day tap.
+struct HistoryEntriesView: View {
+    let title: String
+    let showMedicationName: Bool
+    let entries: [DoseHistoryEntry]
+
+    @AppStorage("timeFormat") private var timeFormat: String = "system"
+
+    var body: some View {
+        Group {
+            if entries.isEmpty {
+                ContentUnavailableView(
+                    "No doses logged",
+                    systemImage: "calendar.badge.clock",
+                    description: Text("Nothing was recorded for this selection.")
+                )
+            } else {
+                List(entries) { entry in
+                    HistoryEntryRow(entry: entry, showMedicationName: showMedicationName, timeFormat: timeFormat)
+                }
+            }
+        }
+        .navigationTitle(title)
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+private struct HistoryEntryRow: View {
+    let entry: DoseHistoryEntry
+    let showMedicationName: Bool
+    let timeFormat: String
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Circle()
+                .fill(Color(hex: entry.colorHex))
+                .frame(width: 10, height: 10)
+            VStack(alignment: .leading, spacing: 2) {
+                if showMedicationName {
+                    Text(entry.medicationName)
+                        .font(.subheadline.weight(.medium))
+                }
+                Text("Due \(TimeFormatPreference.string(for: entry.scheduledAt, preference: timeFormat))")
+                    .font(showMedicationName ? .caption : .subheadline)
+                    .foregroundStyle(.secondary)
+                if let loggedAt = entry.loggedAt, entry.status == .taken {
+                    Text("Taken at \(TimeFormatPreference.string(for: loggedAt, preference: timeFormat))")
+                        .font(.caption)
+                        .foregroundStyle(.green)
+                }
+            }
+            Spacer()
+            statusChip
+        }
+        .padding(.vertical, 2)
+    }
+
+    private var statusChip: some View {
+        let (label, color, icon): (String, Color, String) = {
+            switch entry.status {
+            case .taken:   return ("Taken", .green, "checkmark.circle.fill")
+            case .skipped: return ("Skipped", .orange, "arrow.uturn.right.circle.fill")
+            case .missed:  return ("Missed", .red, "xmark.circle.fill")
+            }
+        }()
+        return Label(label, systemImage: icon)
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(color)
+            .labelStyle(.titleAndIcon)
+    }
 }
 
 // MARK: - Subviews
