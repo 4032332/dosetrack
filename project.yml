@@ -27,7 +27,7 @@ settings:
     # affected by this (the acceleration is Debug-only).
     ENABLE_DEBUG_DYLIB: NO
     MARKETING_VERSION: "1.0.0"
-    CURRENT_PROJECT_VERSION: "6"
+    CURRENT_PROJECT_VERSION: "8"
     CODE_SIGN_STYLE: Automatic
     # Baked in so Xcode's "Update to recommended settings" banner stops reappearing —
     # applying that dialog directly in Xcode would just get overwritten by the next
