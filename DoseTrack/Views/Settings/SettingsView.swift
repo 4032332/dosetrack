@@ -229,7 +229,7 @@ struct SettingsView: View {
                     NavigationLink {
                         MealTimesView()
                     } label: {
-                        Label("Meal Times", systemImage: "fork.knife")
+                        Label("Daily Routine Times", systemImage: "sun.max")
                     }
                 }
 

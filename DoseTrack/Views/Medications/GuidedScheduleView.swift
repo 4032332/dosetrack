@@ -43,10 +43,11 @@ struct GuidedScheduleView: View {
     private enum SpacingChoice { case fixedInterval, meals, manual }
 
     private enum MealSlot: String, CaseIterable, Identifiable {
-        case breakfast, morningTea, lunch, afternoonTea, dinner, dessert, midnightSnack
+        case wakeUp, breakfast, morningTea, lunch, afternoonTea, dinner, dessert, midnightSnack, bedtime
         var id: String { rawValue }
         var label: String {
             switch self {
+            case .wakeUp: return "Wake up"
             case .breakfast: return "Breakfast"
             case .morningTea: return "Morning Tea"
             case .lunch: return "Lunch"
@@ -54,10 +55,12 @@ struct GuidedScheduleView: View {
             case .dinner: return "Dinner"
             case .dessert: return "Dessert"
             case .midnightSnack: return "Midnight Snack"
+            case .bedtime: return "Bedtime"
             }
         }
         func time(in meals: MealTimes) -> MealTime {
             switch self {
+            case .wakeUp: return meals.wakeUp
             case .breakfast: return meals.breakfast
             case .morningTea: return meals.morningTea
             case .lunch: return meals.lunch
@@ -65,6 +68,7 @@ struct GuidedScheduleView: View {
             case .dinner: return meals.dinner
             case .dessert: return meals.dessert
             case .midnightSnack: return meals.midnightSnack
+            case .bedtime: return meals.bedtime
             }
         }
     }
@@ -192,12 +196,11 @@ struct GuidedScheduleView: View {
                 .font(.headline)
             Stepper("\(timesPerDay) time\(timesPerDay == 1 ? "" : "s") per day", value: $timesPerDay, in: 1...12)
             Button("Next") {
-                // `manualTimes` only ever gets resized in `spacingQuestion`'s `.manual`
-                // branch (for timesPerDay > 1); the timesPerDay == 1 path relies on
-                // `manualTimes`'s `@State` default already being a 1-element array, so
-                // it's correct as-is here without a resize — don't add one, and don't
-                // let a future change to `timesPerDay` after this point skip that resize.
-                step = timesPerDay == 1 ? .manualTimes : .spacing
+                // Always go to the timing choice ("Set time" vs "Link to routine"), including
+                // for once-daily meds — that's what lets a single bedtime pill be linked to the
+                // Bedtime routine in one tap instead of scrolling a wheel. The spacing step's
+                // chosen branch resizes `manualTimes` to `timesPerDay` before showing pickers.
+                step = .spacing
             }
         }
     }
@@ -206,14 +209,27 @@ struct GuidedScheduleView: View {
 
     private var spacingQuestion: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("How are doses spaced?")
+            Text(timesPerDay == 1 ? "When is it taken?" : "How are the times set?")
                 .font(.headline)
             Picker("", selection: $spacingChoice) {
-                Text("Fixed intervals").tag(SpacingChoice.fixedInterval)
-                Text("Tied to meals").tag(SpacingChoice.meals)
-                Text("Set manually").tag(SpacingChoice.manual)
+                Text(timesPerDay == 1 ? "Set time" : "Set times").tag(SpacingChoice.manual)
+                Text("Link to routine").tag(SpacingChoice.meals)
+                // Even intervals only makes sense for more than one dose a day.
+                if timesPerDay > 1 {
+                    Text("Even intervals").tag(SpacingChoice.fixedInterval)
+                }
             }
             .pickerStyle(.segmented)
+            .onAppear {
+                // "Even intervals" isn't offered for a single daily dose; if a prior selection
+                // left it set, fall back to "Set time" so the segmented control has a valid tag.
+                if timesPerDay == 1 && spacingChoice == .fixedInterval { spacingChoice = .manual }
+            }
+            Text(spacingChoice == .meals
+                 ? "Pick from your Daily Routine Times — Wake up, meals, or Bedtime. Adjust the actual clock times in Settings › Daily Routine Times."
+                 : "Choose the exact clock time\(timesPerDay > 1 ? "s" : "") on the next step.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
             Button("Next") {
                 switch spacingChoice {
                 case .fixedInterval: step = .intervalDetails
@@ -247,7 +263,7 @@ struct GuidedScheduleView: View {
 
     private var mealSelectionQuestion: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Which meals? (\(selectedMeals.count) of \(timesPerDay) selected)")
+            Text("Which routine times? (\(selectedMeals.count) of \(timesPerDay) selected)")
                 .font(.headline)
             ForEach(MealSlot.allCases) { meal in
                 let time = meal.time(in: mealTimes)

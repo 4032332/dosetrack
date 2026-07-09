@@ -332,13 +332,15 @@ final class SupabaseSyncManager: ObservableObject {
             d.set(ts, forKey: "patientDOBInterval")
         }
         let meals = MealTimes(
+            wakeUp: MealTime(hour: row.mealWakeUpHour ?? MealTimes.default.wakeUp.hour, minute: row.mealWakeUpMinute ?? MealTimes.default.wakeUp.minute),
             breakfast: MealTime(hour: row.mealBreakfastHour ?? MealTimes.default.breakfast.hour, minute: row.mealBreakfastMinute ?? MealTimes.default.breakfast.minute),
             morningTea: MealTime(hour: row.mealMorningTeaHour ?? MealTimes.default.morningTea.hour, minute: row.mealMorningTeaMinute ?? MealTimes.default.morningTea.minute),
             lunch: MealTime(hour: row.mealLunchHour ?? MealTimes.default.lunch.hour, minute: row.mealLunchMinute ?? MealTimes.default.lunch.minute),
             afternoonTea: MealTime(hour: row.mealAfternoonTeaHour ?? MealTimes.default.afternoonTea.hour, minute: row.mealAfternoonTeaMinute ?? MealTimes.default.afternoonTea.minute),
             dinner: MealTime(hour: row.mealDinnerHour ?? MealTimes.default.dinner.hour, minute: row.mealDinnerMinute ?? MealTimes.default.dinner.minute),
             dessert: MealTime(hour: row.mealDessertHour ?? MealTimes.default.dessert.hour, minute: row.mealDessertMinute ?? MealTimes.default.dessert.minute),
-            midnightSnack: MealTime(hour: row.mealMidnightSnackHour ?? MealTimes.default.midnightSnack.hour, minute: row.mealMidnightSnackMinute ?? MealTimes.default.midnightSnack.minute)
+            midnightSnack: MealTime(hour: row.mealMidnightSnackHour ?? MealTimes.default.midnightSnack.hour, minute: row.mealMidnightSnackMinute ?? MealTimes.default.midnightSnack.minute),
+            bedtime: MealTime(hour: row.mealBedtimeHour ?? MealTimes.default.bedtime.hour, minute: row.mealBedtimeMinute ?? MealTimes.default.bedtime.minute)
         )
         meals.save(to: d)
     }
@@ -514,6 +516,10 @@ struct UserSettingsRow: Codable {
     var mealDessertMinute: Int?
     var mealMidnightSnackHour: Int?
     var mealMidnightSnackMinute: Int?
+    var mealWakeUpHour: Int?
+    var mealWakeUpMinute: Int?
+    var mealBedtimeHour: Int?
+    var mealBedtimeMinute: Int?
 
     enum CodingKeys: String, CodingKey {
         case userId = "user_id"
@@ -545,6 +551,10 @@ struct UserSettingsRow: Codable {
         case mealDessertMinute = "meal_dessert_minute"
         case mealMidnightSnackHour = "meal_midnight_snack_hour"
         case mealMidnightSnackMinute = "meal_midnight_snack_minute"
+        case mealWakeUpHour = "meal_wake_up_hour"
+        case mealWakeUpMinute = "meal_wake_up_minute"
+        case mealBedtimeHour = "meal_bedtime_hour"
+        case mealBedtimeMinute = "meal_bedtime_minute"
     }
 
     init(userId: UUID) {
@@ -585,6 +595,10 @@ struct UserSettingsRow: Codable {
         mealDessertMinute = meals.dessert.minute
         mealMidnightSnackHour = meals.midnightSnack.hour
         mealMidnightSnackMinute = meals.midnightSnack.minute
+        mealWakeUpHour = meals.wakeUp.hour
+        mealWakeUpMinute = meals.wakeUp.minute
+        mealBedtimeHour = meals.bedtime.hour
+        mealBedtimeMinute = meals.bedtime.minute
     }
 }
 

@@ -1,13 +1,14 @@
 // DoseTrack/Views/Settings/MealTimesView.swift
 import SwiftUI
 
-/// Settings → Preferences → Meal Times. Lets the user adjust the app-wide meal
-/// times used when a medication's schedule is tied to meals (see
-/// `GuidedScheduleView`). Global, not per-medication.
+/// Settings → Preferences → Daily Routine Times. Lets the user adjust the app-wide
+/// routine times (Wake up, meals, Bedtime) a medication's schedule can be linked to
+/// (see `GuidedScheduleView`). Global, not per-medication.
 struct MealTimesView: View {
     @State private var meals: MealTimes = MealTimes.load()
 
     private let slots: [(name: String, keyPath: WritableKeyPath<MealTimes, MealTime>)] = [
+        ("Wake up", \.wakeUp),
         ("Breakfast", \.breakfast),
         ("Morning Tea", \.morningTea),
         ("Lunch", \.lunch),
@@ -15,6 +16,7 @@ struct MealTimesView: View {
         ("Dinner", \.dinner),
         ("Dessert", \.dessert),
         ("Midnight Snack", \.midnightSnack),
+        ("Bedtime", \.bedtime),
     ]
 
     var body: some View {
@@ -27,7 +29,7 @@ struct MealTimesView: View {
                 )
             }
         }
-        .navigationTitle("Meal Times")
+        .navigationTitle("Daily Routine Times")
         .navigationBarTitleDisplayMode(.inline)
     }
 
