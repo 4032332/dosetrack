@@ -59,22 +59,22 @@ class ComplicationDataSource: NSObject, CLKComplicationDataSource {
 
         switch family {
         case .modularSmall:
-            let template = CLKComplicationTemplateModularSmallStackText()
-            template.line1TextProvider = CLKSimpleTextProvider(text: "💊")
-            template.line2TextProvider = CLKSimpleTextProvider(text: timeText != nil ? "" : "✓")
-            return template
+            return CLKComplicationTemplateModularSmallStackText(
+                line1TextProvider: CLKSimpleTextProvider(text: "💊"),
+                line2TextProvider: CLKSimpleTextProvider(text: timeText != nil ? "" : "✓")
+            )
 
         case .circularSmall:
-            let template = CLKComplicationTemplateCircularSmallStackText()
-            template.line1TextProvider = CLKSimpleTextProvider(text: "💊")
-            template.line2TextProvider = timeText ?? CLKSimpleTextProvider(text: "✓")
-            return template
+            return CLKComplicationTemplateCircularSmallStackText(
+                line1TextProvider: CLKSimpleTextProvider(text: "💊"),
+                line2TextProvider: timeText ?? CLKSimpleTextProvider(text: "✓")
+            )
 
         case .graphicCorner:
-            let template = CLKComplicationTemplateGraphicCornerStackText()
-            template.innerTextProvider = CLKSimpleTextProvider(text: name)
-            template.outerTextProvider = timeText ?? CLKSimpleTextProvider(text: "All done")
-            return template
+            return CLKComplicationTemplateGraphicCornerStackText(
+                innerTextProvider: CLKSimpleTextProvider(text: name),
+                outerTextProvider: timeText ?? CLKSimpleTextProvider(text: "All done")
+            )
 
         case .graphicCircular:
             let template = CLKComplicationTemplateGraphicCircularView(

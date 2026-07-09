@@ -69,6 +69,8 @@ final class WatchConnectivityReceiver: NSObject, ObservableObject {
 
     func confirmDose(medicationId: String, scheduleId: String, scheduledAt: Date, status: String) {
         #if DEBUG
+        // Debug builds (e.g. Watch Simulator, no real WCSession pairing) skip the actual
+        // message send and just update local Watch UI state directly.
         if let idx = medications.firstIndex(where: { $0.id == medicationId }) {
             medications[idx].isTaken = (status == "taken")
         }
@@ -79,8 +81,7 @@ final class WatchConnectivityReceiver: NSObject, ObservableObject {
                 self?.celebrateNow = false
             }
         }
-        return
-        #endif
+        #else
         guard WCSession.default.isReachable else {
             // Store locally for next sync opportunity
             queueConfirmation(medicationId: medicationId, scheduleId: scheduleId,
@@ -111,6 +112,7 @@ final class WatchConnectivityReceiver: NSObject, ObservableObject {
                 self?.celebrateNow = false
             }
         }
+        #endif
     }
 
     // MARK: - Queued confirmations (when iPhone not reachable)
