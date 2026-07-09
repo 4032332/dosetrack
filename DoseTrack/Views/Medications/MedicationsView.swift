@@ -71,6 +71,18 @@ struct MedicationsView: View {
                     ToolbarItem(placement: .topBarLeading) {
                         EditButton()
                     }
+                    ToolbarItem(placement: .topBarLeading) {
+                        Menu {
+                            Picker("Sort", selection: $viewModel.sortMode) {
+                                ForEach(MedicationSort.allCases) { mode in
+                                    Label(mode.label, systemImage: mode.systemImage).tag(mode)
+                                }
+                            }
+                        } label: {
+                            Image(systemName: "arrow.up.arrow.down")
+                                .accessibilityLabel("Sort medications")
+                        }
+                    }
                 }
             }
             .environment(\.editMode, $isEditMode)
