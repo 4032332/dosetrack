@@ -63,11 +63,12 @@ struct AddEditMedicationView: View {
                     HStack(spacing: 0) {
                         Text("Strength")
                             .foregroundStyle(.primary)
-                        Spacer()
-                        TextField("0", text: $viewModel.doseAmount)
-                            .keyboardType(.decimalPad)
-                            .multilineTextAlignment(.trailing)
-                            .frame(width: 70)
+                        // A wide, right-aligned tap area: tapping anywhere between the label and
+                        // the unit picker focuses the field, and focusing selects all so backspace
+                        // clears and typing overwrites (see SelectAllTextField).
+                        SelectAllTextField(text: $viewModel.doseAmount, placeholder: "0")
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 24)
                         Picker("", selection: $viewModel.doseUnit) {
                             ForEach(AddEditMedicationViewModel.doseUnitOptions, id: \.self) {
                                 Text($0).tag($0)
