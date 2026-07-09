@@ -123,7 +123,7 @@ struct SettingsView: View {
                         }
                         .foregroundStyle(.primary)
 
-                        Text("5 medications free forever. Milli Pro unlocks unlimited medications, PDF reports, and family sharing.")
+                        Text("5 medications free forever. Milli Pro unlocks unlimited medications, PDF reports, and caring for a loved one's medications.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -234,28 +234,49 @@ struct SettingsView: View {
                 }
 
                 // MARK: Data & Privacy
-                Section("Data & Privacy") {
-                    if subscriptionManager.isProSubscriber {
+                Section {
+                    // Being cared for is FREE. The patient is often a child or a person with a
+                    // disability who shouldn't have to pay — they just generate an invite for
+                    // their caregiver. Hidden for guests, who have no real Supabase account to
+                    // attach the relationship to.
+                    if !auth.isGuest {
                         NavigationLink {
                             CaregiverInviteView()
                         } label: {
                             Label("Invite a Caregiver", systemImage: "person.2.fill")
                         }
-                    }
 
-                    // Accepting an invite (becoming someone's caregiver) is free and must be
-                    // reachable here: it's the only working way to accept a first invite until
-                    // universal links are configured for dosetrack.app. Hidden for guests, who
-                    // have no real Supabase account to attach the relationship to.
-                    if !auth.isGuest {
+                        // Caring for someone else is the PAID capability (Milli Pro): the
+                        // caregiver is the one gaining "manage another person's medications," so
+                        // they carry the subscription — not the patient. Non-subscribers still
+                        // see this row (for discovery) but are routed to the paywall.
                         Button {
-                            showingEnterInviteCode = true
+                            if subscriptionManager.isProSubscriber {
+                                showingEnterInviteCode = true
+                            } else {
+                                showingPaywall = true
+                            }
                         } label: {
-                            Label("Care for Someone", systemImage: "person.badge.shield.checkmark")
-                                .foregroundStyle(.primary)
+                            HStack {
+                                Label("Care for Someone", systemImage: "person.badge.shield.checkmark")
+                                    .foregroundStyle(.primary)
+                                if !subscriptionManager.isProSubscriber {
+                                    Spacer()
+                                    Image(systemName: "star.fill")
+                                        .font(.caption)
+                                        .foregroundStyle(.yellow)
+                                }
+                            }
                         }
                     }
+                } header: {
+                    Text("Caregiving")
+                } footer: {
+                    Text("Inviting a caregiver is free. Caring for someone else's medications is a Milli Pro feature.")
+                }
 
+                // MARK: Data & Privacy
+                Section("Data & Privacy") {
                     NavigationLink {
                         DisclaimerView()
                     } label: {
