@@ -30,6 +30,11 @@ struct MedicationScannerView: View {
     @State private var isProcessing = false
     @State private var showingCamera = true
     @State private var errorMessage: String? = nil
+    /// Set when Vision found text but the heuristic parser couldn't confidently identify a
+    /// name line — rather than a dead-end error, the user picks which detected line is the
+    /// medication name themselves. Far more reliable than guessing, since real box layouts
+    /// vary enormously (marketing taglines, regulatory codes, multiple languages).
+    @State private var rawLinesForFallback: [String]? = nil
     /// Identifies the in-flight scan so a stale watchdog/completion from a previous
     /// (already-retried) scan can't clobber the state of a newer one.
     @State private var currentScanToken: UUID? = nil
@@ -39,6 +44,25 @@ struct MedicationScannerView: View {
             Group {
                 if let result = scanResult {
                     ScanResultReviewView(result: result, onAccept: onResult, onRetry: retry)
+                } else if let lines = rawLinesForFallback {
+                    RawLinesPickerView(
+                        lines: lines,
+                        onSelect: { chosenName in
+                            scanResult = MedicationScanResult(
+                                name: chosenName, strength: "", strengthUnit: "mg",
+                                count: 0, form: "tablet", rawLines: lines
+                            )
+                            rawLinesForFallback = nil
+                        },
+                        onEnterManually: {
+                            scanResult = MedicationScanResult(
+                                name: "", strength: "", strengthUnit: "mg",
+                                count: 0, form: "tablet", rawLines: lines
+                            )
+                            rawLinesForFallback = nil
+                        },
+                        onRetry: retry
+                    )
                 } else if isProcessing {
                     processingView
                 } else if showingCamera {
@@ -129,8 +153,12 @@ struct MedicationScannerView: View {
                 let lines = observations.compactMap { $0.topCandidates(1).first?.string }
                 if let result = MedicationParser.parse(lines: lines) {
                     scanResult = result
+                } else if !lines.isEmpty {
+                    // Vision found text but the parser's heuristics couldn't confidently pick
+                    // a name line — let the user pick instead of a dead-end error.
+                    rawLinesForFallback = lines
                 } else {
-                    errorMessage = "No medication details detected. Try pointing the camera at the front of the box or bottle label."
+                    errorMessage = "No text detected. Try pointing the camera at the front of the box or bottle label."
                 }
             }
         }
@@ -160,7 +188,53 @@ struct MedicationScannerView: View {
         scanResult = nil
         capturedImage = nil
         errorMessage = nil
+        rawLinesForFallback = nil
         showingCamera = true
+    }
+}
+
+// MARK: - Raw lines fallback picker
+
+/// Shown when Vision detected text but the heuristic parser couldn't confidently identify a
+/// name line. Real medication packaging varies too much (marketing taglines, regulatory
+/// codes, dosing instructions, multiple languages) for automated guessing to be reliable in
+/// every case — letting the user tap the correct line themselves is far more trustworthy than
+/// a wrong guess, and only one tap slower than a right one.
+private struct RawLinesPickerView: View {
+    let lines: [String]
+    let onSelect: (String) -> Void
+    let onEnterManually: () -> Void
+    let onRetry: () -> Void
+
+    var body: some View {
+        List {
+            Section {
+                Text("We couldn't automatically tell which line is the medication name. Tap the correct one below.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+
+            Section("Detected Text") {
+                ForEach(lines, id: \.self) { line in
+                    Button {
+                        onSelect(line)
+                    } label: {
+                        Text(line)
+                            .foregroundStyle(.primary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+
+            Section {
+                Button("None of these — enter manually", action: onEnterManually)
+                Button("Retake Photo", action: onRetry)
+            }
+        }
+        .navigationTitle("Select Medication Name")
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
 
