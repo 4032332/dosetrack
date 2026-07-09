@@ -24,6 +24,7 @@ struct SettingsView: View {
     @State private var showingDeleteConfirm = false
     @State private var testNotificationSent = false
     @State private var showingSignUp = false
+    @State private var showingEnterInviteCode = false
     @Binding var showingAccountSwitcher: Bool
 
     // Hidden Developer Options unlock: tap the version row 7x, then enter the passcode.
@@ -238,7 +239,20 @@ struct SettingsView: View {
                         NavigationLink {
                             CaregiverInviteView()
                         } label: {
-                            Label("Caregiver", systemImage: "person.2.fill")
+                            Label("Invite a Caregiver", systemImage: "person.2.fill")
+                        }
+                    }
+
+                    // Accepting an invite (becoming someone's caregiver) is free and must be
+                    // reachable here: it's the only working way to accept a first invite until
+                    // universal links are configured for dosetrack.app. Hidden for guests, who
+                    // have no real Supabase account to attach the relationship to.
+                    if !auth.isGuest {
+                        Button {
+                            showingEnterInviteCode = true
+                        } label: {
+                            Label("Care for Someone", systemImage: "person.badge.shield.checkmark")
+                                .foregroundStyle(.primary)
                         }
                     }
 
@@ -322,6 +336,9 @@ struct SettingsView: View {
             }
             .sheet(isPresented: $showingPaywall) { PaywallView() }
             .sheet(isPresented: $showingSignUp) { AuthView().environmentObject(auth) }
+            .sheet(isPresented: $showingEnterInviteCode) {
+                EnterInviteCodeView().environmentObject(caregiverManager)
+            }
             .navigationDestination(isPresented: $showingDeveloperOptions) {
                 DeveloperOptionsView()
                     .environmentObject(subscriptionManager)
