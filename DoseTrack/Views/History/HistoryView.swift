@@ -57,17 +57,23 @@ struct HistoryView: View {
 
                 // Chart vs calendar toggle
                 Section {
-                    HStack {
-                        Text(showingCalendar ? "Calendar" : "Chart")
-                            .font(.subheadline.weight(.semibold))
-                        Spacer()
-                        Picker("View", selection: $showingCalendar) {
-                            Label("Chart", systemImage: "chart.bar.fill").tag(false)
-                            Label("Calendar", systemImage: "calendar").tag(true)
-                        }
-                        .pickerStyle(.segmented)
-                        .frame(width: 120)
+                    // Full-width segmented control (matching the Range picker above it) rather
+                    // than a cramped fixed 120pt width next to a redundant duplicate text label —
+                    // the old layout truncated "Calendar" to "Calen..." since two icon+text
+                    // segments plus their own label never fit in 120pt.
+                    Picker("View", selection: $showingCalendar) {
+                        Label("Chart", systemImage: "chart.bar.fill").tag(false)
+                        Label("Calendar", systemImage: "calendar").tag(true)
                     }
+                    .pickerStyle(.segmented)
+                    // Explicitly non-animated: this Picker swaps in an entirely different view
+                    // structure below it (a Swift Charts view vs. CalendarView's 49-cell grid)
+                    // inside the same List Section row. List rows are UICollectionView-backed on
+                    // modern iOS, and an ANIMATED swap between structurally different content in
+                    // one row is the same class of bug that caused the reproducible
+                    // _UICollectionViewFeedbackLoop crash in the calendar's month navigation —
+                    // forcing a plain, non-animated swap here removes that risk at this toggle too.
+                    .animation(nil, value: showingCalendar)
 
                     if showingCalendar {
                         CalendarView(days: viewModel.dayAdherences, displayedMonth: $calendarMonth,
