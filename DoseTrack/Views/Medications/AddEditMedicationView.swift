@@ -437,13 +437,28 @@ private struct ColourPickerGrid: View {
     // would be wasteful for something that only matters when the Colour Coding screen is edited.
     @State private var tagStore = ColorTagStore.load()
 
+    /// Colours the user has tagged (Settings > Colour Coding) first, in the order they were
+    /// assigned, then any remaining untagged palette colours in their normal order. Assigned
+    /// colours were deliberately chosen for a reason, so they should be the easiest to find
+    /// rather than scattered wherever they happen to fall in the raw palette.
+    private var orderedOptions: [String] {
+        let assignedHexes = tagStore.tags.map { $0.colorHex }
+        let assigned = assignedHexes.filter { hex in options.contains { $0.caseInsensitiveCompare(hex) == .orderedSame } }
+        let unassigned = options.filter { hex in !assignedHexes.contains { $0.caseInsensitiveCompare(hex) == .orderedSame } }
+        return assigned + unassigned
+    }
+
     var body: some View {
         // Horizontally scrolling rather than a fixed grid — the palette (see
         // Constants.MedicationColors.palette) is meant to keep growing, and a fixed 8-column
         // grid had no room for more colours without shrinking every swatch.
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 14) {
-                ForEach(options, id: \.self) { hex in
+            // `.top` alignment + a fixed-height label row under every swatch (not just tagged
+            // ones) so circles all sit on the same baseline — mixing swatches with and without a
+            // tag label under a default-centered HStack shifted circles to different heights,
+            // which read as visually uneven.
+            HStack(alignment: .top, spacing: 14) {
+                ForEach(orderedOptions, id: \.self) { hex in
                     VStack(spacing: 4) {
                         Circle()
                             .fill(Color(hex: hex))
@@ -464,13 +479,13 @@ private struct ColourPickerGrid: View {
 
                         // Shows the user's own Colour Coding tag (Settings > Preferences), if
                         // they've assigned one, so the picker itself reflects their scheme.
-                        if let tag = tagStore.name(forHex: hex) {
-                            Text(tag)
-                                .font(.system(size: 9))
-                                .foregroundStyle(.secondary)
-                                .lineLimit(1)
-                                .frame(maxWidth: 48)
-                        }
+                        // Reserves the same height whether or not a tag exists (see above).
+                        Text(tagStore.name(forHex: hex) ?? "")
+                            .font(.system(size: 9))
+                            .foregroundStyle(.secondary)
+                            .lineLimit(2)
+                            .multilineTextAlignment(.center)
+                            .frame(width: 48, height: 22)
                     }
                 }
             }

@@ -83,26 +83,31 @@ private struct ColorTagSwatch: View {
     let onTap: () -> Void
 
     var body: some View {
-        Button(action: onTap) {
-            VStack(spacing: 6) {
-                Circle()
-                    .fill(Color(hex: hex))
-                    .frame(width: 40, height: 40)
-                    .overlay {
-                        if tagName == nil {
-                            Image(systemName: "plus")
-                                .font(.caption.weight(.bold))
-                                .foregroundStyle(.white.opacity(0.85))
-                        }
+        // `.top`-aligned VStack with a fixed-height label row underneath every swatch (not just
+        // tagged ones) — otherwise a row mixing tagged (2-line label) and untagged (1-line
+        // "Untagged") swatches lets the grid's default centering shift circles to different
+        // heights depending on their neighbours' label length, which read as "uneven."
+        VStack(spacing: 6) {
+            Circle()
+                .fill(Color(hex: hex))
+                .frame(width: 40, height: 40)
+                .overlay {
+                    if tagName == nil {
+                        Image(systemName: "plus")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(.white.opacity(0.85))
                     }
-                Text(tagName ?? "Untagged")
-                    .font(.caption2)
-                    .foregroundStyle(tagName == nil ? .secondary : .primary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-            }
+                }
+            Text(tagName ?? "Untagged")
+                .font(.caption2)
+                .foregroundStyle(tagName == nil ? .secondary : .primary)
+                .lineLimit(2)
+                .multilineTextAlignment(.center)
+                .minimumScaleFactor(0.8)
+                .frame(height: 28)
         }
-        .buttonStyle(.plain)
+        .contentShape(Rectangle())
+        .onTapGesture { onTap() }
     }
 }
 
@@ -160,6 +165,14 @@ private struct ColorTagEditSheet: View {
 }
 
 /// Simple wrapping chip layout for suggested tag names — add a custom one via the text field.
+///
+/// Deliberately NOT built from `Button`s: a `LazyVGrid` of `Button`s placed directly inside a
+/// `Form` `Section` (rather than as proper `List` rows) is a known SwiftUI hit-testing trap —
+/// taps anywhere in that grid can get routed to the wrong button, which is exactly what caused
+/// "tapping any suggestion selects Other instead" (the last button in the grid). Using plain
+/// `Text` + `.contentShape(Rectangle()).onTapGesture` — the same pattern already used reliably
+/// elsewhere in this app (day-of-week toggles, country autocomplete rows) — sidesteps Form's
+/// button-dispatch behaviour entirely since there's no `Button` for it to misroute.
 private struct FlowChips: View {
     let options: [String]
     let selected: String
@@ -170,7 +183,7 @@ private struct FlowChips: View {
     var body: some View {
         LazyVGrid(columns: columns, alignment: .leading, spacing: 8) {
             ForEach(options, id: \.self) { option in
-                Button(option) { onPick(option) }
+                Text(option)
                     .font(.caption.weight(.medium))
                     .padding(.horizontal, 10)
                     .padding(.vertical, 6)
@@ -179,6 +192,8 @@ private struct FlowChips: View {
                         in: Capsule()
                     )
                     .foregroundStyle(option == selected ? .white : .primary)
+                    .contentShape(Rectangle())
+                    .onTapGesture { onPick(option) }
             }
         }
         .padding(.vertical, 4)

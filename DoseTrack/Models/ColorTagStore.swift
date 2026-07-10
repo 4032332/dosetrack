@@ -19,11 +19,13 @@ struct ColorTagStore: Equatable {
     static let empty = ColorTagStore(tags: [])
 
     /// Common starting suggestions shown as quick-add chips — not pre-assigned to any colour,
-    /// since the user picks the colour first, then names it.
+    /// since the user picks the colour first, then names it. No generic "Other" chip: the tag
+    /// name field already accepts anything, so a vague catch-all suggestion is redundant —
+    /// typing a custom name in the field above IS "Other" for whatever doesn't fit these.
     static let suggestedNames: [String] = [
         "Medication", "Vitamin", "Supplement",
         "Morning Batch", "Night Batch",
-        "Pain Relief", "Mental Health", "Heart & Blood Pressure", "Other",
+        "Pain Relief", "Mental Health", "Heart & Blood Pressure",
     ]
 
     private static let defaultsKey = "colorTagAssignments"
