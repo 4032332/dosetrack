@@ -70,50 +70,59 @@ struct CalendarView: View {
                         .frame(maxWidth: .infinity)
                 }
 
-                // Empty leading cells
-                ForEach(0..<firstWeekday, id: \.self) { _ in
-                    Color.clear.frame(height: 36)
-                }
-
-                // Day cells
-                ForEach(1...daysInMonth, id: \.self) { day in
-                    dayCell(for: day)
+                // Always exactly 42 cells (6 weeks × 7 days) — a FIXED item count regardless of
+                // which month is displayed, padding with blank cells before day 1 and after the
+                // month's last day. Previously this used two variable-length ForEach ranges
+                // (0..<firstWeekday for leading blanks, 1...daysInMonth for real days), so the
+                // grid's total item count changed on every month navigation. SwiftUI's List is
+                // UICollectionView-backed on modern iOS, and changing a nested grid's item count
+                // while it's inside a List row is a known trigger for a
+                // "_UICollectionViewFeedbackLoop" internal UIKit assertion crash — exactly the
+                // crash TestFlight reported, reproducible specifically (and only) on this screen.
+                // A constant cell count regardless of month removes the trigger at the root.
+                ForEach(0..<42, id: \.self) { index in
+                    dayCell(forCellIndex: index)
                 }
             }
         }
     }
 
     @ViewBuilder
-    private func dayCell(for day: Int) -> some View {
-        let date = calendar.date(bySetting: .day, value: day, of: monthStart) ?? monthStart
-        let dayStart = calendar.startOfDay(for: date)
-        let adherence = dayMap[dayStart]
-        let isToday = calendar.isDateInToday(date)
-        let isFuture = date > Date()
+    private func dayCell(forCellIndex index: Int) -> some View {
+        let day = index - firstWeekday + 1
+        if day < 1 || day > daysInMonth {
+            Color.clear.frame(height: 36)
+        } else {
+            let date = calendar.date(bySetting: .day, value: day, of: monthStart) ?? monthStart
+            let dayStart = calendar.startOfDay(for: date)
+            let adherence = dayMap[dayStart]
+            let isToday = calendar.isDateInToday(date)
+            let isFuture = date > Date()
 
-        VStack(spacing: 2) {
-            Text("\(day)")
-                .font(.caption)
-                .fontWeight(isToday ? .bold : .regular)
-                .foregroundStyle(isToday ? .white : isFuture ? .secondary : .primary)
-                .frame(width: 26, height: 26)
-                .background(isToday ? Color.accentColor : Color.clear)
-                .clipShape(Circle())
+            VStack(spacing: 2) {
+                Text("\(day)")
+                    .font(.caption)
+                    .fontWeight(isToday ? .bold : .regular)
+                    .foregroundStyle(isToday ? .white : isFuture ? .secondary : .primary)
+                    .frame(width: 26, height: 26)
+                    .background(isToday ? Color.accentColor : Color.clear)
+                    .clipShape(Circle())
 
-            // Adherence dot
-            if let ad = adherence, ad.total > 0, !isFuture {
-                Circle()
-                    .fill(ad.color)
-                    .frame(width: 5, height: 5)
-            } else {
-                Color.clear.frame(width: 5, height: 5)
+                // Adherence dot
+                if let ad = adherence, ad.total > 0, !isFuture {
+                    Circle()
+                        .fill(ad.color)
+                        .frame(width: 5, height: 5)
+                } else {
+                    Color.clear.frame(width: 5, height: 5)
+                }
             }
-        }
-        .frame(maxWidth: .infinity)
-        .contentShape(Rectangle())
-        .onTapGesture {
-            guard !isFuture else { return }
-            onSelectDay(dayStart)
+            .frame(maxWidth: .infinity)
+            .contentShape(Rectangle())
+            .onTapGesture {
+                guard !isFuture else { return }
+                onSelectDay(dayStart)
+            }
         }
     }
 

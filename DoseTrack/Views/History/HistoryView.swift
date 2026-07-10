@@ -71,7 +71,14 @@ struct HistoryView: View {
 
                     if showingCalendar {
                         CalendarView(days: viewModel.dayAdherences, displayedMonth: $calendarMonth,
-                                     onSelectDay: { day in daySelection = DaySelection(day: day) })
+                                     onSelectDay: { day in
+                                         // Deferred a turn, same fix pattern used elsewhere in this
+                                         // app for state changes fired from inside a tap/dialog
+                                         // handler nested in a List-backed view — presenting a sheet
+                                         // in the same run-loop turn as the originating tap can be
+                                         // dropped or interact badly with the List's own layout pass.
+                                         DispatchQueue.main.async { daySelection = DaySelection(day: day) }
+                                     })
                             .padding(.vertical, 4)
                     } else {
                         if viewModel.dayAdherences.isEmpty {
