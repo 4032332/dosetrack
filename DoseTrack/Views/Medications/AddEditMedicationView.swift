@@ -432,26 +432,51 @@ struct EScriptFullscreenView: View {
 private struct ColourPickerGrid: View {
     @Binding var selectedHex: String
     let options: [String]
-    private let columns = Array(repeating: GridItem(.flexible()), count: 8)
+    // Loaded once per appearance of the form rather than kept live — the palette/tags aren't
+    // expected to change while this sheet is open, and re-reading UserDefaults on every render
+    // would be wasteful for something that only matters when the Colour Coding screen is edited.
+    @State private var tagStore = ColorTagStore.load()
 
     var body: some View {
-        LazyVGrid(columns: columns, spacing: 8) {
-            ForEach(options, id: \.self) { hex in
-                Circle()
-                    .fill(Color(hex: hex))
-                    .frame(width: 32, height: 32)
-                    .overlay {
-                        if selectedHex == hex {
-                            Image(systemName: "checkmark")
-                                .font(.caption.weight(.bold))
-                                .foregroundStyle(.white)
+        // Horizontally scrolling rather than a fixed grid — the palette (see
+        // Constants.MedicationColors.palette) is meant to keep growing, and a fixed 8-column
+        // grid had no room for more colours without shrinking every swatch.
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 14) {
+                ForEach(options, id: \.self) { hex in
+                    VStack(spacing: 4) {
+                        Circle()
+                            .fill(Color(hex: hex))
+                            .frame(width: 36, height: 36)
+                            .overlay {
+                                if selectedHex == hex {
+                                    Image(systemName: "checkmark")
+                                        .font(.caption.weight(.bold))
+                                        .foregroundStyle(.white)
+                                }
+                            }
+                            .overlay {
+                                Circle().stroke(Color.primary.opacity(selectedHex == hex ? 0.25 : 0), lineWidth: 2)
+                                    .padding(-3)
+                            }
+                            .onTapGesture { selectedHex = hex }
+                            .accessibilityLabel(tagStore.name(forHex: hex).map { "Colour \($0)" } ?? "Colour \(hex)")
+
+                        // Shows the user's own Colour Coding tag (Settings > Preferences), if
+                        // they've assigned one, so the picker itself reflects their scheme.
+                        if let tag = tagStore.name(forHex: hex) {
+                            Text(tag)
+                                .font(.system(size: 9))
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                                .frame(maxWidth: 48)
                         }
                     }
-                    .onTapGesture { selectedHex = hex }
-                    .accessibilityLabel("Colour \(hex)")
+                }
             }
+            .padding(.horizontal, 2)
+            .padding(.vertical, 4)
         }
-        .padding(.vertical, 4)
     }
 }
 

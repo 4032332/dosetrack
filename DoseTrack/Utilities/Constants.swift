@@ -39,6 +39,23 @@ enum Constants {
         static let privacyPolicy = URL(string: "https://4032332.github.io/dosetrack/privacy.html")!
     }
 
+    enum MedicationColors {
+        /// The full colour palette offered when picking a medication's colour, and in the
+        /// Colour Coding preferences screen where a colour can be assigned a tag (e.g.
+        /// "Morning Batch", "Pain Relief"). Expanded from the original fixed set of 8 so users
+        /// with many medications have enough distinct colours to actually colour-code by
+        /// category — the picker that shows these scrolls horizontally (see
+        /// AddEditMedicationView.ColourPickerGrid) so this list can keep growing.
+        static let palette: [String] = [
+            "#5B8AF0", "#FF6B6B", "#4ECDC4", "#45B7D1",
+            "#96CEB4", "#FFEAA7", "#DDA0DD", "#98D8C8",
+            "#F4845F", "#F76E11", "#EF5B5B", "#FFC93C",
+            "#3EC1D3", "#2E86AB", "#6A4C93", "#B5838D",
+            "#588157", "#A3B18A", "#E76F51", "#264653",
+            "#FF9F1C", "#8ECAE6", "#219EBC", "#023047",
+        ]
+    }
+
     enum Notification {
         static let categoryMedicationDue = "MEDICATION_DUE"
         static let actionTakeDose = "TAKE_DOSE"

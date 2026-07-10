@@ -35,13 +35,22 @@ extension Medication {
         Color(hex: colorHex ?? "#5B8AF0")
     }
 
+    /// Canonical "needs restock soon" signal — the single source of truth used everywhere a
+    /// low-supply warning is shown (Medications list icon, Today's alerts box, Restock urgency
+    /// colouring). Previously each of those three places had its OWN slightly different
+    /// definition (one keyed off `currentCount <= refillThreshold`, another off `daysOfSupply <
+    /// 7` with a hardcoded "7" instead of the user's threshold, a third off raw count bands) —
+    /// so a medication could show a warning in one place and not another (e.g. Restavit at 0
+    /// supply missing from Today's alerts; Clonidine with 8 tablets but only 2 days left,
+    /// because it's taken more than once a day, missing from the Medications list icon).
+    /// Warn when either the raw count is at/below the user's threshold, OR days-of-supply is
+    /// under a week — matching the two urgency signals already described in the Refill Tracking
+    /// footer ("<3 doses, <5 days, and <7 days remaining"). Gated on the med actually being
+    /// consumed on a schedule (totalDosesPerDay > 0) so as-needed items that don't track a
+    /// running count don't nag.
     var isRefillWarning: Bool {
-        // Warn at or below the refill threshold, INCLUDING 0 (out of stock). The previous
-        // `currentCount > 0` guard suppressed the warning at exactly 0 — the single most
-        // urgent state — so a depleted medication showed no flag at all. Gated on the med
-        // actually being consumed on a schedule (totalDosesPerDay > 0) so as-needed items
-        // that don't track a running count don't nag.
-        totalDosesPerDay > 0 && currentCount <= refillThreshold
+        guard totalDosesPerDay > 0 else { return false }
+        return currentCount <= refillThreshold || daysOfSupply < 7
     }
 
     var wrappedName: String { name ?? "" }

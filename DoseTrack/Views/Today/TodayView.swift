@@ -14,6 +14,9 @@ struct TodayView: View {
     @State private var selectedEntry: DoseEntry?
     @AppStorage("patientName") private var patientName: String = ""
     @State private var showConfetti = false
+    /// Taken-and-past doses default to collapsed so a long list of already-handled doses
+    /// doesn't push "Upcoming Today" off screen — the user can still expand to review them.
+    @State private var showTakenPast = false
     @Binding var showingAccountSwitcher: Bool
 
     init(showingAccountSwitcher: Binding<Bool> = .constant(false)) {
@@ -70,9 +73,15 @@ struct TodayView: View {
                     let upcoming = viewModel.doseEntries.filter {
                         $0.scheduledAt > Date() && $0.existingLog == nil
                     }
+                    // Split past doses into anything still needing attention (pending/skipped/
+                    // missed) — always shown — and doses already marked taken, which collapse
+                    // into their own expandable section so a long taken history doesn't push
+                    // "Upcoming Today" off screen.
+                    let pendingPast = past.filter { $0.status != .taken }
+                    let takenPast = past.filter { $0.status == .taken }
 
-                    if !past.isEmpty {
-                        let pastGroups = groupedByTime(past)
+                    if !pendingPast.isEmpty {
+                        let pastGroups = groupedByTime(pendingPast)
                         ForEach(Array(pastGroups.enumerated()), id: \.element.time) { index, group in
                             Section {
                                 ForEach(group.entries) { entry in
@@ -87,6 +96,23 @@ struct TodayView: View {
                                     onMarkAllTaken: { viewModel.markAllTaken(group.entries) }
                                 )
                             }
+                        }
+                    }
+
+                    if !takenPast.isEmpty {
+                        Section {
+                            DisclosureGroup(isExpanded: $showTakenPast) {
+                                ForEach(takenPast.sorted { $0.scheduledAt < $1.scheduledAt }) { entry in
+                                    DoseRowView(entry: entry)
+                                        .contentShape(Rectangle())
+                                        .onTapGesture { selectedEntry = entry }
+                                }
+                            } label: {
+                                Text(pendingPast.isEmpty ? "Due / Past — Taken (\(takenPast.count))" : "Taken (\(takenPast.count))")
+                                    .font(.footnote.weight(.semibold))
+                                    .foregroundStyle(.secondary)
+                            }
+                            .textCase(nil)
                         }
                     }
 

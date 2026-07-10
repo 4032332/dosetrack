@@ -6,6 +6,8 @@ import SwiftUI
 /// (see `GuidedScheduleView`). Global, not per-medication.
 struct MealTimesView: View {
     @State private var meals: MealTimes = MealTimes.load()
+    @State private var isSaving = false
+    @State private var toast: ToastMessage? = nil
 
     private let slots: [(name: String, keyPath: WritableKeyPath<MealTimes, MealTime>)] = [
         ("Wake up", \.wakeUp),
@@ -31,6 +33,29 @@ struct MealTimesView: View {
         }
         .navigationTitle("Daily Routine Times")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    Task { await save(showToast: true) }
+                } label: {
+                    if isSaving {
+                        ProgressView().scaleEffect(0.8)
+                    } else {
+                        Text("Save").fontWeight(.semibold)
+                    }
+                }
+                .disabled(isSaving)
+            }
+        }
+        .toast($toast)
+        // Each field already saves locally + pushes remotely the instant it changes (see
+        // timeBinding below), but leaving the screen — via the back button or a swipe — used
+        // to skip any pending push still in flight. Saving again on disappear (same pattern as
+        // ProfileView's DOB fix) guarantees the final state is written and pushed before the
+        // screen closes, not just "probably already sent."
+        .onDisappear {
+            Task { await save(showToast: false) }
+        }
     }
 
     private func timeBinding(for keyPath: WritableKeyPath<MealTimes, MealTime>) -> Binding<Date> {
@@ -46,9 +71,18 @@ struct MealTimesView: View {
                 let c = Calendar.current.dateComponents([.hour, .minute], from: date)
                 meals[keyPath: keyPath] = MealTime(hour: c.hour ?? 0, minute: c.minute ?? 0)
                 meals.save()
-                Task { await SupabaseSyncManager.shared.pushSettings() }
             }
         )
+    }
+
+    private func save(showToast: Bool) async {
+        isSaving = true
+        defer { isSaving = false }
+        meals.save()
+        await SupabaseSyncManager.shared.pushSettings()
+        if showToast {
+            toast = ToastMessage(text: "Saved", systemImage: "checkmark.circle.fill")
+        }
     }
 }
 

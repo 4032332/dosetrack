@@ -231,6 +231,12 @@ struct SettingsView: View {
                     } label: {
                         Label("Daily Routine Times", systemImage: "sun.max")
                     }
+
+                    NavigationLink {
+                        ColorCodingView()
+                    } label: {
+                        Label("Colour Coding", systemImage: "paintpalette.fill")
+                    }
                 }
 
                 // MARK: Data & Privacy

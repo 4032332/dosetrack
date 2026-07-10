@@ -83,6 +83,7 @@
 		8FB3539A31B3EB4EFAFF1825 /* DoseLoggingServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3835C3FC5AE13F3280F6AF38 /* DoseLoggingServiceTests.swift */; };
 		916A863B157262FC0976EA50 /* TodayViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4A5D3091DF9FA6B51262E03 /* TodayViewModelTests.swift */; };
 		93B2CC95359EBB9FD24E0837 /* ExportManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49E70FC6E1596E9EFC428455 /* ExportManager.swift */; };
+		93D7CF492F8069842148B5B1 /* ColorTagStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA8952C2C79810D3E842F60E /* ColorTagStore.swift */; };
 		93FF0F39C336E9618A5DB9BC /* SupplyWheelPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = C52052AE425D7A4CB3943378 /* SupplyWheelPicker.swift */; };
 		97CF120B7DF5A4BDB06BF36B /* SupabaseSyncManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8F0A5CF3936D62E1ED5B2EF /* SupabaseSyncManager.swift */; };
 		98A2FC5717EFE25EFC8B4F89 /* MedicationScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EFBF2F1DB4EE6C1B60AB2673 /* MedicationScannerView.swift */; };
@@ -120,6 +121,7 @@
 		C946DC2FCC34233F54D48A3B /* CoreDataTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8DF9733C237D4FC1AC12A310 /* CoreDataTests.swift */; };
 		CA5BBFDEAB8B18DA3DF5C154 /* SyncMergeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 856E2087A98DF1DC78EE02F0 /* SyncMergeTests.swift */; };
 		CC32A8FABA8182BE6986EDB8 /* SubscriptionManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FA89388364D687BFC710600 /* SubscriptionManagerTests.swift */; };
+		CCF17173CFE4C1432ACD36E4 /* ColorCodingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A11660D692F5A74A5879FD40 /* ColorCodingView.swift */; };
 		CF78CFEB0883C456B2A70708 /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1BE89FDB7E4F9D9923C173E /* HistoryView.swift */; };
 		D76707027834FD6DCC843135 /* Products.storekit in Resources */ = {isa = PBXBuildFile; fileRef = 2F9FC8A28D3514A8AF3C2784 /* Products.storekit */; };
 		DB0B6E9160C204F15B1E8EED /* MissedDoseDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6EDB9C9C80FC6420898A0E4 /* MissedDoseDetector.swift */; };
@@ -260,6 +262,7 @@
 		9ECD54ED0D8136C78ECBDDF8 /* AcceptCaregiverInviteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcceptCaregiverInviteView.swift; sourceTree = "<group>"; };
 		A06BB85DFE0B688F4E9B7EE9 /* MealTimes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealTimes.swift; sourceTree = "<group>"; };
 		A0D0350A360359C3266D8EA8 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		A11660D692F5A74A5879FD40 /* ColorCodingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorCodingView.swift; sourceTree = "<group>"; };
 		A177488B7127CD2F5DCABCEB /* MediumWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediumWidget.swift; sourceTree = "<group>"; };
 		A1A152E48F7A10E094FB3B37 /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
 		A3C137AE71909B05AA99C229 /* AdherenceCalculatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdherenceCalculatorTests.swift; sourceTree = "<group>"; };
@@ -269,6 +272,7 @@
 		A68FE0D696E5C1C84C0E33C1 /* DoseTrackWidgets.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = DoseTrackWidgets.entitlements; sourceTree = "<group>"; };
 		A6EC0ECE28E942CC99534F64 /* SmallWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmallWidget.swift; sourceTree = "<group>"; };
 		A75207F9029E62A3CEDDA679 /* GuidedScheduleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuidedScheduleView.swift; sourceTree = "<group>"; };
+		AA8952C2C79810D3E842F60E /* ColorTagStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorTagStore.swift; sourceTree = "<group>"; };
 		AAB551C1FB8D1EA35972B282 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		AAB6477B7EBA6905CBA433D1 /* AccountSwitcherView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountSwitcherView.swift; sourceTree = "<group>"; };
 		ABE8C1BB6ADF181C91D7B1B5 /* DoseLog+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "DoseLog+Extensions.swift"; sourceTree = "<group>"; };
@@ -340,6 +344,7 @@
 			children = (
 				D4341C7F0E59FA9C0240094D /* DoseTrack.xcdatamodeld */,
 				7E8539B8E908D6EE13B45C02 /* CaregiverRelationshipRow.swift */,
+				AA8952C2C79810D3E842F60E /* ColorTagStore.swift */,
 				80992CD6D8F672994CF27502 /* DoseLog+CoreDataClass.swift */,
 				ABE8C1BB6ADF181C91D7B1B5 /* DoseLog+Extensions.swift */,
 				A06BB85DFE0B688F4E9B7EE9 /* MealTimes.swift */,
@@ -538,6 +543,7 @@
 				464D0595D1B5467B84401EE6 /* AppPreferencesView.swift */,
 				F94A8FE73284D8CC6C89EC51 /* AvatarPickerView.swift */,
 				74716822DA208FC0B80FAC07 /* CaregiverInviteView.swift */,
+				A11660D692F5A74A5879FD40 /* ColorCodingView.swift */,
 				E9BC6878833AE5C45FC5BA65 /* ContraceptiveTrackerView.swift */,
 				F28589A481525FC1CCB3CD11 /* DeveloperOptionsView.swift */,
 				B21417AA844EA49F0CE994BD /* EnterInviteCodeView.swift */,
@@ -898,7 +904,9 @@
 				8B48DF3CE85DB538565ECD06 /* CaregiverManager.swift in Sources */,
 				AAFD22374BC98407BFF8AA1A /* CaregiverRelationshipRow.swift in Sources */,
 				A281A80A50F5524437F5AD94 /* CollapsiblePickers.swift in Sources */,
+				CCF17173CFE4C1432ACD36E4 /* ColorCodingView.swift in Sources */,
 				6C4CF3F6F5157E4806D48163 /* ColorExtensions.swift in Sources */,
+				93D7CF492F8069842148B5B1 /* ColorTagStore.swift in Sources */,
 				8533FEFD60599D181C4D1AEF /* ConfettiView.swift in Sources */,
 				0A20C2B5AEEBCA76A32C54AA /* Constants.swift in Sources */,
 				FF4F8AB24C069BA1A44BFE2B /* ContentView.swift in Sources */,

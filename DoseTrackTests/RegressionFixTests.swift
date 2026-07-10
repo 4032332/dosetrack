@@ -74,6 +74,19 @@ final class RefillWarningTests: XCTestCase {
         XCTAssertFalse(med.isRefillWarning)
     }
 
+    /// Reported bug: Clonidine had 8 tablets (above the 7-tablet refillThreshold) but was taken
+    /// multiple times a day, leaving only 2 days of supply — it appeared in Today's alerts (which
+    /// used to check days-remaining) but NOT in the Medications list warning icon (which used to
+    /// check count-vs-threshold only). The two checks disagreeing was the bug; isRefillWarning
+    /// must warn on EITHER signal so every screen agrees.
+    func testWarns_whenDaysLowEvenIfCountAboveThreshold() throws {
+        let med = Medication.create(in: context, name: "Clonidine", dosage: "100mcg")
+        med.currentCount = 8
+        med.refillThreshold = 7
+        med.totalDosesPerDay = 4 // 8 tablets / 4 per day = 2 days left
+        XCTAssertTrue(med.isRefillWarning)
+    }
+
     /// A med not consumed on a schedule (no doses/day) shouldn't nag about supply.
     func testNoWarning_whenNotScheduled() throws {
         let med = Medication.create(in: context, name: "As Needed", dosage: "5mg")

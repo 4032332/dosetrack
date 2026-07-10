@@ -226,14 +226,13 @@ final class TodayViewModel: ObservableObject {
         var alerts: [MedicationAlert] = []
 
         for med in medications {
-            // Low refill warning — only show on Today when < 7 days supply remains
-            let count = Int(med.currentCount)
-            let dpd = max(Int(med.totalDosesPerDay), 1)
-            let daysLeft = count / dpd
-            if count > 0 && daysLeft < 7 {
-                alerts.append(.lowRefill(med, remaining: count))
+            // Uses Medication.isRefillWarning — the single canonical low-supply definition also
+            // used by the Medications list icon and Restock urgency colouring. This used to be a
+            // separate, looser copy here (`count > 0 && daysLeft < 7`, hardcoded 7 instead of the
+            // user's threshold) that disagreed with the other two screens.
+            if med.isRefillWarning {
+                alerts.append(.lowRefill(med, remaining: Int(med.currentCount)))
             }
-
         }
 
         // Contraceptive tracker alert (stored in UserDefaults by ContraceptiveTrackerView)
