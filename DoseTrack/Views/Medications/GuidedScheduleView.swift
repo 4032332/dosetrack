@@ -351,10 +351,17 @@ struct GuidedScheduleView: View {
                 }
             }
             HStack {
+                // `.borderless` is essential here: two buttons in a single Form row without an
+                // explicit button style makes SwiftUI treat the WHOLE row as one tap target and
+                // fire BOTH closures. Tapping "Change Schedule Type" therefore also ran "Done"
+                // (step = .collapsed), collapsing the editor — which is exactly why the button
+                // "did nothing." Borderless makes each button its own independent hit target.
                 Button("Change Schedule Type") { resetWizardToFreshStart() }
+                    .buttonStyle(.borderless)
                 Spacer()
                 Button("Done") { step = .collapsed }
                     .fontWeight(.semibold)
+                    .buttonStyle(.borderless)
             }
         }
     }
