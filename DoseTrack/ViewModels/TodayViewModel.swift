@@ -136,7 +136,7 @@ final class TodayViewModel: ObservableObject {
         NotificationScheduler.shared.scheduleSnooze(
             medicationId: entry.medication.id?.uuidString ?? "",
             medicationName: entry.medication.wrappedName,
-            dosage: entry.medication.wrappedDosage,
+            dosage: entry.medication.totalDoseText,
             scheduleId: entry.schedule.id?.uuidString ?? "",
             scheduledAt: entry.scheduledAt,
             minutes: minutes

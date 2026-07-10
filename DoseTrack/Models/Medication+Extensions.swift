@@ -95,4 +95,46 @@ extension Medication {
             ($0.scheduledAt ?? .distantPast) < ($1.scheduledAt ?? .distantPast)
         } ?? []
     }
+
+    /// The strength actually taken in one dose, e.g. "4mg" for a medication whose `dosage` is
+    /// the per-tablet strength "2mg" but where 2 tablets are taken per dose. `dosage` only ever
+    /// stores the per-unit strength (see AddEditMedicationViewModel.save) — how many units make
+    /// up one dose is derived from `totalDosesPerDay ÷ enabled schedule count`, the same maths
+    /// SupplyMath already uses for refill tracking. Notifications previously showed the raw
+    /// per-unit `dosage` regardless of quantity, so "2 tablets of Melatonin 2mg" read as "Time
+    /// to take 2mg" instead of the correct 4mg actually taken.
+    var totalDoseText: String {
+        let (amountString, unit) = Self.parseDosage(wrappedDosage)
+        guard let perUnitAmount = Double(amountString) else { return wrappedDosage }
+
+        let enabledScheduleCount = schedulesArray.filter { $0.isEnabled }.count
+        let quantityPerDose = SupplyMath.quantityPerDose(
+            totalDosesPerDay: Int(totalDosesPerDay),
+            enabledScheduleCount: enabledScheduleCount
+        )
+        guard quantityPerDose > 1 else { return wrappedDosage }
+
+        let total = perUnitAmount * Double(quantityPerDose)
+        let totalString = total.truncatingRemainder(dividingBy: 1) == 0
+            ? String(format: "%.0f", total)
+            : String(total)
+        return "\(totalString)\(unit)"
+    }
+
+    /// Splits a dosage string like "500mg" into its numeric amount and unit. Mirrors
+    /// AddEditMedicationViewModel.parseDosage (which builds the form fields from this same
+    /// string) — kept here too since that one is private to the view model.
+    private static func parseDosage(_ dosage: String) -> (amount: String, unit: String) {
+        let str = dosage.trimmingCharacters(in: .whitespaces)
+        var idx = str.startIndex
+        while idx < str.endIndex {
+            let ch = str[idx]
+            if !ch.isNumber && ch != "." { break }
+            idx = str.index(after: idx)
+        }
+        let amount = String(str[str.startIndex..<idx])
+        let unit = String(str[idx...]).trimmingCharacters(in: .whitespaces)
+        if amount.isEmpty { return (str, "mg") }
+        return (amount, unit.isEmpty ? "mg" : unit)
+    }
 }

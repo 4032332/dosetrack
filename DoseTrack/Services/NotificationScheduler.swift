@@ -226,7 +226,7 @@ final class NotificationScheduler {
 
                 let content = makeContent(
                     medicationName: medication.wrappedName,
-                    dosage: medication.wrappedDosage,
+                    dosage: medication.totalDoseText,
                     medicationId: medication.id?.uuidString ?? "",
                     scheduleId: schedule.id?.uuidString ?? "",
                     scheduledAt: fireDate
