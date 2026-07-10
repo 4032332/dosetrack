@@ -254,6 +254,18 @@ private struct ActiveSessionView: View {
                 watchManager.syncTodayMedications(context: ownContext)
                 // Pull all user data from Supabase on first app open after sign-in
                 Task { await SupabaseSyncManager.shared.pullAll(context: ownContext) }
+                // Guarantee the notification permission prompt appears before the user can add any
+                // medication. Onboarding requests it on its Notifications page, but Apple/Google
+                // sign-in set `hasCompletedOnboarding = true` and skip onboarding entirely — so
+                // without this a new social-login user could add meds whose reminders silently
+                // never fire. Requesting when the status is already determined is a no-op (iOS
+                // only prompts once), so onboarding users are never double-prompted.
+                Task {
+                    await NotificationManager.shared.refreshStatus()
+                    if NotificationManager.shared.authorizationStatus == .notDetermined {
+                        _ = await NotificationManager.shared.requestAuthorization()
+                    }
+                }
             }
             .onChange(of: activeAccount.activeUserId) { _, newUserId in
                 let resolvedId: UUID? = (newUserId == activeAccount.ownUserId) ? nil : newUserId
