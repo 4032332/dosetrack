@@ -48,4 +48,52 @@ final class MedicationScannerParserTests: XCTestCase {
         let result = MedicationParser.parse(lines: lines)
         XCTAssertNil(result, "Should not fabricate a name when every line is boilerplate")
     }
+
+    func testParse_nameAndStrengthOnSameLine_stripsStrengthKeepsName() {
+        // OCR very commonly merges the brand name and strength onto one line.
+        let lines = ["Nurofen 200mg", "24 Tablets"]
+        let result = MedicationParser.parse(lines: lines)
+        XCTAssertEqual(result?.name, "Nurofen")
+        XCTAssertEqual(result?.strength, "200")
+        XCTAssertEqual(result?.strengthUnit, "mg")
+        XCTAssertEqual(result?.count, 24)
+    }
+
+    func testParse_strengthWithoutSpaceAndMicrograms() {
+        let lines = ["Levothyroxine", "100microgram", "50 tablets"]
+        let result = MedicationParser.parse(lines: lines)
+        XCTAssertEqual(result?.name, "Levothyroxine")
+        XCTAssertEqual(result?.strength, "100")
+        XCTAssertEqual(result?.strengthUnit, "mcg")
+    }
+
+    func testParse_liquidStrengthPerVolume() {
+        let lines = ["Amoxil", "250mg/5mL", "Oral Liquid"]
+        let result = MedicationParser.parse(lines: lines)
+        XCTAssertEqual(result?.name, "Amoxil")
+        XCTAssertEqual(result?.strength, "250")
+        XCTAssertEqual(result?.strengthUnit, "mg/5ml")
+        XCTAssertEqual(result?.form, "ml")
+    }
+
+    func testParse_countWithApostropheS() {
+        // "Panadol 500mg 100's" — the "100's" pack-size shorthand.
+        let lines = ["Panadol", "500 mg", "100's"]
+        let result = MedicationParser.parse(lines: lines)
+        XCTAssertEqual(result?.name, "Panadol")
+        XCTAssertEqual(result?.count, 100)
+    }
+
+    func testParse_stripsTrademarkSymbolFromName() {
+        let lines = ["Claratyne®", "10 mg", "30 Tablets"]
+        let result = MedicationParser.parse(lines: lines)
+        XCTAssertEqual(result?.name, "Claratyne")
+    }
+
+    func testParse_pureCountAndStrengthLines_areNotMistakenForName() {
+        // Every non-boilerplate line is just numbers+units → nothing left after stripping → nil.
+        let lines = ["500 mg", "100 Tablets", "AUST R 55555"]
+        let result = MedicationParser.parse(lines: lines)
+        XCTAssertNil(result)
+    }
 }

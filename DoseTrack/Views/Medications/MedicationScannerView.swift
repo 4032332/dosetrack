@@ -1,12 +1,13 @@
 // DoseTrack/Views/Medications/MedicationScannerView.swift
-// Camera-based medication box scanner using Vision OCR.
-// User photographs the front of a medication box or bottle.
-// Vision extracts all text, then a parser pulls out drug name, strength, and tablet count.
-// Results pre-fill the Add Medication form — user reviews and corrects before saving.
+// Camera-based medication box scanner. The user scans the front of a medication box or bottle
+// with the system document scanner (edge-detected, deskewed, contrast-enhanced), then
+// MedicationTextRecognizer runs Vision OCR (orientation-aware) and MedicationParser pulls out the
+// drug name, strength, count, and form. Results pre-fill the Add Medication form for the user to
+// review and correct before saving.
 
 import SwiftUI
-import Vision
-import AVFoundation
+import UIKit
+import VisionKit
 
 // MARK: - Result model
 
@@ -66,15 +67,36 @@ struct MedicationScannerView: View {
                 } else if isProcessing {
                     processingView
                 } else if showingCamera {
-                    ScannerCameraView(
-                        onCapture: { image in
-                            capturedImage = image
-                            showingCamera = false
-                            processImage(image)
-                        },
-                        onCancel: onCancel
-                    )
-                    .ignoresSafeArea()
+                    // Prefer the system document scanner: it finds the box edges, corrects the
+                    // perspective, and boosts contrast before we ever run OCR — a far cleaner
+                    // input than a raw glossy-box snapshot, which is what OCR needs to succeed on
+                    // real packaging. Falls back to the photo picker where the document camera
+                    // isn't available (notably the Simulator).
+                    if DocumentScannerView.isSupported {
+                        DocumentScannerView(
+                            onCapture: { image in
+                                capturedImage = image
+                                showingCamera = false
+                                processImage(image)
+                            },
+                            onCancel: onCancel,
+                            onError: { message in
+                                showingCamera = false
+                                errorMessage = message
+                            }
+                        )
+                        .ignoresSafeArea()
+                    } else {
+                        ScannerCameraView(
+                            onCapture: { image in
+                                capturedImage = image
+                                showingCamera = false
+                                processImage(image)
+                            },
+                            onCancel: onCancel
+                        )
+                        .ignoresSafeArea()
+                    }
                 } else {
                     errorView
                 }
@@ -125,60 +147,40 @@ struct MedicationScannerView: View {
         let scanToken = UUID()
         currentScanToken = scanToken
 
-        guard let cgImage = image.cgImage else {
-            isProcessing = false
-            errorMessage = "Could not process this image."
-            return
-        }
-
-        // Watchdog: if Vision hasn't called back within 10s (device stall, huge image, or a
-        // failure mode neither the completion handler's error path nor the `perform` catch
-        // below happens to cover), surface an error instead of leaving the spinner stuck
-        // forever — that indefinite hang is exactly what earlier looked like "does nothing."
-        DispatchQueue.main.asyncAfter(deadline: .now() + 10) { [self] in
+        // Watchdog: if recognition hasn't finished within 15s (device stall or a huge image),
+        // surface an error instead of leaving the spinner stuck forever — that indefinite hang
+        // is exactly what earlier looked like "does nothing."
+        DispatchQueue.main.asyncAfter(deadline: .now() + 15) { [self] in
             guard currentScanToken == scanToken, isProcessing else { return }
             isProcessing = false
             errorMessage = "Taking longer than expected. Please try again."
         }
 
-        let request = VNRecognizeTextRequest { request, error in
+        DispatchQueue.global(qos: .userInitiated).async {
+            let outcome: Result<[RecognizedLine], Error>
+            do {
+                outcome = .success(try MedicationTextRecognizer.recognizeLines(in: image))
+            } catch {
+                outcome = .failure(error)
+            }
+
             DispatchQueue.main.async {
                 guard currentScanToken == scanToken else { return }
                 isProcessing = false
-                if let error {
-                    errorMessage = error.localizedDescription
-                    return
-                }
-                let observations = request.results as? [VNRecognizedTextObservation] ?? []
-                let lines = observations.compactMap { $0.topCandidates(1).first?.string }
-                if let result = MedicationParser.parse(lines: lines) {
-                    scanResult = result
-                } else if !lines.isEmpty {
-                    // Vision found text but the parser's heuristics couldn't confidently pick
-                    // a name line — let the user pick instead of a dead-end error.
-                    rawLinesForFallback = lines
-                } else {
-                    errorMessage = "No text detected. Try pointing the camera at the front of the box or bottle label."
-                }
-            }
-        }
-        request.recognitionLevel = .accurate
-        request.usesLanguageCorrection = true
-
-        let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
-        DispatchQueue.global(qos: .userInitiated).async {
-            do {
-                try handler.perform([request])
-            } catch {
-                // `perform` throwing (as opposed to the request completion handler reporting
-                // an error) never invokes VNRecognizeTextRequest's completion block at all —
-                // silently swallowing this with `try?` left the UI stuck on the "Reading
-                // medication details…" spinner forever with no feedback, which is exactly
-                // what looked like "the photo does nothing."
-                DispatchQueue.main.async {
-                    guard currentScanToken == scanToken else { return }
-                    isProcessing = false
-                    errorMessage = "Couldn't read this image. Please try again with better lighting."
+                switch outcome {
+                case .failure(let error):
+                    errorMessage = (error as? LocalizedError)?.errorDescription
+                        ?? "Couldn't read this image. Please try again with better lighting."
+                case .success(let lines):
+                    if let result = MedicationParser.parse(lines: lines) {
+                        scanResult = result
+                    } else if !lines.isEmpty {
+                        // Vision found text but the parser couldn't confidently pick a name
+                        // line — let the user pick instead of a dead-end error.
+                        rawLinesForFallback = lines.map(\.text)
+                    } else {
+                        errorMessage = "No text detected. Try pointing the camera at the front of the box or bottle label."
+                    }
                 }
             }
         }
@@ -329,121 +331,6 @@ private struct ScanResultReviewView: View {
     }
 }
 
-// MARK: - OCR parser
-
-enum MedicationParser {
-
-    static func parse(lines: [String]) -> MedicationScanResult? {
-        guard !lines.isEmpty else { return nil }
-
-        let strength = extractStrength(from: lines)
-        let count = extractCount(from: lines)
-        let form = extractForm(from: lines)
-        let name = extractName(from: lines, excludingStrength: strength?.full)
-
-        // Require at minimum a name to proceed
-        guard let name, !name.isEmpty else { return nil }
-
-        return MedicationScanResult(
-            name: name,
-            strength: strength?.value ?? "",
-            strengthUnit: strength?.unit ?? "mg",
-            count: count ?? 0,
-            form: form ?? "tablet",
-            rawLines: lines
-        )
-    }
-
-    // MARK: - Strength: "500 mg", "10mg", "2.5mg/5mL"
-
-    private struct StrengthMatch {
-        let full: String
-        let value: String
-        let unit: String
-    }
-
-    private static let strengthPattern = try! NSRegularExpression(
-        pattern: #"(\d+(?:\.\d+)?)\s*(mg\/(?:ml|5ml)|mcg|mg|g|ml|iu|%|mg\/ml)"#,
-        options: .caseInsensitive
-    )
-
-    private static func extractStrength(from lines: [String]) -> StrengthMatch? {
-        for line in lines {
-            let range = NSRange(line.startIndex..., in: line)
-            if let match = strengthPattern.firstMatch(in: line, range: range) {
-                let value = (line as NSString).substring(with: match.range(at: 1))
-                let unit  = (line as NSString).substring(with: match.range(at: 2)).lowercased()
-                let full  = (line as NSString).substring(with: match.range)
-                return StrengthMatch(full: full, value: value, unit: unit)
-            }
-        }
-        return nil
-    }
-
-    // MARK: - Count: "30 tablets", "28 CAPSULES", "100 tab"
-
-    private static let countPattern = try! NSRegularExpression(
-        pattern: #"(\d+)\s*(?:tablets?|caps?(?:ules?)?|caplets?|sachets?|doses?|puffs?|patches?|vials?|ampoules?|injections?|tabs?)"#,
-        options: .caseInsensitive
-    )
-
-    private static func extractCount(from lines: [String]) -> Int? {
-        for line in lines {
-            let range = NSRange(line.startIndex..., in: line)
-            if let match = countPattern.firstMatch(in: line, range: range) {
-                let numStr = (line as NSString).substring(with: match.range(at: 1))
-                if let n = Int(numStr), n > 0, n <= 1000 { return n }
-            }
-        }
-        return nil
-    }
-
-    // MARK: - Form
-
-    private static let formKeywords: [(keyword: String, form: String)] = [
-        ("tablet", "tablet"), ("cap", "capsule"), ("liquid", "liquid"),
-        ("syrup", "liquid"), ("injection", "injection"), ("patch", "patch"),
-        ("spray", "spray"), ("inhaler", "spray"), ("supplement", "supplement"),
-        ("softgel", "capsule"), ("sachet", "sachet")
-    ]
-
-    private static func extractForm(from lines: [String]) -> String? {
-        let joined = lines.joined(separator: " ").lowercased()
-        for (keyword, form) in formKeywords {
-            if joined.contains(keyword) { return form }
-        }
-        return nil
-    }
-
-    // MARK: - Name: longest title-case line that isn't just numbers/strength
-
-    private static func extractName(from lines: [String], excludingStrength: String?) -> String? {
-        // Filter lines: must have letters, not purely numeric, not too short
-        let candidates = lines.filter { line in
-            let cleaned = line.trimmingCharacters(in: .whitespaces)
-            guard cleaned.count >= 4 else { return false }
-            guard cleaned.rangeOfCharacter(from: .letters) != nil else { return false }
-            // Exclude lines that are predominantly dosage/count info
-            if let strength = excludingStrength, cleaned.lowercased().contains(strength.lowercased()) { return false }
-            let lc = cleaned.lowercased()
-            let skipWords = ["tablets", "capsules", "dose", "directions", "active ingredient",
-                             "inactive", "store", "expir", "batch", "lot", "medicine",
-                             "pharmacy", "prescrib", "warning", "keep out", "apn", "ean",
-                             "australian", "new zealand", "contains", "each", "take",
-                             "before", "after", "consult", "doctor", "pharmacist"]
-            return !skipWords.contains(where: { lc.contains($0) })
-        }
-
-        // Prefer lines that look like a proper noun (start with capital, short-ish)
-        let properNoun = candidates.first(where: { line in
-            guard let first = line.first else { return false }
-            return first.isUppercase && line.count <= 40 && !line.contains("  ")
-        })
-
-        return properNoun ?? candidates.first
-    }
-}
-
 // MARK: - Camera picker (reuses UIImagePickerController)
 
 struct ScannerCameraView: UIViewControllerRepresentable {
@@ -478,6 +365,55 @@ struct ScannerCameraView: UIViewControllerRepresentable {
         func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
             onCancel()
             picker.dismiss(animated: true)
+        }
+    }
+}
+
+// MARK: - Document scanner (VisionKit)
+
+/// Wraps `VNDocumentCameraViewController` — the same edge-detecting, perspective-correcting,
+/// contrast-enhancing scanner used by Notes/Files. Its output is a clean, deskewed, high-contrast
+/// image of the label, which is dramatically easier for OCR to read than a raw camera photo.
+struct DocumentScannerView: UIViewControllerRepresentable {
+    let onCapture: (UIImage) -> Void
+    let onCancel: () -> Void
+    let onError: (String) -> Void
+
+    /// False on the Simulator and any device without document-scanning support.
+    static var isSupported: Bool { VNDocumentCameraViewController.isSupported }
+
+    func makeCoordinator() -> Coordinator { Coordinator(self) }
+
+    func makeUIViewController(context: Context) -> VNDocumentCameraViewController {
+        let vc = VNDocumentCameraViewController()
+        vc.delegate = context.coordinator
+        return vc
+    }
+
+    func updateUIViewController(_ vc: VNDocumentCameraViewController, context: Context) {}
+
+    class Coordinator: NSObject, VNDocumentCameraViewControllerDelegate {
+        let parent: DocumentScannerView
+        init(_ parent: DocumentScannerView) { self.parent = parent }
+
+        func documentCameraViewController(_ controller: VNDocumentCameraViewController,
+                                          didFinishWith scan: VNDocumentCameraScan) {
+            // A box front is a single page; take the first scanned page.
+            guard scan.pageCount > 0 else {
+                parent.onError("No page was scanned. Please try again.")
+                return
+            }
+            let image = scan.imageOfPage(at: 0)
+            parent.onCapture(image)
+        }
+
+        func documentCameraViewControllerDidCancel(_ controller: VNDocumentCameraViewController) {
+            parent.onCancel()
+        }
+
+        func documentCameraViewController(_ controller: VNDocumentCameraViewController,
+                                          didFailWithError error: Error) {
+            parent.onError("Scanning failed. Please try again.")
         }
     }
 }
