@@ -24,117 +24,126 @@ struct HistoryView: View {
 
     var body: some View {
         NavigationStack {
-            List {
-                // Range picker
-                Section {
-                    Picker("Range", selection: $viewModel.rangeMode) {
-                        ForEach(DateRangeMode.allCases, id: \.self) {
-                            Text($0.rawValue).tag($0)
+            // Plain ScrollView + styled cards, NOT List. SwiftUI's List is UICollectionView-
+            // backed on modern iOS, and embedding a self-sizing custom grid (CalendarView's
+            // LazyVGrid) or a Swift Charts view directly inside a List row is a known-unreliable
+            // combination — the List row's own sizing pass and the embedded content's internal
+            // layout pass can end up invalidating each other in a loop. That's exactly the
+            // reproducible crash reported on a real device (_UICollectionViewFeedbackLoop,
+            // _updateVisibleCellsNow: appearing twice in its own stack — UIKit's own internal
+            // anti-infinite-loop safety net firing). A fixed day-count in the calendar grid
+            // (previous attempt) reduced but didn't eliminate the risk, since the underlying
+            // List+self-sizing-grid combination is the real problem. ScrollView has no such
+            // collection-view backing, so this removes the entire crash class rather than
+            // continuing to patch symptoms of it.
+            ScrollView {
+                VStack(spacing: 16) {
+                    // Range picker
+                    HistoryCard {
+                        Picker("Range", selection: $viewModel.rangeMode) {
+                            ForEach(DateRangeMode.allCases, id: \.self) {
+                                Text($0.rawValue).tag($0)
+                            }
                         }
-                    }
-                    .pickerStyle(.segmented)
+                        .pickerStyle(.segmented)
 
-                    if viewModel.rangeMode == .custom {
-                        CollapsibleDatePicker(
-                            label: "From",
-                            systemImage: "calendar",
-                            date: $viewModel.customStart,
-                            range: ...viewModel.customEnd
-                        )
-                        CollapsibleDatePicker(
-                            label: "To",
-                            systemImage: "calendar",
-                            date: $viewModel.customEnd,
-                            range: ...Date()
-                        )
-                    }
-                }
-
-                // Overall adherence
-                Section {
-                    AdherenceSummaryRow(percent: viewModel.overallPercent)
-                }
-
-                // Chart vs calendar toggle
-                Section {
-                    // Full-width segmented control (matching the Range picker above it) rather
-                    // than a cramped fixed 120pt width next to a redundant duplicate text label —
-                    // the old layout truncated "Calendar" to "Calen..." since two icon+text
-                    // segments plus their own label never fit in 120pt.
-                    Picker("View", selection: $showingCalendar) {
-                        Label("Chart", systemImage: "chart.bar.fill").tag(false)
-                        Label("Calendar", systemImage: "calendar").tag(true)
-                    }
-                    .pickerStyle(.segmented)
-                    // Explicitly non-animated: this Picker swaps in an entirely different view
-                    // structure below it (a Swift Charts view vs. CalendarView's 49-cell grid)
-                    // inside the same List Section row. List rows are UICollectionView-backed on
-                    // modern iOS, and an ANIMATED swap between structurally different content in
-                    // one row is the same class of bug that caused the reproducible
-                    // _UICollectionViewFeedbackLoop crash in the calendar's month navigation —
-                    // forcing a plain, non-animated swap here removes that risk at this toggle too.
-                    .animation(nil, value: showingCalendar)
-
-                    if showingCalendar {
-                        CalendarView(days: viewModel.dayAdherences, displayedMonth: $calendarMonth,
-                                     onSelectDay: { day in
-                                         // Deferred a turn, same fix pattern used elsewhere in this
-                                         // app for state changes fired from inside a tap/dialog
-                                         // handler nested in a List-backed view — presenting a sheet
-                                         // in the same run-loop turn as the originating tap can be
-                                         // dropped or interact badly with the List's own layout pass.
-                                         DispatchQueue.main.async { daySelection = DaySelection(day: day) }
-                                     })
-                            .padding(.vertical, 4)
-                    } else {
-                        if viewModel.dayAdherences.isEmpty {
-                            ContentUnavailableView(
-                                "No data",
-                                systemImage: "chart.bar",
-                                description: Text("Log doses to see adherence trends")
+                        if viewModel.rangeMode == .custom {
+                            CollapsibleDatePicker(
+                                label: "From",
+                                systemImage: "calendar",
+                                date: $viewModel.customStart,
+                                range: ...viewModel.customEnd
                             )
-                            .frame(height: 180)
-                        } else {
-                            AdherenceChartView(days: viewModel.dayAdherences)
-                                .padding(.vertical, 4)
+                            CollapsibleDatePicker(
+                                label: "To",
+                                systemImage: "calendar",
+                                date: $viewModel.customEnd,
+                                range: ...Date()
+                            )
                         }
                     }
-                }
 
-                // Per-medication breakdown — tap through to each medication's logged doses
-                if !viewModel.medicationAdherences.isEmpty {
-                    Section("By Medication") {
-                        ForEach(viewModel.medicationAdherences) { item in
-                            NavigationLink {
-                                HistoryEntriesView(
-                                    title: item.name,
-                                    showMedicationName: false,
-                                    entries: viewModel.entries(forMedication: item.id)
+                    // Overall adherence
+                    HistoryCard {
+                        AdherenceSummaryRow(percent: viewModel.overallPercent)
+                    }
+
+                    // Chart vs calendar toggle
+                    HistoryCard {
+                        // Full-width segmented control (matching the Range picker above it)
+                        // rather than a cramped fixed 120pt width next to a redundant duplicate
+                        // text label — the old layout truncated "Calendar" to "Calen...".
+                        Picker("View", selection: $showingCalendar) {
+                            Label("Chart", systemImage: "chart.bar.fill").tag(false)
+                            Label("Calendar", systemImage: "calendar").tag(true)
+                        }
+                        .pickerStyle(.segmented)
+                        .animation(nil, value: showingCalendar)
+
+                        if showingCalendar {
+                            CalendarView(days: viewModel.dayAdherences, displayedMonth: $calendarMonth,
+                                         onSelectDay: { day in daySelection = DaySelection(day: day) })
+                                .padding(.vertical, 4)
+                        } else {
+                            if viewModel.dayAdherences.isEmpty {
+                                ContentUnavailableView(
+                                    "No data",
+                                    systemImage: "chart.bar",
+                                    description: Text("Log doses to see adherence trends")
                                 )
-                            } label: {
-                                MedicationAdherenceRow(item: item)
+                                .frame(height: 180)
+                            } else {
+                                AdherenceChartView(days: viewModel.dayAdherences)
+                                    .padding(.vertical, 4)
                             }
                         }
                     }
-                }
 
-                // Legend
-                Section {
-                    HStack(spacing: 16) {
-                        LegendDot(color: .green, label: "≥90%")
-                        LegendDot(color: .orange, label: "50–89%")
-                        LegendDot(color: .red, label: "<50%")
-                        LegendDot(color: .gray.opacity(0.4), label: "No doses")
+                    // Per-medication breakdown — tap through to each medication's logged doses
+                    if !viewModel.medicationAdherences.isEmpty {
+                        VStack(alignment: .leading, spacing: 8) {
+                            HistorySectionHeader("By Medication")
+                            HistoryCard(spacing: 14) {
+                                ForEach(Array(viewModel.medicationAdherences.enumerated()), id: \.element.id) { index, item in
+                                    NavigationLink {
+                                        HistoryEntriesView(
+                                            title: item.name,
+                                            showMedicationName: false,
+                                            entries: viewModel.entries(forMedication: item.id)
+                                        )
+                                    } label: {
+                                        MedicationAdherenceRow(item: item)
+                                    }
+                                    .buttonStyle(.plain)
+                                    if index != viewModel.medicationAdherences.count - 1 {
+                                        Divider()
+                                    }
+                                }
+                            }
+                        }
                     }
-                    .font(.caption)
-                }
 
-                // Disclaimer
-                Section {
+                    // Legend
+                    HistoryCard {
+                        HStack(spacing: 16) {
+                            LegendDot(color: .green, label: "≥90%")
+                            LegendDot(color: .orange, label: "50–89%")
+                            LegendDot(color: .red, label: "<50%")
+                            LegendDot(color: .gray.opacity(0.4), label: "No doses")
+                        }
+                        .font(.caption)
+                    }
+
+                    // Disclaimer
                     Text("DoseTrack is a reminder tool, not medical advice. Always follow your healthcare provider's instructions.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 8)
                 }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
             }
             .scrollIndicators(.visible)
             .contentMargins(.bottom, 32, for: .scrollContent)
@@ -328,6 +337,36 @@ private struct HistoryEntryRow: View {
             .font(.caption.weight(.semibold))
             .foregroundStyle(color)
             .labelStyle(.titleAndIcon)
+    }
+}
+
+// MARK: - Card container (replaces List's Section styling now that History uses ScrollView)
+
+/// Rounded card wrapper standing in for a `List` `Section`'s grouped-inset look, now that
+/// HistoryView uses a plain `ScrollView` instead of `List` (see the crash-fix comment on
+/// `HistoryView.body`).
+private struct HistoryCard<Content: View>: View {
+    var spacing: CGFloat = 12
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: spacing) {
+            content
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+}
+
+private struct HistorySectionHeader: View {
+    let title: String
+    init(_ title: String) { self.title = title }
+    var body: some View {
+        Text(title.uppercased())
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 4)
     }
 }
 
