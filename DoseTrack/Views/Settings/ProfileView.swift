@@ -77,7 +77,7 @@ struct ProfileView: View {
                 if isPro {
                     HStack {
                         Spacer()
-                        Label("Milli Pro", systemImage: "star.fill")
+                        Label("DoseTrack Pro", systemImage: "star.fill")
                             .font(.caption.weight(.semibold))
                             .foregroundStyle(.yellow)
                             .padding(.horizontal, 10).padding(.vertical, 4)

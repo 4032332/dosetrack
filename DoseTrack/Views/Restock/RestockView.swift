@@ -70,7 +70,9 @@ struct RestockView: View {
                         AccountSwitcherPill(isPresented: $showingAccountSwitcher)
                     }
                 }
-                ToolbarItem(placement: .topBarTrailing) {
+                // Leading, matching the Edit button's placement on the Medications list — it
+                // was on the trailing side here and leading there, which looked inconsistent.
+                ToolbarItem(placement: .topBarLeading) {
                     EditButton()
                 }
             }
@@ -190,21 +192,15 @@ private struct RestockRow: View {
     var body: some View {
         Button(action: onTap) {
             HStack(spacing: 14) {
-                // Colour + urgency indicator
-                ZStack(alignment: .bottomTrailing) {
-                    RoundedRectangle(cornerRadius: 10)
-                        .fill(med.color.opacity(0.15))
-                        .frame(width: 44, height: 44)
-                    Image(systemName: unitIcon(med.wrappedUnit))
-                        .font(.system(size: 18))
-                        .foregroundStyle(med.color)
-                        .frame(width: 44, height: 44)
-
-                    Circle()
-                        .fill(med.restockColor)
-                        .frame(width: 12, height: 12)
-                        .offset(x: 4, y: 4)
-                }
+                // Shared tinted tile (identical to the Medications list) + a supply-urgency dot,
+                // which is meaningful specifically on this restock-focused screen.
+                MedicationColorTile(medication: med)
+                    .overlay(alignment: .bottomTrailing) {
+                        Circle()
+                            .fill(med.restockColor)
+                            .frame(width: 12, height: 12)
+                            .offset(x: 3, y: 3)
+                    }
 
                 VStack(alignment: .leading, spacing: 3) {
                     Text(med.wrappedName)
@@ -253,15 +249,6 @@ private struct RestockRow: View {
         }
     }
 
-    private func unitIcon(_ unit: String) -> String {
-        switch unit {
-        case "injection", "contraceptive": return "syringe.fill"
-        case "ml":        return "drop.fill"
-        case "spray":     return "aqi.medium"
-        case "supplement":return "leaf.fill"
-        default:          return "pill.fill"
-        }
-    }
 }
 
 // MARK: - Legend

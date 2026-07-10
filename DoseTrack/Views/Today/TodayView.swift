@@ -45,27 +45,28 @@ struct TodayView: View {
                 // MARK: Dose list
                 if viewModel.doseEntries.isEmpty {
                     Section {
-                        VStack(spacing: 12) {
-                            // OnboardingAllDone.png has an opaque background baked in — see AuthView.
-                            ZStack {
-                                Circle()
-                                    .fill(LinearGradient(colors: [.green.opacity(0.3), .green.opacity(0.12)],
-                                                          startPoint: .topLeading, endPoint: .bottomTrailing))
-                                    .frame(width: 108, height: 108)
-                                Image("OnboardingAllDone")
-                                    .resizable()
-                                    .scaledToFit()
-                                    .frame(width: 76, height: 76)
-                                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                            }
-                            Text("No medications scheduled today")
+                        VStack(spacing: 8) {
+                            // The mascot artwork has a white background baked in; the white card
+                            // row background below lets it blend seamlessly (no white square on
+                            // grey) without cropping the full scene into a circle.
+                            Image("EmptyState")
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 150, height: 150)
+                            Text("Nothing scheduled today")
+                                .font(.headline)
+                            Text("Enjoy the day off — you're all clear.")
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
                         }
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 24)
+                        .padding(.vertical, 20)
                     }
-                    .listRowBackground(Color.clear)
+                    .listRowBackground(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .fill(Color(.secondarySystemGroupedBackground))
+                            .padding(.horizontal, 16)
+                    )
                 } else {
                     let past = viewModel.doseEntries.filter {
                         $0.scheduledAt <= Date() || $0.existingLog != nil
@@ -130,6 +131,10 @@ struct TodayView: View {
                 }
             }
             .scrollIndicators(.visible)
+            // Tightens the large default gaps between time-group sections — grouping doses by
+            // exact time meant a handful of meds otherwise filled the whole screen with mostly
+            // whitespace between separate cards.
+            .listSectionSpacing(12)
             .contentMargins(.bottom, 32, for: .scrollContent)
             .navigationTitle(Date().formatted(.dateTime.weekday(.wide).month().day()))
             .navigationBarTitleDisplayMode(.large)

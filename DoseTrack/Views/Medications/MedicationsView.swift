@@ -214,14 +214,16 @@ private struct MedicationRowView: View {
     @ObservedObject var medication: Medication
 
     var body: some View {
-        HStack(spacing: 12) {
-            Circle()
-                .fill(medication.color)
-                .frame(width: 12, height: 12)
-            VStack(alignment: .leading, spacing: 2) {
+        HStack(spacing: 14) {
+            // Tinted squircle tile with the form icon — the same treatment used on the Restock
+            // list (via MedicationColorTile) so the two screens share one visual language
+            // instead of one using a bare 12pt dot and the other a big tile.
+            MedicationColorTile(medication: medication)
+
+            VStack(alignment: .leading, spacing: 3) {
                 Text(medication.wrappedName)
                     .font(.body.weight(.medium))
-                Text("\(medication.wrappedDosage) \(medication.wrappedUnit)")
+                Text("\(medication.wrappedDosage) · \(medication.wrappedUnit)")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -232,8 +234,26 @@ private struct MedicationRowView: View {
                     .accessibilityLabel("Refill warning")
             }
         }
-        .padding(.vertical, 2)
+        .padding(.vertical, 4)
         .accessibilityElement(children: .combine)
+    }
+}
+
+/// Shared 44pt tinted squircle showing a medication's colour + form icon. Used by both the
+/// Medications and Restock lists so their rows look identical.
+struct MedicationColorTile: View {
+    @ObservedObject var medication: Medication
+    var size: CGFloat = 44
+
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: size * 0.23, style: .continuous)
+                .fill(medication.color.opacity(0.16))
+            Image(systemName: medication.unitIconName)
+                .font(.system(size: size * 0.4))
+                .foregroundStyle(medication.color)
+        }
+        .frame(width: size, height: size)
     }
 }
 

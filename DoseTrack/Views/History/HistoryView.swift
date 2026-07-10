@@ -363,8 +363,10 @@ private struct HistorySectionHeader: View {
     let title: String
     init(_ title: String) { self.title = title }
     var body: some View {
-        Text(title.uppercased())
-            .font(.caption.weight(.semibold))
+        // Sentence case to match every other section header in the app ("Due / Past",
+        // "Upcoming Today") — an ALL-CAPS header was the odd one out.
+        Text(title)
+            .font(.footnote.weight(.semibold))
             .foregroundStyle(.secondary)
             .padding(.horizontal, 4)
     }

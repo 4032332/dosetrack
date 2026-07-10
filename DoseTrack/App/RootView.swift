@@ -67,8 +67,8 @@ struct RootView: View {
     }
 
     private func dismissSplash() {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.6) {
-            showSplash = false
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            withAnimation(.easeInOut(duration: 0.4)) { showSplash = false }
         }
     }
 
@@ -87,7 +87,7 @@ struct RootView: View {
                     .transition(.opacity)
             }
 
-            // Splash overlay — shown briefly on every launch
+            // Splash overlay — cold launch ONLY (see note on the removed scenePhase re-show below).
             if showSplash {
                 SplashView()
                     .transition(.opacity)
@@ -122,12 +122,11 @@ struct RootView: View {
         .onChange(of: auth.session?.user.id) { _, _ in
             refreshActiveAccount()
         }
-        .onChange(of: scenePhase) { _, phase in
-            if phase == .active && !showSplash {
-                showSplash = true
-                dismissSplash()
-            }
-        }
+        // NOTE: the splash intentionally does NOT re-show when the app returns to the
+        // foreground. It previously did (scenePhase == .active → showSplash = true), which meant
+        // a full ~2.6s animation replayed every time you switched apps and came back — genuinely
+        // irritating for an app opened many times a day, and against Apple's guidance that launch
+        // should feel instant. The splash now shows once, on cold launch only.
         .onChange(of: scenePhase) { _, newPhase in
             // Re-validate caregiver access whenever the app comes to the foreground. If we're
             // currently viewing a patient's account and that relationship has since been revoked
@@ -248,161 +247,68 @@ private extension Binding where Value == String? {
 
 private struct SplashView: View {
 
-    // Phase 1 – Milli drops in
-    @State private var milliY: CGFloat = -500
-    @State private var milliRotation: Double = 0
-    @State private var milliScale: CGFloat = 1.0
-
-    // Phase 2 – Rattle (pill-bottle shake)
-    @State private var shakeX: CGFloat = 0
-
-    // Phase 3 – Pill burst particles
-    @State private var burstProgress: CGFloat = 0
-    @State private var burstOpacity: Double = 0
-
-    // Phase 4 – Title + tagline
-    @State private var titleScale: CGFloat = 0.6
-    @State private var titleOpacity: Double = 0
+    // One gentle beat: the mascot settles in, the wordmark rises under it.
+    @State private var heroScale: CGFloat = 0.82
+    @State private var heroOpacity: Double = 0
+    @State private var heroLift: CGFloat = 12
+    @State private var wordmarkOpacity: Double = 0
+    @State private var wordmarkLift: CGFloat = 10
     @State private var taglineOpacity: Double = 0
-
-    // Exit
-    @State private var exitScale: CGFloat = 1.0
-    @State private var exitOpacity: Double = 1.0
-
-    private let pillAngles: [Double] = [0, 40, 80, 120, 160, 200, 240, 300, 340]
 
     var body: some View {
         ZStack {
-            // Background
-            LinearGradient(
-                colors: [Color(hex: "1A1A2E"), Color(hex: "16213E"), Color(hex: "0F3460")],
-                startPoint: .topLeading, endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
+            // Solid white — the mascot artwork has a white background baked in, so it blends
+            // seamlessly, and white→app is a calm, same-brightness transition. Deliberately NOT
+            // the old navy gradient, which flashed a dark screen between the white launch screen
+            // and the light app and used colours found nowhere else in the product.
+            Color.white.ignoresSafeArea()
 
-            // Pill burst particles
-            ZStack {
-                ForEach(Array(pillAngles.enumerated()), id: \.offset) { i, angle in
-                    Capsule()
-                        .fill(
-                            LinearGradient(
-                                colors: [pillColor(i).opacity(0.9), pillColor(i).opacity(0.5)],
-                                startPoint: .leading, endPoint: .trailing
-                            )
-                        )
-                        .frame(width: 22, height: 10)
-                        .rotationEffect(.degrees(angle))
-                        .offset(
-                            x: cos(angle * .pi / 180) * 90 * burstProgress,
-                            y: sin(angle * .pi / 180) * 90 * burstProgress
-                        )
-                        .opacity(burstOpacity * (1 - burstProgress * 0.6))
-                        .scaleEffect(0.5 + burstProgress * 0.5)
-                }
-            }
+            VStack(spacing: 20) {
+                // The hero already contains the celebratory pill-burst as part of the artwork —
+                // no separate particle system needed. It just settles into place.
+                Image("SplashHero")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 230, height: 230)
+                    .scaleEffect(heroScale)
+                    .offset(y: heroLift)
+                    .opacity(heroOpacity)
 
-            VStack(spacing: 18) {
-                // Milli
-                ZStack {
-                    RoundedRectangle(cornerRadius: 30, style: .continuous)
-                        .fill(.white)
-                        .frame(width: 130, height: 130)
-                        .shadow(color: .black.opacity(0.35), radius: 24, y: 12)
-                    Image("OnboardingWelcome")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 110, height: 110)
-                        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-                }
-                .rotationEffect(.degrees(milliRotation))
-                .scaleEffect(milliScale)
-                .offset(x: shakeX, y: milliY)
-
-                // Title
-                VStack(spacing: 6) {
+                VStack(spacing: 8) {
                     Text("DoseTrack")
-                        .font(.system(size: 38, weight: .black, design: .rounded))
-                        .foregroundStyle(.white)
+                        .font(.system(size: 40, weight: .heavy, design: .rounded))
+                        .foregroundStyle(Color(hex: "3B5FCC"))
+                        .offset(y: wordmarkLift)
+                        .opacity(wordmarkOpacity)
                     Text("Never miss a dose.")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundStyle(.white.opacity(0.65))
+                        .font(.system(size: 16, weight: .medium, design: .rounded))
+                        .foregroundStyle(Color(hex: "5B8AF0"))
                         .opacity(taglineOpacity)
                 }
-                .scaleEffect(titleScale)
-                .opacity(titleOpacity)
+                .offset(y: -8)
             }
         }
-        .scaleEffect(exitScale)
-        .opacity(exitOpacity)
         .onAppear { runSequence() }
     }
 
-    private func pillColor(_ i: Int) -> Color {
-        let colors: [Color] = [
-            Color(hex: "FF6B6B"), Color(hex: "FFD93D"), Color(hex: "6BCB77"),
-            Color(hex: "4D96FF"), Color(hex: "C77DFF"), Color(hex: "FF9F1C"),
-            Color(hex: "2EC4B6"), Color(hex: "FF6B6B"), Color(hex: "FFD93D")
-        ]
-        return colors[i % colors.count]
-    }
-
     private func runSequence() {
-        // Phase 1: Milli spins in from top with bounce (0.0–0.6s)
-        withAnimation(.spring(response: 0.55, dampingFraction: 0.58)) {
-            milliY = 0
-            milliRotation = 360
+        // Mascot settles in (0–0.5s) — a soft spring, no spin, no rattle.
+        withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
+            heroScale = 1.0
+            heroOpacity = 1
+            heroLift = 0
         }
-
-        // Phase 2: Rattle — rapid left-right shake (0.65–1.0s)
-        let shakeTimes: [(Double, CGFloat)] = [
-            (0.60, -18), (0.68, 18), (0.74, -14), (0.80, 14),
-            (0.86, -8),  (0.92, 8),  (0.98, 0)
-        ]
-        for (delay, x) in shakeTimes {
-            DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
-                withAnimation(.interactiveSpring(response: 0.07, dampingFraction: 0.3)) {
-                    shakeX = x
-                }
+        // Wordmark rises just after (0.35s).
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+            withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
+                wordmarkOpacity = 1
+                wordmarkLift = 0
             }
         }
-
-        // Also squash/stretch during rattle for extra juice
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.62) {
-            withAnimation(.easeInOut(duration: 0.18)) { milliScale = 1.12 }
+        // Tagline fades in last (0.6s).
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+            withAnimation(.easeOut(duration: 0.4)) { taglineOpacity = 1 }
         }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.80) {
-            withAnimation(.spring(response: 0.2, dampingFraction: 0.5)) { milliScale = 1.0 }
-        }
-
-        // Phase 3: Pill burst (1.0–1.4s)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.00) {
-            burstOpacity = 1
-            withAnimation(.easeOut(duration: 0.45)) {
-                burstProgress = 1
-            }
-        }
-
-        // Phase 4: Title snaps up (1.05s)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.05) {
-            withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) {
-                titleScale = 1.0
-                titleOpacity = 1
-            }
-        }
-
-        // Tagline fades in (1.25s)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.25) {
-            withAnimation(.easeIn(duration: 0.35)) {
-                taglineOpacity = 1
-            }
-        }
-
-        // Exit: zoom out and fade (2.2s)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.2) {
-            withAnimation(.easeIn(duration: 0.35)) {
-                exitScale = 1.08
-                exitOpacity = 0
-            }
-        }
+        // Exit is handled by the parent fading `showSplash` at 1.5s.
     }
 }

@@ -78,7 +78,7 @@ struct SettingsView: View {
                                     .font(.body.weight(patientName.isEmpty ? .regular : .medium))
                                     .foregroundStyle(patientName.isEmpty ? .secondary : .primary)
                                 if subscriptionManager.isProSubscriber {
-                                    Text("Milli Pro ✦")
+                                    Text("DoseTrack Pro ✦")
                                         .font(.caption.weight(.semibold))
                                         .foregroundStyle(.yellow)
                                 } else {
@@ -97,8 +97,7 @@ struct SettingsView: View {
                 Section("Subscription") {
                     if subscriptionManager.isProSubscriber {
                         HStack {
-                            Label("Milli Pro", systemImage: "star.fill")
-                                .foregroundStyle(.yellow)
+                            SettingsLabel(title: "DoseTrack Pro", systemImage: "star.fill", tint: .yellow)
                             Spacer()
                             Text("Active ✦")
                                 .foregroundStyle(.secondary)
@@ -107,25 +106,22 @@ struct SettingsView: View {
                         Button {
                             Task { await subscriptionManager.restorePurchases() }
                         } label: {
-                            Label("Restore Purchases", systemImage: "arrow.clockwise")
-                                .foregroundStyle(.primary)
+                            SettingsLabel(title: "Restore Purchases", systemImage: "arrow.clockwise", tint: .gray)
                         }
                     } else {
                         Button {
                             showingPaywall = true
                         } label: {
                             HStack {
-                                Label("Upgrade to Milli Pro", systemImage: "star.fill")
-                                    .foregroundStyle(.yellow)
+                                SettingsLabel(title: "Upgrade to DoseTrack Pro", systemImage: "star.fill", tint: .yellow)
                                 Spacer()
                                 Image(systemName: "chevron.right")
                                     .foregroundStyle(.secondary)
                                     .font(.caption)
                             }
                         }
-                        .foregroundStyle(.primary)
 
-                        Text("5 medications free forever. Milli Pro unlocks unlimited medications, PDF reports, and caring for a loved one's medications.")
+                        Text("5 medications free forever. DoseTrack Pro unlocks unlimited medications, PDF reports, and caring for a loved one's medications.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -160,8 +156,7 @@ struct SettingsView: View {
                             }
                         } label: {
                             HStack {
-                                Label("Enable Notifications", systemImage: "bell.badge.fill")
-                                    .foregroundStyle(Color.accentColor)
+                                SettingsLabel(title: "Enable Notifications", systemImage: "bell.badge.fill", tint: .red, titleColor: Color.accentColor)
                                 Spacer()
                             }
                         }
@@ -180,18 +175,19 @@ struct SettingsView: View {
                         sendTestNotification()
                     } label: {
                         HStack {
-                            Label(
-                                testNotificationSent ? "Test Sent ✓ (background the app)" : "Send Test Notification",
-                                systemImage: "bell.fill"
+                            SettingsLabel(
+                                title: testNotificationSent ? "Test Sent ✓ (background the app)" : "Send Test Notification",
+                                systemImage: "bell.fill",
+                                tint: .red,
+                                titleColor: testNotificationSent ? .green : .primary
                             )
-                            .foregroundStyle(testNotificationSent ? .green : .primary)
                             Spacer()
                         }
                     }
                     .disabled(status == .denied)
 
                     HStack {
-                        Label("Default Snooze", systemImage: "clock.fill")
+                        SettingsLabel(title: "Default Snooze", systemImage: "clock.fill", tint: .gray)
                         Spacer()
                         Picker("", selection: $defaultSnoozeDuration) {
                             Text("10 min").tag(10)
@@ -208,8 +204,7 @@ struct SettingsView: View {
                             UIApplication.shared.open(url)
                         }
                     } label: {
-                        Label("iOS Notification Settings", systemImage: "gear.badge")
-                            .foregroundStyle(.primary)
+                        SettingsLabel(title: "iOS Notification Settings", systemImage: "gear", tint: .gray)
                     }
                 } header: {
                     Text("Notifications")
@@ -237,11 +232,12 @@ struct SettingsView: View {
                         DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { watchSyncTriggered = false }
                     } label: {
                         HStack {
-                            Label(
-                                watchSyncTriggered ? "Sync Sent ✓" : "Sync to Watch",
-                                systemImage: "arrow.triangle.2.circlepath"
+                            SettingsLabel(
+                                title: watchSyncTriggered ? "Sync Sent ✓" : "Sync to Watch",
+                                systemImage: "arrow.triangle.2.circlepath",
+                                tint: .blue,
+                                titleColor: watchSyncTriggered ? .green : .primary
                             )
-                            .foregroundStyle(watchSyncTriggered ? .green : .primary)
                             Spacer()
                         }
                     }
@@ -257,19 +253,19 @@ struct SettingsView: View {
                     NavigationLink {
                         AppPreferencesView()
                     } label: {
-                        Label("App Preferences", systemImage: "slider.horizontal.3")
+                        SettingsLabel(title: "App Preferences", systemImage: "slider.horizontal.3", tint: .gray)
                     }
 
                     NavigationLink {
                         MealTimesView()
                     } label: {
-                        Label("Daily Routine Times", systemImage: "sun.max")
+                        SettingsLabel(title: "Daily Routine Times", systemImage: "sun.max.fill", tint: .orange)
                     }
 
                     NavigationLink {
                         ColorCodingView()
                     } label: {
-                        Label("Colour Coding", systemImage: "paintpalette.fill")
+                        SettingsLabel(title: "Colour Coding", systemImage: "paintpalette.fill", tint: .pink)
                     }
                 }
 
@@ -283,10 +279,10 @@ struct SettingsView: View {
                         NavigationLink {
                             CaregiverInviteView()
                         } label: {
-                            Label("Invite a Caregiver", systemImage: "person.2.fill")
+                            SettingsLabel(title: "Invite a Caregiver", systemImage: "person.2.fill", tint: .blue)
                         }
 
-                        // Caring for someone else is the PAID capability (Milli Pro): the
+                        // Caring for someone else is the PAID capability (DoseTrack Pro): the
                         // caregiver is the one gaining "manage another person's medications," so
                         // they carry the subscription — not the patient. Non-subscribers still
                         // see this row (for discovery) but are routed to the paywall.
@@ -298,8 +294,7 @@ struct SettingsView: View {
                             }
                         } label: {
                             HStack {
-                                Label("Care for Someone", systemImage: "person.badge.shield.checkmark")
-                                    .foregroundStyle(.primary)
+                                SettingsLabel(title: "Care for Someone", systemImage: "person.badge.shield.checkmark", tint: .teal)
                                 if !subscriptionManager.isProSubscriber {
                                     Spacer()
                                     Image(systemName: "star.fill")
@@ -312,7 +307,7 @@ struct SettingsView: View {
                 } header: {
                     Text("Caregiving")
                 } footer: {
-                    Text("Inviting a caregiver is free. Caring for someone else's medications is a Milli Pro feature.")
+                    Text("Inviting a caregiver is free. Caring for someone else's medications is a DoseTrack Pro feature.")
                 }
 
                 // MARK: Data & Privacy
@@ -320,18 +315,18 @@ struct SettingsView: View {
                     NavigationLink {
                         DisclaimerView()
                     } label: {
-                        Label("Privacy & Disclaimer", systemImage: "hand.raised.fill")
+                        SettingsLabel(title: "Privacy & Disclaimer", systemImage: "hand.raised.fill", tint: .gray)
                     }
 
                     Link(destination: Constants.ExternalLinks.privacyPolicy) {
-                        Label("Privacy Policy", systemImage: "doc.text.fill")
+                        SettingsLabel(title: "Privacy Policy", systemImage: "doc.text.fill", tint: .blue)
                     }
                 }
 
                 // MARK: About
                 Section("About") {
                     HStack {
-                        Label("Version", systemImage: "info.circle.fill")
+                        SettingsLabel(title: "Version", systemImage: "info.circle.fill", tint: .gray)
                         Spacer()
                         Text(Bundle.main.appVersion)
                             .foregroundStyle(.secondary)
@@ -355,23 +350,22 @@ struct SettingsView: View {
                         // once the App Store ID is known.
                         requestReview()
                     } label: {
-                        Label("Rate DoseTrack", systemImage: "star.bubble.fill")
-                            .foregroundStyle(.primary)
+                        SettingsLabel(title: "Rate DoseTrack", systemImage: "star.bubble.fill", tint: .yellow)
                     }
 
-                    Button(role: .destructive) {
+                    Button {
                         Task { await auth.signOut() }
                     } label: {
-                        Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
+                        SettingsLabel(title: "Sign Out", systemImage: "rectangle.portrait.and.arrow.right", tint: .gray)
                     }
                 }
 
                 // MARK: Danger zone
                 Section {
-                    Button(role: .destructive) {
+                    Button {
                         showingDeleteConfirm = true
                     } label: {
-                        Label("Delete All Data", systemImage: "trash.fill")
+                        SettingsLabel(title: "Delete All Data", systemImage: "trash.fill", tint: .red, titleColor: .red)
                     }
                 }
 
@@ -475,6 +469,33 @@ struct SettingsView: View {
     }
 }
 
+// MARK: - Settings row label
+
+/// A settings row label with the icon rendered in a uniform tinted squircle — the same
+/// treatment Apple's own Settings uses. Replaces the previous mix of plain black glyphs, blue
+/// outlines, filled circles, and a bare yellow star that made the list look patched-together.
+private struct SettingsLabel: View {
+    let title: String
+    let systemImage: String
+    let tint: Color
+    var titleColor: Color = .primary
+
+    var body: some View {
+        HStack(spacing: 12) {
+            RoundedRectangle(cornerRadius: 7, style: .continuous)
+                .fill(tint)
+                .frame(width: 29, height: 29)
+                .overlay {
+                    Image(systemName: systemImage)
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(.white)
+                }
+            Text(title)
+                .foregroundStyle(titleColor)
+        }
+    }
+}
+
 // MARK: - Supporting Types
 
 struct ShareSheetView: UIViewControllerRepresentable {
@@ -496,7 +517,7 @@ struct DisclaimerView: View {
                 Text("DoseTrack is a reminder tool only. It does not provide medical advice, diagnosis, or treatment. Always follow your healthcare provider's instructions regarding medications.")
                 Text("Data Privacy")
                     .font(.title2.bold())
-                Text("All medication data is stored locally on your device. No personal health information is sent to external servers without your explicit consent. Family sharing (Milli Pro feature) syncs data only with caregivers you explicitly invite.")
+                Text("All medication data is stored locally on your device. No personal health information is sent to external servers without your explicit consent. Family sharing (DoseTrack Pro feature) syncs data only with caregivers you explicitly invite.")
                 Text("If you have questions about your medications, consult your pharmacist or doctor.")
                     .foregroundStyle(.secondary)
             }

@@ -35,6 +35,19 @@ extension Medication {
         Color(hex: colorHex ?? "#5B8AF0")
     }
 
+    /// SF Symbol used to represent this medication's form, in the tinted tile shown on both the
+    /// Medications and Restock lists (kept here as the single source of truth so those two
+    /// screens can't drift apart on iconography).
+    var unitIconName: String {
+        switch wrappedUnit {
+        case "injection", "contraceptive": return "syringe.fill"
+        case "ml":         return "drop.fill"
+        case "spray":      return "aqi.medium"
+        case "supplement": return "leaf.fill"
+        default:           return "pill.fill"
+        }
+    }
+
     /// Canonical "needs restock soon" signal — the single source of truth used everywhere a
     /// low-supply warning is shown (Medications list icon, Today's alerts box, Restock urgency
     /// colouring). Previously each of those three places had its OWN slightly different
