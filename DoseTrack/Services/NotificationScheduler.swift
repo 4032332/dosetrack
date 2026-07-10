@@ -162,14 +162,15 @@ final class NotificationScheduler {
     func scheduleSnooze(
         medicationId: String,
         medicationName: String,
-        dosage: String,
+        unit: String,
         scheduleId: String,
         scheduledAt: Date,
         minutes: Int
     ) {
         let content = makeContent(
             medicationName: medicationName,
-            dosage: dosage,
+            unit: unit,
+            hour: Calendar.current.component(.hour, from: scheduledAt),
             medicationId: medicationId,
             scheduleId: scheduleId,
             scheduledAt: scheduledAt
@@ -226,7 +227,8 @@ final class NotificationScheduler {
 
                 let content = makeContent(
                     medicationName: medication.wrappedName,
-                    dosage: medication.totalDoseText,
+                    unit: medication.wrappedUnit,
+                    hour: Int(schedule.hour),
                     medicationId: medication.id?.uuidString ?? "",
                     scheduleId: schedule.id?.uuidString ?? "",
                     scheduledAt: fireDate
@@ -267,14 +269,15 @@ final class NotificationScheduler {
 
     private func makeContent(
         medicationName: String,
-        dosage: String,
+        unit: String,
+        hour: Int,
         medicationId: String,
         scheduleId: String,
         scheduledAt: Date
     ) -> UNMutableNotificationContent {
         let content = UNMutableNotificationContent()
         content.title = medicationName
-        content.body = "Time to take \(dosage)"
+        content.body = NotificationCopy.randomLine(medicationName: medicationName, unit: unit, hour: hour)
         let criticalEnabled = UserDefaults.standard.object(forKey: "criticalAlertsEnabled") as? Bool ?? true
         if Self.useCriticalSound(criticalEnabled: criticalEnabled) {
             content.sound = .defaultCritical
@@ -332,7 +335,8 @@ final class NotificationScheduler {
             let dueId = "dt.interval.due.\(medication.id?.uuidString ?? "").\(Int(dueDate.timeIntervalSince1970))"
             let content = makeContent(
                 medicationName: medication.wrappedName,
-                dosage: "due today",
+                unit: medication.wrappedUnit,
+                hour: calendar.component(.hour, from: dueDate),
                 medicationId: medication.id?.uuidString ?? "",
                 scheduleId: schedule.id?.uuidString ?? "",
                 scheduledAt: dueDate

@@ -210,7 +210,7 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
             let med = try? context.fetch(req).first
             NotificationScheduler.shared.scheduleSnooze(
                 medicationId: medIdStr, medicationName: med?.wrappedName ?? "Medication",
-                dosage: med?.totalDoseText ?? "", scheduleId: schIdStr,
+                unit: med?.wrappedUnit ?? "", scheduleId: schIdStr,
                 scheduledAt: Date(timeIntervalSince1970: ts), minutes: minutes)
         }
     }

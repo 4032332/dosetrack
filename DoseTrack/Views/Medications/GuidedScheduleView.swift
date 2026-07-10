@@ -351,7 +351,7 @@ struct GuidedScheduleView: View {
                 }
             }
             HStack {
-                Button("Change Schedule Type") { step = .howOften }
+                Button("Change Schedule Type") { resetWizardToFreshStart() }
                 Spacer()
                 Button("Done") { step = .collapsed }
                     .fontWeight(.semibold)
@@ -360,6 +360,24 @@ struct GuidedScheduleView: View {
     }
 
     // MARK: - Helpers
+
+    /// Restarts the wizard from Q1 exactly as if creating a brand-new schedule — all local
+    /// wizard state reset to defaults, not just `step` jumped back. Previously this only changed
+    /// `step`, leaving `everyDay`/`daysOfWeek`/`timesPerDay`/`spacingChoice`/`manualTimes` however
+    /// they'd been left by the ORIGINAL schedule this view was seeded from, so re-answering the
+    /// questions could silently regenerate the same schedule the user was trying to replace —
+    /// which read as "the button doesn't let you change the schedule."
+    private func resetWizardToFreshStart() {
+        everyDay = true
+        daysOfWeek = []
+        timesPerDay = 1
+        spacingChoice = .manual
+        intervalFirstTime = Self.defaultTime(hour: 8, minute: 0)
+        intervalHours = 8
+        selectedMeals = []
+        manualTimes = [Self.defaultTime(hour: 8, minute: 0)]
+        step = .howOften
+    }
 
     private func makeDraft(hour: Int, minute: Int) -> ScheduleDraft {
         ScheduleDraft(

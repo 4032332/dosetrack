@@ -57,7 +57,7 @@ final class AddEditMedicationViewModel: ObservableObject {
     // Dose strength units (what's in each unit)
     static let doseUnitOptions = ["mg", "ml", "IU", "mcg", "g", "µg", "%", "mmol", "mEq"]
     // Form factor (how it's taken)
-    static let quantityUnitOptions = ["tablet", "capsule", "pill", "oral syringe", "injection", "spray", "patch", "drop", "sachet", "suppository", "lozenge"]
+    static let quantityUnitOptions = ["tablet", "capsule", "pill", "oral syringe", "injection", "inhaler", "spray", "patch", "drop", "sachet", "suppository", "lozenge"]
     // Shared with the Colour Coding preferences screen so a tag assigned there (e.g. "Morning
     // Batch") labels the same swatch here.
     static let colorOptions = Constants.MedicationColors.palette
