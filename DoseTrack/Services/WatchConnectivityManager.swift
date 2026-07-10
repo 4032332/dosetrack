@@ -161,12 +161,27 @@ extension WatchConnectivityManager: WCSessionDelegate {
     ) {
         Task { @MainActor in
             self.isWatchReachable = session.isReachable
+            // Activation completing is itself a good moment to push — this is what fires when
+            // the phone app launches and WCSession finishes activating, which previously raced
+            // against the one-shot sync call in RootView (if activation hadn't finished yet,
+            // that first sync's `activationState == .activated` guard silently no-opped it).
+            if let context = self.viewContext {
+                self.syncTodayMedications(context: context)
+            }
         }
     }
 
     nonisolated func sessionReachabilityDidChange(_ session: WCSession) {
         Task { @MainActor in
             self.isWatchReachable = session.isReachable
+            // The watch app frequently isn't reachable at the exact moment the phone app
+            // launches (Bluetooth still connecting, watch app not yet foregrounded) — that's
+            // when the old one-shot sync used to fire and never again. Re-push the moment the
+            // watch actually becomes reachable so a watch that connects late still catches up
+            // without the phone app needing to be relaunched.
+            if session.isReachable, let context = self.viewContext {
+                self.syncTodayMedications(context: context)
+            }
         }
     }
 

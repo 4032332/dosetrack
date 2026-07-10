@@ -149,6 +149,10 @@ struct RootView: View {
                 Task {
                     await SupabaseSyncManager.shared.pushUnsyncedLocalChanges(context: pushContext, forUserId: activeId)
                 }
+                // Also refresh the watch's copy on every foreground — catches doses logged via
+                // the widget while the phone app was closed (the watch was never told about
+                // those either) and doubles as a retry if the watch wasn't reachable earlier.
+                watchManager.syncTodayMedications(context: context)
             }
         }
         .sheet(item: $pendingInviteCode.mappedToIdentifiable()) { wrapped in
@@ -198,6 +202,12 @@ private struct ActiveSessionView: View {
                 ActiveAccountResolver.shared.set(
                     activeUserId: activeAccount.isViewingOtherAccount ? activeAccount.activeUserId : nil
                 )
+                // Without this, WatchConnectivityManager's `viewContext` stayed nil forever —
+                // configure() was defined but never actually called anywhere — so any dose
+                // confirmation logged ON the watch was silently dropped on arrival (the delegate
+                // methods guard on `viewContext` being non-nil) and the reachability-triggered
+                // re-sync below had no context to sync with either.
+                watchManager.configure(context: ownContext)
                 watchManager.syncTodayMedications(context: ownContext)
                 // Pull all user data from Supabase on first app open after sign-in
                 Task { await SupabaseSyncManager.shared.pullAll(context: ownContext) }

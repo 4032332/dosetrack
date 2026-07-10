@@ -159,6 +159,10 @@ final class MedicationsViewModel: ObservableObject {
         // the next pull.
         let pushUserId = ActiveAccountResolver.shared.activeUserId
         Task { await SupabaseSyncManager.shared.pushMedication(medication, forUserId: pushUserId) }
+        // Own account only — see the matching comment in AddEditMedicationViewModel.save().
+        if pushUserId == nil {
+            WatchConnectivityManager.shared.syncTodayMedications(context: context)
+        }
         fetchMedications()
     }
 

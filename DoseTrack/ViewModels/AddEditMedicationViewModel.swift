@@ -200,6 +200,14 @@ final class AddEditMedicationViewModel: ObservableObject {
 
         context.saveOrReport()
         WidgetCenter.shared.reloadAllTimelines()
+        // Keep the watch's copy current the moment a medication/schedule changes, not just when
+        // a dose gets logged. Only for the signed-in user's own account — the watch always
+        // mirrors `ownContext` (see RootView), never whichever patient a caregiver might
+        // currently be viewing, so pushing here when editing a patient's medication would leak
+        // that patient's data onto the caregiver's own watch.
+        if ActiveAccountResolver.shared.activeUserId == nil {
+            WatchConnectivityManager.shared.syncTodayMedications(context: context)
+        }
         // Rebuild the notification queue immediately so any schedule/time change takes effect
         // now. Previously save() never touched notifications, so an edited dose time only
         // applied after the next app launch (when refreshAll runs on foreground) — meanwhile

@@ -67,5 +67,15 @@ final class DoseLoggingService {
 
         WidgetCenter.shared.reloadAllTimelines()
         Task { await SupabaseSyncManager.shared.pushDoseLog(doseLog, forUserId: pushUserId) }
+
+        // Keep the Watch app's copy of today's doses current. Previously the phone only ever
+        // pushed to the watch once, on app launch (RootView's ActiveSessionView.onAppear) — if
+        // the watch wasn't reachable at that exact instant (very common: Bluetooth not yet
+        // connected, watch app not foregrounded), nothing ever retried, so the watch was stuck
+        // showing "No doses today" indefinitely regardless of how many doses were logged on the
+        // phone afterwards. Every log now re-pushes, so the watch catches up the moment it's
+        // next reachable (syncTodayMedications itself already falls back to
+        // updateApplicationContext for background delivery when not immediately reachable).
+        WatchConnectivityManager.shared.syncTodayMedications(context: context)
     }
 }

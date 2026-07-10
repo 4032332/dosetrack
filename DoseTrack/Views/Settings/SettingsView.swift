@@ -11,6 +11,7 @@ struct SettingsView: View {
     @EnvironmentObject private var subscriptionManager: SubscriptionManager
     @EnvironmentObject private var auth: AuthManager
     @EnvironmentObject private var caregiverManager: CaregiverManager
+    @EnvironmentObject private var watchManager: WatchConnectivityManager
 
     @AppStorage("patientName")           private var patientName: String = ""
     @AppStorage("selectedAvatar")           private var selectedAvatar: String = "milli"
@@ -25,6 +26,7 @@ struct SettingsView: View {
     @State private var testNotificationSent = false
     @State private var showingSignUp = false
     @State private var showingEnterInviteCode = false
+    @State private var watchSyncTriggered = false
     @Binding var showingAccountSwitcher: Bool
 
     // Hidden Developer Options unlock: tap the version row 7x, then enter the passcode.
@@ -216,6 +218,38 @@ struct SettingsView: View {
                         Text("Test notifications appear when the app is in the background.")
                             .font(.caption)
                     }
+                }
+
+                // MARK: Apple Watch
+                Section {
+                    HStack(spacing: 10) {
+                        Image(systemName: watchManager.isWatchReachable ? "applewatch.radiowaves.left.and.right" : "applewatch.slash")
+                            .foregroundStyle(watchManager.isWatchReachable ? .green : .secondary)
+                        Text(watchManager.isWatchReachable ? "Watch connected" : "Watch not reachable right now")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.vertical, 2)
+
+                    Button {
+                        watchManager.syncTodayMedications(context: context)
+                        watchSyncTriggered = true
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { watchSyncTriggered = false }
+                    } label: {
+                        HStack {
+                            Label(
+                                watchSyncTriggered ? "Sync Sent ✓" : "Sync to Watch",
+                                systemImage: "arrow.triangle.2.circlepath"
+                            )
+                            .foregroundStyle(watchSyncTriggered ? .green : .primary)
+                            Spacer()
+                        }
+                    }
+                } header: {
+                    Text("Apple Watch")
+                } footer: {
+                    Text("The watch normally updates on its own whenever a dose is logged or a medication changes. Use this if it looks out of date — e.g. right after pairing, or if the watch wasn't in range earlier.")
+                        .font(.caption)
                 }
 
                 // MARK: Preferences
