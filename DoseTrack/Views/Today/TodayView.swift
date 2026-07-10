@@ -271,11 +271,23 @@ private struct TodayHeaderCard: View {
                 endPoint: .bottomTrailing
             )
 
-            // Subtle pill watermark
-            Image(systemName: "pills.fill")
-                .font(.system(size: 120))
-                .foregroundStyle(.white.opacity(0.07))
-                .offset(x: 200, y: -10)
+            if allDone {
+                // The celebratory mascot art replaces the generic pill watermark for the one
+                // moment in the app that's actually worth celebrating — previously this state
+                // had no dedicated visual at all, just the same faint pill icon as every other
+                // state, despite AllDone.png having been created specifically for this.
+                Image("AllDone")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 108, height: 108)
+                    .opacity(0.9)
+                    .offset(x: 118, y: 6)
+            } else {
+                Image(systemName: "pills.fill")
+                    .font(.system(size: 120))
+                    .foregroundStyle(.white.opacity(0.07))
+                    .offset(x: 200, y: -10)
+            }
 
             HStack(alignment: .bottom) {
                 VStack(alignment: .leading, spacing: 4) {
@@ -301,7 +313,7 @@ private struct TodayHeaderCard: View {
                     }
                 }
                 Spacer()
-                if totalCount > 0 {
+                if totalCount > 0 && !allDone {
                     AdherenceRingView(percent: adherencePercent, allDone: allDone)
                         .frame(width: 64, height: 64)
                 }
@@ -309,8 +321,13 @@ private struct TodayHeaderCard: View {
             .padding(20)
         }
         .clipShape(RoundedRectangle(cornerRadius: 16))
+        // A soft coloured shadow (tinted from the card's own gradient, not a generic grey) lifts
+        // the card off the page — matching the more finished, "designed" feel introduced with the
+        // new splash, rather than sitting perfectly flat against the list background.
+        .shadow(color: (allDone ? Color(hex: "#30A46C") : Color(hex: "#3B5FCC")).opacity(0.28), radius: 14, y: 6)
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
+        .animation(.easeInOut(duration: 0.3), value: allDone)
     }
 }
 

@@ -105,23 +105,18 @@ private struct WelcomePage: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 28) {
-                Spacer().frame(height: 24)
+                Spacer().frame(height: 12)
 
-                // OnboardingWelcome.png has an opaque *white* background baked in — a white card
-                // behind it is invisible, so the backdrop needs an actual contrasting colour.
-                ZStack {
-                    Circle()
-                        .fill(LinearGradient(colors: [.blue.opacity(0.35), .blue.opacity(0.15)],
-                                              startPoint: .topLeading, endPoint: .bottomTrailing))
-                        .frame(width: 212, height: 212)
-                        .shadow(color: .black.opacity(0.25), radius: 18, y: 8)
-                    Image("OnboardingWelcome")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 156, height: 156)
-                        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-                }
-                .padding(.bottom, 4)
+                // The same SplashHero artwork used on the launch splash — the mascot already
+                // carries its own pill-burst and colour, so it stands on its own without the
+                // old boxed-circle-backdrop treatment (which read as "app icon pasted on a
+                // page" in review). Consistent art across the very first two screens a new
+                // user sees.
+                Image("SplashHero")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 200, height: 200)
+                    .padding(.bottom, 4)
 
                 VStack(spacing: 6) {
                     Text("Meet Milli! 💊")
