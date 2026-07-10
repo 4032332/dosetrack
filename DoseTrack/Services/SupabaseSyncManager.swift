@@ -177,6 +177,43 @@ final class SupabaseSyncManager: ObservableObject {
         } catch { print("pushSettings error: \(error)") }
     }
 
+    // MARK: - Disclaimer acceptance
+
+    /// Whether this account has a recorded acceptance of the medical disclaimer / terms.
+    /// A targeted 2-column read so it works even before the full settings row exists, and so
+    /// `pushSettings`'s full-row upsert can never touch (or clobber) `disclaimer_accepted_at`.
+    /// Returns false on any error (offline, or the column not yet added) — the caller falls
+    /// back to a local acceptance flag, so a transient failure never blocks or double-prompts a
+    /// user who has genuinely already accepted on this device.
+    func hasAcceptedDisclaimer(userId: UUID) async -> Bool {
+        do {
+            let rows: [DisclaimerAcceptanceRow] = try await client
+                .from("user_settings")
+                .select("user_id, disclaimer_accepted_at")
+                .eq("user_id", value: userId.uuidString)
+                .execute().value
+            return rows.first?.disclaimerAcceptedAt != nil
+        } catch {
+            print("hasAcceptedDisclaimer error: \(error)")
+            return false
+        }
+    }
+
+    /// Records the account's acceptance timestamp on its profile row. Targeted upsert on just
+    /// `user_id` + `disclaimer_accepted_at` so it neither depends on nor overwrites the other
+    /// settings columns. Best-effort: returns false if it couldn't reach the server.
+    @discardableResult
+    func recordDisclaimerAcceptance(userId: UUID, at date: Date = Date()) async -> Bool {
+        let row = DisclaimerAcceptanceRow(userId: userId.uuidString, disclaimerAcceptedAt: date)
+        do {
+            try await client.from("user_settings").upsert(row, onConflict: "user_id").execute()
+            return true
+        } catch {
+            print("recordDisclaimerAcceptance error: \(error)")
+            return false
+        }
+    }
+
     func deleteMedication(id: UUID) async {
         guard AuthManager.shared.isSignedIn, !AuthManager.shared.isGuest else { return }
         do {
@@ -394,6 +431,18 @@ final class SupabaseSyncManager: ObservableObject {
 }
 
 // MARK: - Codable row types (match Supabase column names exactly)
+
+/// Minimal projection of the `user_settings` row used only for reading/writing the disclaimer
+/// acceptance timestamp, independent of the full `UserSettingsRow`.
+struct DisclaimerAcceptanceRow: Codable {
+    var userId: String
+    var disclaimerAcceptedAt: Date?
+
+    enum CodingKeys: String, CodingKey {
+        case userId = "user_id"
+        case disclaimerAcceptedAt = "disclaimer_accepted_at"
+    }
+}
 
 struct MedicationRow: Codable {
     var id: String

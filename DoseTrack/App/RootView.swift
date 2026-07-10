@@ -15,8 +15,25 @@ struct RootView: View {
     @State private var activeAccount: ActiveAccountContext?
     @State private var revocationMessage: String?
     @ObservedObject private var caregiverManager = CaregiverManager.shared
+    @ObservedObject private var disclaimer = DisclaimerManager.shared
 
     private var canProceed: Bool { auth.isSignedIn || guestMode }
+
+    // MARK: - Disclaimer identity
+
+    /// Who the one-time medical disclaimer is being decided for. A real account uses its Supabase
+    /// user id; guests (anonymous or the session-less fallback) have no server profile and share
+    /// the local "guest" bucket.
+    private var disclaimerUserId: UUID? {
+        auth.session?.user.id ?? (guestMode ? localGuestId() : nil)
+    }
+    private var disclaimerIsGuest: Bool { auth.isGuest || guestMode }
+
+    /// Changes whenever the signed-in identity does, so the `.task` below re-evaluates acceptance
+    /// on login/logout/account switch.
+    private var disclaimerIdentityKey: String {
+        "\(canProceed)-\(disclaimerUserId?.uuidString ?? "none")-\(disclaimerIsGuest)"
+    }
 
     /// Key used to persist a stable local identifier for guest-mode users whose
     /// Supabase session is nil (anonymous auth disabled/failed fallback — see
@@ -79,6 +96,23 @@ struct RootView: View {
             if !canProceed {
                 AuthView()
                     .transition(.opacity)
+            } else if disclaimer.status == .required {
+                // Gate a newly-created account on accepting the medical disclaimer / terms before
+                // reaching onboarding or the app. Declining signs out.
+                DisclaimerConsentView(
+                    onAccept: {
+                        Task { await disclaimer.accept(userId: disclaimerUserId, isGuest: disclaimerIsGuest) }
+                    },
+                    onDecline: {
+                        Task { await auth.signOut() }
+                    }
+                )
+                .transition(.opacity)
+            } else if disclaimer.status == .unknown {
+                // Still resolving whether acceptance is needed — don't flash onboarding/app. On a
+                // cold launch the splash overlay covers this; the check is a fast local lookup
+                // (or a quick server read) so it resolves almost immediately.
+                Color(.systemBackground).ignoresSafeArea()
             } else if !hasCompletedOnboarding {
                 OnboardingView()
                     .transition(.opacity)
@@ -98,6 +132,16 @@ struct RootView: View {
 
         .animation(.easeInOut(duration: 0.35), value: hasCompletedOnboarding)
         .animation(.easeInOut(duration: 0.5), value: showSplash)
+        .animation(.easeInOut(duration: 0.35), value: disclaimer.status)
+        // Re-evaluate whether the one-time medical disclaimer must be shown whenever the signed-in
+        // identity changes (login, logout, guest, account switch).
+        .task(id: disclaimerIdentityKey) {
+            if canProceed {
+                await disclaimer.evaluate(userId: disclaimerUserId, isGuest: disclaimerIsGuest)
+            } else {
+                disclaimer.reset()
+            }
+        }
         // Appearance override (light/dark/system) is applied at the UIKit level via
         // `window.overrideUserInterfaceStyle` in SceneDelegate, not here. A `.preferredColorScheme`
         // + `.id(appearanceOverride)` was tried first, but forcing SwiftUI to rebuild this
