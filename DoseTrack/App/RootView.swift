@@ -247,68 +247,146 @@ private extension Binding where Value == String? {
 
 private struct SplashView: View {
 
-    // One gentle beat: the mascot settles in, the wordmark rises under it.
-    @State private var heroScale: CGFloat = 0.82
+    // Backdrop glow — gives the canvas depth instead of the mascot floating in a flat void.
+    @State private var glowScale: CGFloat = 0.3
+    @State private var glowOpacity: Double = 0
+
+    // Hero — pops in with a real bounce (spring overshoot) plus a small settling rotation,
+    // rather than a flat scale+fade. This is where the "lustre" was missing: a static
+    // scale-up reads as an image appearing, not as a character arriving.
+    @State private var heroScale: CGFloat = 0.4
     @State private var heroOpacity: Double = 0
-    @State private var heroLift: CGFloat = 12
+    @State private var heroRotation: Double = -10
+
+    // Small sparkle accents that pop briefly around the hero as it lands, then fade —
+    // unlike the old debris (pills hanging static mid-air at rest), these are gone well
+    // before the hold frame, so a paused screenshot never shows floating clutter.
+    @State private var sparkleScale: CGFloat = 0.2
+    @State private var sparkleOpacity: Double = 0
+
+    // Wordmark — pops with a quick overshoot too, and a brand-blue underline draws in
+    // beneath it for a more finished, "designed" feel.
+    @State private var wordmarkScale: CGFloat = 0.7
     @State private var wordmarkOpacity: Double = 0
-    @State private var wordmarkLift: CGFloat = 10
+    @State private var underlineWidth: CGFloat = 0
     @State private var taglineOpacity: Double = 0
+
+    private let sparkles: [(x: CGFloat, y: CGFloat, delay: Double, size: CGFloat)] = [
+        (-96, -70, 0.0,  16), (100, -85, 0.06, 12),
+        (-110, 30, 0.10, 11), (108, 40, 0.03, 15),
+    ]
 
     var body: some View {
         ZStack {
-            // Solid white — the mascot artwork has a white background baked in, so it blends
-            // seamlessly, and white→app is a calm, same-brightness transition. Deliberately NOT
-            // the old navy gradient, which flashed a dark screen between the white launch screen
-            // and the light app and used colours found nowhere else in the product.
-            Color.white.ignoresSafeArea()
+            // Soft radial wash — pale brand-blue fading to white, not a flat void and not the
+            // old incoherent navy gradient. Gives the canvas depth while staying light and
+            // consistent with the app's own palette (Color(hex: "5B8AF0") is the accent used
+            // throughout the rest of the product).
+            RadialGradient(
+                colors: [Color(hex: "EAF1FF"), Color.white],
+                center: .center, startRadius: 20, endRadius: 420
+            )
+            .ignoresSafeArea()
 
-            VStack(spacing: 20) {
-                // The hero already contains the celebratory pill-burst as part of the artwork —
-                // no separate particle system needed. It just settles into place.
-                Image("SplashHero")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 230, height: 230)
-                    .scaleEffect(heroScale)
-                    .offset(y: heroLift)
-                    .opacity(heroOpacity)
+            VStack(spacing: 22) {
+                ZStack {
+                    // Pulsing glow behind the mascot — an "energy source" the character lands
+                    // into, rather than appearing in empty space.
+                    Circle()
+                        .fill(Color(hex: "5B8AF0").opacity(0.16))
+                        .frame(width: 260, height: 260)
+                        .scaleEffect(glowScale)
+                        .opacity(glowOpacity)
+                        .blur(radius: 18)
+
+                    ForEach(Array(sparkles.enumerated()), id: \.offset) { _, s in
+                        Image(systemName: "sparkle")
+                            .font(.system(size: s.size, weight: .bold))
+                            .foregroundStyle(Color(hex: "5B8AF0").opacity(0.7))
+                            .offset(x: s.x, y: s.y)
+                            .scaleEffect(sparkleScale)
+                            .opacity(sparkleOpacity)
+                    }
+
+                    Image("SplashHero")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 260, height: 260)
+                        .scaleEffect(heroScale)
+                        .rotationEffect(.degrees(heroRotation))
+                        .opacity(heroOpacity)
+                }
 
                 VStack(spacing: 8) {
                     Text("DoseTrack")
-                        .font(.system(size: 40, weight: .heavy, design: .rounded))
+                        .font(.system(size: 42, weight: .heavy, design: .rounded))
                         .foregroundStyle(Color(hex: "3B5FCC"))
-                        .offset(y: wordmarkLift)
+                        .scaleEffect(wordmarkScale)
                         .opacity(wordmarkOpacity)
+
+                    Capsule()
+                        .fill(Color(hex: "5B8AF0"))
+                        .frame(width: underlineWidth, height: 3)
+
                     Text("Never miss a dose.")
                         .font(.system(size: 16, weight: .medium, design: .rounded))
                         .foregroundStyle(Color(hex: "5B8AF0"))
                         .opacity(taglineOpacity)
+                        .padding(.top, 2)
                 }
-                .offset(y: -8)
             }
+            .offset(y: -12)
         }
         .onAppear { runSequence() }
     }
 
     private func runSequence() {
-        // Mascot settles in (0–0.5s) — a soft spring, no spin, no rattle.
-        withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
-            heroScale = 1.0
-            heroOpacity = 1
-            heroLift = 0
+        // Glow breathes in first, setting the stage (0–0.3s).
+        withAnimation(.easeOut(duration: 0.3)) {
+            glowScale = 1.0
+            glowOpacity = 1
         }
-        // Wordmark rises just after (0.35s).
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-            withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
-                wordmarkOpacity = 1
-                wordmarkLift = 0
+
+        // Hero pops in with a genuine overshoot bounce + settling rotation (0.05–0.55s) —
+        // the low damping fraction is deliberate, it's what makes this read as "arriving"
+        // rather than "fading up."
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+            withAnimation(.spring(response: 0.5, dampingFraction: 0.58)) {
+                heroScale = 1.0
+                heroOpacity = 1
+                heroRotation = 0
             }
         }
-        // Tagline fades in last (0.6s).
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
-            withAnimation(.easeOut(duration: 0.4)) { taglineOpacity = 1 }
+
+        // Sparkles pop and fade quickly around the landing (0.35–0.75s) — fully gone before
+        // the splash holds, so there's never a static frame with floating clutter.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+            withAnimation(.easeOut(duration: 0.22)) {
+                sparkleScale = 1.0
+                sparkleOpacity = 1
+            }
         }
-        // Exit is handled by the parent fading `showSplash` at 1.5s.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.62) {
+            withAnimation(.easeIn(duration: 0.3)) {
+                sparkleOpacity = 0
+                sparkleScale = 1.3
+            }
+        }
+
+        // Wordmark pops with its own small overshoot (0.5s), underline draws in right after,
+        // tagline fades in last.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.65)) {
+                wordmarkScale = 1.0
+                wordmarkOpacity = 1
+            }
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.72) {
+            withAnimation(.easeOut(duration: 0.3)) { underlineWidth = 64 }
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.85) {
+            withAnimation(.easeOut(duration: 0.35)) { taglineOpacity = 1 }
+        }
+        // Exit is handled by the parent fading `showSplash` — see RootView.dismissSplash().
     }
 }

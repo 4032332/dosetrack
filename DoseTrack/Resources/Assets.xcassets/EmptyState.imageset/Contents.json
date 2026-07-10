@@ -1,6 +1,6 @@
 {
   "images" : [
-    { "idiom" : "universal", "filename" : "EmptyState.png" }
+    { "idiom" : "universal", "scale" : "1x", "filename" : "EmptyState.png" }
   ],
   "info" : { "author" : "xcode", "version" : 1 }
 }

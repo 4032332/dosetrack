@@ -190,9 +190,13 @@ struct MedicationsView: View {
 
     private var emptyState: some View {
         VStack(spacing: 16) {
-            Image(systemName: "pill.fill")
-                .font(.system(size: 56))
-                .foregroundStyle(.secondary.opacity(0.5))
+            // SplashHero (the enthusiastic, arms-up mascot) rather than a plain SF Symbol — this
+            // is the most commonly seen empty state (any fresh install, before adding a first
+            // medication), and the previous placeholder icon never reflected the mascot at all.
+            Image("SplashHero")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 130, height: 130)
             Text("No Medications Yet")
                 .font(.title2.weight(.semibold))
             Text("Add your first medication to get started.")

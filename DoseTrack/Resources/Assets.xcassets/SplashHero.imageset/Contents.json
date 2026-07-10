@@ -1,6 +1,6 @@
 {
   "images" : [
-    { "idiom" : "universal", "filename" : "SplashHero.png" }
+    { "idiom" : "universal", "scale" : "1x", "filename" : "SplashHero.png" }
   ],
   "info" : { "author" : "xcode", "version" : 1 }
 }

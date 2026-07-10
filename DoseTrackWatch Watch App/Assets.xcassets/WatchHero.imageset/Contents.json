@@ -1,6 +1,6 @@
 {
   "images" : [
-    { "idiom" : "universal", "filename" : "WatchHero.png" }
+    { "idiom" : "universal", "scale" : "1x", "filename" : "WatchHero.png" }
   ],
   "info" : { "author" : "xcode", "version" : 1 }
 }
