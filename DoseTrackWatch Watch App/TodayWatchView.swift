@@ -4,7 +4,13 @@ import SwiftUI
 struct TodayWatchView: View {
     @EnvironmentObject private var connectivity: WatchConnectivityReceiver
     @State private var showConfetti = false
+    /// Taken doses collapse into their own expandable section by default — on a watch screen
+    /// this small, a fully-taken list otherwise pushes anything still outstanding off screen,
+    /// which is the opposite of what matters most at a glance.
+    @State private var showTaken = false
 
+    private var outstanding: [WatchMedication] { connectivity.medications.filter { !$0.isTaken } }
+    private var takenMeds: [WatchMedication] { connectivity.medications.filter { $0.isTaken } }
     private var taken: Int { connectivity.medications.filter { $0.isTaken }.count }
     private var total: Int { connectivity.medications.count }
     private var allDone: Bool { total > 0 && taken == total }
@@ -95,16 +101,54 @@ struct TodayWatchView: View {
             emptyState
         } else {
             VStack(spacing: 6) {
-                ForEach(connectivity.medications) { med in
-                    WatchDoseRow(medication: med) { status in
-                        connectivity.confirmDose(
-                            medicationId: med.id,
-                            scheduleId: med.scheduleId,
-                            scheduledAt: med.scheduledAt,
-                            status: status
-                        )
+                if outstanding.isEmpty && !takenMeds.isEmpty {
+                    // Everything's done — no separate "outstanding" heading needed, the header
+                    // card already says "All done! 🎉". Show the taken list directly (it's the
+                    // only content there is), still collapsed by default.
+                    takenSection
+                } else {
+                    ForEach(outstanding) { med in doseRow(for: med) }
+                    if !takenMeds.isEmpty {
+                        takenSection
                     }
                 }
+            }
+        }
+    }
+
+    private func doseRow(for med: WatchMedication) -> some View {
+        WatchDoseRow(medication: med) { status in
+            connectivity.confirmDose(
+                medicationId: med.id,
+                scheduleId: med.scheduleId,
+                scheduledAt: med.scheduledAt,
+                status: status
+            )
+        }
+    }
+
+    private var takenSection: some View {
+        VStack(spacing: 6) {
+            Button {
+                withAnimation(.easeInOut(duration: 0.2)) { showTaken.toggle() }
+            } label: {
+                HStack(spacing: 4) {
+                    Text("Taken (\(takenMeds.count))")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                    Image(systemName: showTaken ? "chevron.up" : "chevron.down")
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                }
+                .padding(.horizontal, 10)
+                .padding(.top, 4)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
+            if showTaken {
+                ForEach(takenMeds) { med in doseRow(for: med) }
             }
         }
     }

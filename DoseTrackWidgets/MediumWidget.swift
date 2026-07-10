@@ -7,7 +7,13 @@ import AppIntents
 
 struct MediumWidgetEntry: TimelineEntry {
     let date: Date
-    let entries: [WidgetDoseEntry]
+    /// Outstanding (not-yet-taken) doses only, already capped to what the current widget
+    /// family (medium vs. large) can comfortably fit — WidgetKit doesn't support scrolling
+    /// inside a widget at all (an Apple platform restriction, not a choice made here), so a
+    /// bigger widget size is the correct substitute for "see more" rather than a scroll gesture.
+    let outstanding: [WidgetDoseEntry]
+    /// Total outstanding count BEFORE capping, so the view can show "+N more".
+    let outstandingTotal: Int
     let takenCount: Int
     let totalCount: Int
     /// Interactive "mark taken" only writes to the signed-in user's own store (see
@@ -20,29 +26,34 @@ struct MediumWidgetEntry: TimelineEntry {
 
 struct MediumWidgetProvider: AppIntentTimelineProvider {
     func placeholder(in context: Context) -> MediumWidgetEntry {
-        MediumWidgetEntry(date: Date(), entries: [], takenCount: 0, totalCount: 0, isOwnAccount: true)
+        MediumWidgetEntry(date: Date(), outstanding: [], outstandingTotal: 0, takenCount: 0, totalCount: 0, isOwnAccount: true)
     }
 
     func snapshot(for configuration: SelectDoseAccountIntent, in context: Context) async -> MediumWidgetEntry {
-        makeEntry(for: configuration)
+        makeEntry(for: configuration, family: context.family)
     }
 
     func timeline(for configuration: SelectDoseAccountIntent, in context: Context) async -> Timeline<MediumWidgetEntry> {
-        let entry = makeEntry(for: configuration)
-        let nextDue = entry.entries.first { !$0.isTaken }?.scheduledAt
-        // Refresh at the next dose time, or fall back to a short interval so the widget keeps
-        // catching up even on days with no more doses due (rather than sitting stale for an hour).
-        let reloadDate = nextDue ?? Date(timeIntervalSinceNow: 900)
+        let entry = makeEntry(for: configuration, family: context.family)
+        // Refresh at the next outstanding dose's time, or fall back to a short interval so the
+        // widget keeps catching up even on days with no more doses due.
+        let reloadDate = entry.outstanding.first?.scheduledAt ?? Date(timeIntervalSinceNow: 900)
         return Timeline(entries: [entry], policy: .after(reloadDate))
     }
 
-    private func makeEntry(for configuration: SelectDoseAccountIntent) -> MediumWidgetEntry {
+    private func makeEntry(for configuration: SelectDoseAccountIntent, family: WidgetFamily) -> MediumWidgetEntry {
         let accountId = configuration.storageAccountId
         let allEntries = WidgetDataProvider.shared.todayEntries(for: accountId)
         let taken = allEntries.filter { $0.isTaken }.count
+        let outstandingAll = allEntries.filter { !$0.isTaken }
+        // Conservative row caps chosen to comfortably fit within each family's content area
+        // without needing (unsupported) scrolling — a systemLarge widget can show roughly
+        // double what systemMedium can.
+        let cap = family == .systemLarge ? 8 : 3
         return MediumWidgetEntry(
             date: Date(),
-            entries: Array(allEntries.prefix(5)),  // Show up to 5 rows in medium widget
+            outstanding: Array(outstandingAll.prefix(cap)),
+            outstandingTotal: outstandingAll.count,
             takenCount: taken,
             totalCount: allEntries.count,
             isOwnAccount: accountId == nil
@@ -55,59 +66,59 @@ struct MediumWidgetProvider: AppIntentTimelineProvider {
 struct MediumWidgetView: View {
     var entry: MediumWidgetEntry
 
-    private var completionFraction: Double {
-        guard entry.totalCount > 0 else { return 0 }
-        return min(Double(entry.takenCount) / Double(entry.totalCount), 1.0)
-    }
-
-    private var allDone: Bool { entry.takenCount == entry.totalCount && entry.totalCount > 0 }
+    private var allDone: Bool { entry.totalCount > 0 && entry.takenCount == entry.totalCount }
+    private var hiddenCount: Int { max(entry.outstandingTotal - entry.outstanding.count, 0) }
 
     var body: some View {
-        HStack(spacing: 12) {
-            // Milli progress column
-            VStack(spacing: 4) {
-                MilliProgressView(fraction: completionFraction)
-                    .frame(width: 56, height: 56)
-                if allDone {
-                    Text("Done! 🎉")
-                        .font(.system(size: 9, weight: .semibold))
-                        .foregroundStyle(.green)
-                } else {
-                    Text("\(entry.takenCount) of \(entry.totalCount)")
-                        .font(.system(size: 10, weight: .bold))
-                        .foregroundStyle(.primary)
-                }
-            }
-            .frame(width: 60)
+        VStack(alignment: .leading, spacing: 10) {
+            header
 
-            // Dose list
-            VStack(alignment: .leading, spacing: 0) {
-                Text(allDone ? "All done today!" : "medications taken today")
-                    .font(.caption2)
+            if entry.totalCount == 0 {
+                Spacer()
+                Text("No doses today")
+                    .font(.caption)
                     .foregroundStyle(.secondary)
-                    .padding(.bottom, 4)
-
-                if entry.entries.isEmpty {
-                    Spacer()
-                    Text("No doses today")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Spacer()
-                } else {
-                    ForEach(entry.entries) { dose in
+                Spacer()
+            } else if allDone {
+                Spacer()
+                Label("All doses taken today", systemImage: "checkmark.circle.fill")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.green)
+                Spacer()
+            } else {
+                // Outstanding doses only — a fully-taken row mixed in with pending ones was
+                // exactly what made the old design read as "halfway between a few options."
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(entry.outstanding) { dose in
                         MediumDoseRow(dose: dose, isInteractive: entry.isOwnAccount)
-                        if dose.id != entry.entries.last?.id {
+                        if dose.id != entry.outstanding.last?.id {
                             Divider().padding(.vertical, 2)
                         }
                     }
+                    if hiddenCount > 0 {
+                        Text("+\(hiddenCount) more — open DoseTrack")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                            .padding(.top, 4)
+                    }
                 }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(12)
+        .padding(14)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         .containerBackground(for: .widget) {
             Color(UIColor.systemBackground)
+        }
+    }
+
+    private var header: some View {
+        HStack(spacing: 8) {
+            DoseProgressRing(taken: entry.takenCount, total: entry.totalCount, lineWidth: 3)
+                .frame(width: 20, height: 20)
+            Text(allDone ? "All done!" : "\(entry.takenCount) of \(entry.totalCount) taken today")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.primary)
+            Spacer()
         }
     }
 }
@@ -127,17 +138,16 @@ private struct MediumDoseRow: View {
                     scheduleId: dose.scheduleId,
                     scheduledAt: dose.scheduledAt
                 )) {
-                    Image(systemName: dose.isTaken ? "checkmark.circle.fill" : "circle")
+                    Image(systemName: "circle")
                         .font(.system(size: 18))
-                        .foregroundStyle(dose.isTaken ? .green : .secondary)
+                        .foregroundStyle(.secondary)
                         .frame(width: 24, height: 24)
                 }
                 .buttonStyle(.plain)
-                .disabled(dose.isTaken)
             } else {
-                Image(systemName: dose.isTaken ? "checkmark.circle.fill" : "circle")
+                Image(systemName: "circle")
                     .font(.system(size: 18))
-                    .foregroundStyle(dose.isTaken ? .green : .secondary)
+                    .foregroundStyle(.secondary)
                     .frame(width: 24, height: 24)
             }
 
@@ -149,8 +159,6 @@ private struct MediumDoseRow: View {
                 Text(dose.medicationName)
                     .font(.caption.weight(.medium))
                     .lineLimit(1)
-                    .strikethrough(dose.isTaken)
-                    .foregroundStyle(dose.isTaken ? .secondary : .primary)
                 Text(dose.dosage)
                     .font(.caption2)
                     .foregroundStyle(.secondary)
@@ -162,7 +170,7 @@ private struct MediumDoseRow: View {
                 .font(.caption2)
                 .foregroundStyle(.secondary)
         }
-        .padding(.vertical, 2)
+        .padding(.vertical, 1)
     }
 }
 
@@ -175,8 +183,8 @@ struct MediumWidget: Widget {
         AppIntentConfiguration(kind: kind, intent: SelectDoseAccountIntent.self, provider: MediumWidgetProvider()) { entry in
             MediumWidgetView(entry: entry)
         }
-        .configurationDisplayName("Today's Doses")
-        .description("See today's medications and mark them taken without opening the app. Caregivers can choose whose medications to show.")
-        .supportedFamilies([.systemMedium])
+        .configurationDisplayName("Outstanding Doses")
+        .description("Shows only what's still due today, with a bigger size available for more at once. Mark doses taken without opening the app.")
+        .supportedFamilies([.systemMedium, .systemLarge])
     }
 }
