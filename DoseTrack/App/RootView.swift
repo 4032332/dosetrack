@@ -67,7 +67,7 @@ struct RootView: View {
     }
 
     private func dismissSplash() {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) {
             withAnimation(.easeInOut(duration: 0.4)) { showSplash = false }
         }
     }
@@ -258,11 +258,11 @@ private struct SplashView: View {
     @State private var heroOpacity: Double = 0
     @State private var heroRotation: Double = -10
 
-    // Small sparkle accents that pop briefly around the hero as it lands, then fade —
-    // unlike the old debris (pills hanging static mid-air at rest), these are gone well
-    // before the hold frame, so a paused screenshot never shows floating clutter.
-    @State private var sparkleScale: CGFloat = 0.2
-    @State private var sparkleOpacity: Double = 0
+    // Confetti burst — a single 0→1 progress value drives every piece (position, gravity,
+    // spin, fade are all derived from it), so the whole party-popper effect is one cheap
+    // animated value rather than dozens of independent timers. This is the "oomph" the
+    // previous fade-up sparkles lacked.
+    @State private var burst: CGFloat = 0
 
     // Wordmark — pops with a quick overshoot too, and a brand-blue underline draws in
     // beneath it for a more finished, "designed" feel.
@@ -271,20 +271,16 @@ private struct SplashView: View {
     @State private var underlineWidth: CGFloat = 0
     @State private var taglineOpacity: Double = 0
 
-    private let sparkles: [(x: CGFloat, y: CGFloat, delay: Double, size: CGFloat)] = [
-        (-96, -70, 0.0,  16), (100, -85, 0.06, 12),
-        (-110, 30, 0.10, 11), (108, 40, 0.03, 15),
-    ]
+    private let confetti = ConfettiPiece.burst(count: 40)
 
     var body: some View {
         ZStack {
-            // Soft radial wash — pale brand-blue fading to white, not a flat void and not the
-            // old incoherent navy gradient. Gives the canvas depth while staying light and
-            // consistent with the app's own palette (Color(hex: "5B8AF0") is the accent used
-            // throughout the rest of the product).
+            // Soft radial wash — pale brand-blue fading to white. Kept light so the colourful
+            // (now transparent-cut-out) mascot and confetti pop against it. Consistent with the
+            // app's own accent, Color(hex: "5B8AF0").
             RadialGradient(
-                colors: [Color(hex: "EAF1FF"), Color.white],
-                center: .center, startRadius: 20, endRadius: 420
+                colors: [Color(hex: "E4EDFF"), Color.white],
+                center: .center, startRadius: 10, endRadius: 460
             )
             .ignoresSafeArea()
 
@@ -293,19 +289,22 @@ private struct SplashView: View {
                     // Pulsing glow behind the mascot — an "energy source" the character lands
                     // into, rather than appearing in empty space.
                     Circle()
-                        .fill(Color(hex: "5B8AF0").opacity(0.16))
+                        .fill(Color(hex: "5B8AF0").opacity(0.18))
                         .frame(width: 260, height: 260)
                         .scaleEffect(glowScale)
                         .opacity(glowOpacity)
-                        .blur(radius: 18)
+                        .blur(radius: 20)
 
-                    ForEach(Array(sparkles.enumerated()), id: \.offset) { _, s in
-                        Image(systemName: "sparkle")
-                            .font(.system(size: s.size, weight: .bold))
-                            .foregroundStyle(Color(hex: "5B8AF0").opacity(0.7))
-                            .offset(x: s.x, y: s.y)
-                            .scaleEffect(sparkleScale)
-                            .opacity(sparkleOpacity)
+                    // Confetti erupts from behind the mascot and rains outward past its edges.
+                    // Driven by an Animatable modifier (see ConfettiEffect) so SwiftUI interpolates
+                    // `burst` frame-by-frame — feeding it straight into .offset/.opacity instead
+                    // makes SwiftUI animate only the end values, which for opacity is 0→0 (the
+                    // burst is invisible at both ends), so the whole flight would be skipped.
+                    ForEach(confetti) { piece in
+                        piece.shape
+                            .fill(piece.color)
+                            .frame(width: piece.size.width, height: piece.size.height)
+                            .modifier(ConfettiEffect(progress: burst, piece: piece))
                     }
 
                     Image("SplashHero")
@@ -351,32 +350,24 @@ private struct SplashView: View {
         // the low damping fraction is deliberate, it's what makes this read as "arriving"
         // rather than "fading up."
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-            withAnimation(.spring(response: 0.5, dampingFraction: 0.58)) {
+            withAnimation(.spring(response: 0.42, dampingFraction: 0.52)) {
                 heroScale = 1.0
                 heroOpacity = 1
                 heroRotation = 0
             }
         }
 
-        // Sparkles pop and fade quickly around the landing (0.35–0.75s) — fully gone before
-        // the splash holds, so there's never a static frame with floating clutter.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-            withAnimation(.easeOut(duration: 0.22)) {
-                sparkleScale = 1.0
-                sparkleOpacity = 1
-            }
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.62) {
-            withAnimation(.easeIn(duration: 0.3)) {
-                sparkleOpacity = 0
-                sparkleScale = 1.3
-            }
+        // Confetti fires right as the hero lands (0.22s) and plays out over ~1.1s: pieces
+        // shoot outward, arc down under gravity, spin, and fade — an easeOut so they burst
+        // fast then settle. Timed to be mostly gone by the 1.5s hold, leaving a clean frame.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.22) {
+            withAnimation(.easeOut(duration: 1.3)) { burst = 1 }
         }
 
         // Wordmark pops with its own small overshoot (0.5s), underline draws in right after,
         // tagline fades in last.
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            withAnimation(.spring(response: 0.4, dampingFraction: 0.65)) {
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.62)) {
                 wordmarkScale = 1.0
                 wordmarkOpacity = 1
             }
@@ -388,5 +379,118 @@ private struct SplashView: View {
             withAnimation(.easeOut(duration: 0.35)) { taglineOpacity = 1 }
         }
         // Exit is handled by the parent fading `showSplash` — see RootView.dismissSplash().
+    }
+}
+
+// MARK: - Confetti
+
+/// One confetti piece. Every animated property is a pure function of a single 0→1 `progress`
+/// value so the whole burst is driven by one `withAnimation` on `SplashView.burst`, keeping it
+/// cheap and perfectly in sync. Launch direction, travel distance, spin and colour are fixed at
+/// creation (seeded, so the spread is deterministic and art-directed rather than random noise).
+private struct ConfettiPiece: Identifiable {
+    let id: Int
+    let angle: Double        // launch direction, radians
+    let distance: CGFloat    // outward travel radius at full progress
+    let color: Color
+    let size: CGSize
+    let rotation: Double     // spin magnitude
+    let isCapsule: Bool
+    let launchScale: CGFloat // per-piece easing skew so pieces don't move in lockstep
+
+    var shape: AnyShapeView {
+        isCapsule ? AnyShapeView(Capsule()) : AnyShapeView(RoundedRectangle(cornerRadius: 2))
+    }
+
+    /// Position: outward travel (eased) plus a gravity arc that pulls pieces downward over time.
+    func offset(at progress: CGFloat) -> CGSize {
+        let p = min(1, progress * launchScale)
+        let eased = 1 - pow(1 - p, 2)               // easeOut on outward travel
+        // Pieces start ~120pt out (at the mascot's edge) so they're never hidden behind the
+        // character, then travel the rest of the way toward the screen edges.
+        let travel = 120 + distance * eased
+        let gravity = 130 * progress * progress     // accelerating downward drift
+        return CGSize(width: cos(angle) * travel,
+                      height: sin(angle) * travel + gravity)
+    }
+
+    /// Fade: snap in over the first 12%, hold, then fade out across the final 45%.
+    func opacity(at progress: CGFloat) -> Double {
+        let p = Double(progress)
+        if p < 0.10 { return p / 0.10 }
+        if p > 0.62 { return max(0, 1 - (p - 0.62) / 0.38) }
+        return 1
+    }
+
+    /// Deterministic, art-directed spread — brand + pill palette, biased to launch upward and
+    /// outward from behind the mascot like a popper.
+    static func burst(count: Int) -> [ConfettiPiece] {
+        let palette: [Color] = [
+            Color(hex: "5B8AF0"), Color(hex: "F27A9B"), Color(hex: "FFB443"),
+            Color(hex: "5FCB7E"), Color(hex: "FFD23F"), Color(hex: "A78BFA"),
+            Color(hex: "56C2E6"),
+        ]
+        var rng = SeededGenerator(seed: 20260710)
+        return (0..<count).map { i in
+            // Bias angles toward the upper hemisphere (−π…0 is upward in screen space) so the
+            // burst reads as erupting up-and-out rather than sinking.
+            let spread = Double.random(in: -Double.pi ... 0.35 * Double.pi, using: &rng)
+            return ConfettiPiece(
+                id: i,
+                angle: spread,
+                distance: CGFloat.random(in: 80...240, using: &rng),
+                color: palette[Int.random(in: 0..<palette.count, using: &rng)],
+                size: {
+                    let cap = Bool.random(using: &rng)
+                    return cap ? CGSize(width: 8, height: 18) : CGSize(width: 11, height: 11)
+                }(),
+                rotation: Double.random(in: 90...360, using: &rng) * (Bool.random(using: &rng) ? 1 : -1),
+                isCapsule: Bool.random(using: &rng),
+                launchScale: CGFloat.random(in: 0.85...1.15, using: &rng)
+            )
+        }
+    }
+}
+
+/// Animates one confetti piece. `animatableData` IS the burst progress, so SwiftUI interpolates
+/// it frame-by-frame and re-invokes `body` at each step — the only way to get the full outward
+/// flight when the piece is invisible (opacity 0) at both progress 0 and 1. Reading `burst`
+/// directly in `.offset`/`.opacity` back in the view body would let SwiftUI animate just the end
+/// values (0→0 opacity) and skip the visible middle entirely.
+private struct ConfettiEffect: ViewModifier, Animatable {
+    var progress: CGFloat
+    let piece: ConfettiPiece
+
+    var animatableData: CGFloat {
+        get { progress }
+        set { progress = newValue }
+    }
+
+    func body(content: Content) -> some View {
+        content
+            .rotationEffect(.degrees(piece.rotation * Double(progress) * 3))
+            .offset(piece.offset(at: progress))
+            .opacity(piece.opacity(at: progress))
+    }
+}
+
+/// Type-erased Shape wrapper so a piece can hold either a Capsule or a RoundedRectangle.
+private struct AnyShapeView: Shape {
+    private let pathBuilder: (CGRect) -> Path
+    init<S: Shape>(_ shape: S) { pathBuilder = { shape.path(in: $0) } }
+    func path(in rect: CGRect) -> Path { pathBuilder(rect) }
+}
+
+/// Tiny seedable RNG (SplitMix64) so the confetti spread is identical every launch — an
+/// art-directed layout, not random noise that occasionally clumps badly.
+private struct SeededGenerator: RandomNumberGenerator {
+    private var state: UInt64
+    init(seed: UInt64) { state = seed }
+    mutating func next() -> UInt64 {
+        state &+= 0x9E3779B97F4A7C15
+        var z = state
+        z = (z ^ (z >> 30)) &* 0xBF58476D1CE4E5B9
+        z = (z ^ (z >> 27)) &* 0x94D049BB133111EB
+        return z ^ (z >> 31)
     }
 }

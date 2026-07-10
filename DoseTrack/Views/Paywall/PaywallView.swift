@@ -95,17 +95,14 @@ struct PaywallView: View {
                 .offset(x: 110, y: -30)
 
             VStack(spacing: 10) {
-                // SplashHero already has a white background baked into the artwork itself
-                // (same as every other use of this asset in the app) — adding a white Circle
-                // BEHIND it without clipping the image to match left the square art edges
-                // visible as a white card floating on the gradient. Clipping to Circle uses
-                // that same baked-in white as the visible backing, no separate layer needed.
+                // SplashHero is now a transparent cut-out (white background knocked out), so it
+                // drops straight onto the gradient with no box and no circle clip — clipping to a
+                // Circle here would crop the mascot's outstretched arms and the floating pills.
                 Image("SplashHero")
                     .resizable()
                     .scaledToFit()
-                    .frame(width: 108, height: 108)
-                    .clipShape(Circle())
-                    .shadow(color: .black.opacity(0.2), radius: 12, y: 6)
+                    .frame(width: 132, height: 132)
+                    .shadow(color: .black.opacity(0.18), radius: 12, y: 6)
 
                 Text("DoseTrack Pro")
                     .font(.system(size: 30, weight: .heavy, design: .rounded))

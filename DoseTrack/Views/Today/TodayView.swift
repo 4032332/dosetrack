@@ -261,44 +261,41 @@ private struct TodayHeaderCard: View {
     }
 
     var body: some View {
-        ZStack(alignment: .bottomLeading) {
+        ZStack {
             // Gradient background
             LinearGradient(
                 colors: allDone
-                    ? [Color(hex: "#34C759").opacity(0.85), Color(hex: "#30A46C")]
+                    ? [Color(hex: "#34C759").opacity(0.9), Color(hex: "#2E9E68")]
                     : [Color(hex: "#5B8AF0"), Color(hex: "#3B5FCC")],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
 
-            if allDone {
-                // The celebratory mascot art replaces the generic pill watermark for the one
-                // moment in the app that's actually worth celebrating — previously this state
-                // had no dedicated visual at all, just the same faint pill icon as every other
-                // state, despite AllDone.png having been created specifically for this.
-                Image("AllDone")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 108, height: 108)
-                    .opacity(0.9)
-                    .offset(x: 118, y: 6)
-            } else {
+            // A faint pill watermark only in the non-celebration states. The all-done
+            // celebration uses the full-colour AllDone mascot in-flow (below) instead of
+            // any background watermark, so it never collides with the headline text.
+            if !allDone {
                 Image(systemName: "pills.fill")
                     .font(.system(size: 120))
                     .foregroundStyle(.white.opacity(0.07))
-                    .offset(x: 200, y: -10)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+                    .offset(x: 24, y: -18)
+                    .clipped()
             }
 
-            HStack(alignment: .bottom) {
+            HStack(alignment: .center, spacing: 12) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(name.isEmpty ? greeting : "\(greeting), \(name.split(separator: " ").first.map(String.init) ?? name)")
                         .font(.headline)
                         .foregroundStyle(.white.opacity(0.9))
 
                     if allDone {
-                        Label("All doses taken today!", systemImage: "checkmark.seal.fill")
-                            .font(.title3.bold())
+                        Text("All done!")
+                            .font(.system(size: 32, weight: .heavy, design: .rounded))
                             .foregroundStyle(.white)
+                        Text("Every dose taken today")
+                            .font(.subheadline)
+                            .foregroundStyle(.white.opacity(0.85))
                     } else if totalCount == 0 {
                         Text("Nothing scheduled today")
                             .font(.title3.bold())
@@ -312,8 +309,17 @@ private struct TodayHeaderCard: View {
                             .foregroundStyle(.white.opacity(0.75))
                     }
                 }
-                Spacer()
-                if totalCount > 0 && !allDone {
+                Spacer(minLength: 0)
+                if allDone {
+                    // The celebratory mascot, now a transparent cut-out, sits cleanly in-flow
+                    // on the trailing edge — no white box, no overlap with the headline, and it
+                    // reads correctly on the green gradient (and in dark mode).
+                    Image("AllDone")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 96, height: 96)
+                        .shadow(color: .black.opacity(0.15), radius: 6, y: 3)
+                } else if totalCount > 0 {
                     AdherenceRingView(percent: adherencePercent, allDone: allDone)
                         .frame(width: 64, height: 64)
                 }
