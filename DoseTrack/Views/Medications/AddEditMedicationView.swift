@@ -340,7 +340,7 @@ struct AddEditMedicationView: View {
             .sheet(isPresented: $showingScanner) {
                 MedicationScannerView(
                     onResult: { result in
-                        viewModel.name = result.name
+                        if !result.name.isEmpty { viewModel.name = result.name }
                         if !result.strength.isEmpty {
                             viewModel.doseAmount = result.strength
                             viewModel.doseUnit   = result.strengthUnit
@@ -350,6 +350,12 @@ struct AddEditMedicationView: View {
                         }
                         if !result.form.isEmpty {
                             viewModel.quantityUnit = result.form
+                        }
+                        // Units taken per dose, reasoned from the box's dosing instructions
+                        // ("take 2 tablets" → 2). Only overwrite the form's default when the
+                        // scanner actually found it.
+                        if result.perDose > 0 {
+                            viewModel.quantityAmount = result.perDose
                         }
                         showingScanner = false
                     },

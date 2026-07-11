@@ -198,14 +198,16 @@ iOS notifications mirror to the Watch automatically; `DoseTrackWatch Watch App/N
 
 ---
 
-## 6b. Medication Box Scanner (Vision + VisionKit)
+## 6b. Medication Box Scanner (VisionKit live scanner)
 
-`Views/Medications/MedicationScannerView.swift`, backed by `Services/MedicationTextRecognizer.swift` and `Services/MedicationParser.swift`.
+`Views/Medications/MedicationScannerView.swift`, backed by `Services/MedicationParser.swift` (and `Services/MedicationTextRecognizer.swift` for the fallback path).
 
-- **Capture:** `VNDocumentCameraViewController` (the same edge-detecting, deskewing, contrast-boosting scanner as Notes/Files) is the primary capture path; falls back to a plain photo picker where unsupported (Simulator).
-- **OCR:** `MedicationTextRecognizer` runs `VNRecognizeTextRequest` with the image's actual `CGImagePropertyOrientation` — critical, since `UIImage.cgImage` is the raw sensor buffer with orientation NOT applied, so a naive request reads portrait photos rotated 90°. Also sorts results into reading order (Vision doesn't guarantee it).
-- **Parsing:** `MedicationParser` picks the medication name by **text height** (the brand name is almost always the largest text on a box) with a casing/order fallback; extracts strength (`"500 mg"`, `"250mg/5mL"`, micrograms, etc.), pack count (`"30 Tablets"`, `"100's"`), and form. If Vision found text but the parser can't confidently pick a name, the user is shown the raw detected lines to tap the correct one themselves — never a wrong guess.
-- Covered by real end-to-end tests that render a synthetic box image and run the *actual* Vision pipeline (`DoseTrackTests/MedicationTextRecognizerTests.swift`), including a portrait-capture regression guard.
+- **Capture (primary):** `DataScannerViewController` (VisionKit) — a **live** text scanner. The camera feed runs continuous OCR and the text it reads is **highlighted on the live image**, each box colour-coded and labelled by which field it matched (Name / Strength / Supply / Dose). A bottom "captured details" card fills in live with checkmarks. There is NO capture-then-process step and no document-edge hunting — this deliberately replaced the old `VNDocumentCameraViewController`, whose "keep scanning for a document" behaviour was confusing and gave no feedback about what it had extracted.
+- **Capture (fallback):** `DataScannerViewController` requires a physical A12+ device (not the Simulator, not older hardware), so `PhotoScanFallbackView` provides a single-photo path (`MedicationTextRecognizer` → parse → a small review form) for those cases.
+- **OCR orientation:** `MedicationTextRecognizer` (fallback path) runs `VNRecognizeTextRequest` with the image's actual `CGImagePropertyOrientation` — critical, since `UIImage.cgImage` is the raw sensor buffer with orientation NOT applied, so a naive request reads portrait photos rotated 90°.
+- **Parsing (`MedicationParser`):** produces a `MedicationScanResult` — name, strength, supply quantity, form, **and units-per-dose reasoned from dosing instructions**. Name is picked by **text height** (the brand name is almost always the largest text). Supply prefers explicit `QTY`/`Quantity`/`Pack of N` markers and deliberately ignores dosing-instruction lines (so "take 1 tablet" is never mistaken for a supply of 1). Per-dose parses "take **N** tablet(s)" — including number words ("take **one**…") — and specifically takes the number that precedes a *dose-form word*, not the frequency ("take 1 tablet **3 times** a day" → 1 per dose, not 3).
+- **Direct form fill:** the result populates the Add Medication form's name, strength+unit, current supply, form, and per-dose quantity fields directly — the form is the review step. On the fallback path (no live feedback) a small confirm screen precedes it.
+- Extraction is covered by unit tests (`DoseTrackTests/MedicationScannerParserTests.swift`) plus real end-to-end OCR tests that render a synthetic box and run the *actual* Vision pipeline (`MedicationTextRecognizerTests.swift`), including a portrait-capture regression guard. **The live `DataScannerViewController` UI itself can only be verified on a physical device — it does not run on the Simulator.**
 
 ---
 

@@ -96,4 +96,75 @@ final class MedicationScannerParserTests: XCTestCase {
         let result = MedicationParser.parse(lines: lines)
         XCTAssertNil(result)
     }
+
+    // MARK: - Supply quantity (QTY markers)
+
+    func testParse_explicitQTYMarker_isSupply() {
+        let lines = ["Vyvanse", "50 mg", "QTY: 30", "Take 1 capsule each morning"]
+        let result = MedicationParser.parse(lines: lines)
+        XCTAssertEqual(result?.name, "Vyvanse")
+        XCTAssertEqual(result?.strength, "50")
+        XCTAssertEqual(result?.count, 30)
+    }
+
+    func testParse_packOfN_isSupply() {
+        let lines = ["Endep", "10 mg", "Pack of 50"]
+        XCTAssertEqual(MedicationParser.parse(lines: lines)?.count, 50)
+    }
+
+    func testParse_instructionTabletCount_isNotMistakenForSupply() {
+        // "Take 1 tablet..." must NOT set supply to 1; the real supply is the pack line.
+        let lines = ["Metformin", "500mg", "100 Tablets", "Take 1 tablet 3 times a day"]
+        let result = MedicationParser.parse(lines: lines)
+        XCTAssertEqual(result?.count, 100, "Supply should come from the pack line, not the instruction")
+    }
+
+    // MARK: - Per-dose from instructions
+
+    func testParse_perDose_digit() {
+        let lines = ["Panadol", "500mg", "20 Tablets", "Take 2 tablets with food"]
+        let result = MedicationParser.parse(lines: lines)
+        XCTAssertEqual(result?.perDose, 2)
+        XCTAssertEqual(result?.count, 20)
+    }
+
+    func testParse_perDose_numberWord() {
+        let lines = ["Amoxil", "500mg", "Take ONE capsule three times daily"]
+        XCTAssertEqual(MedicationParser.parse(lines: lines)?.perDose, 1)
+    }
+
+    func testParse_perDose_ignoresFrequencyNumber() {
+        // The classic trap: "1 tablet, 3 times" → per dose is 1, NOT 3.
+        let lines = ["Sertraline", "50mg", "Take 1 tablet 3 times per day"]
+        XCTAssertEqual(MedicationParser.parse(lines: lines)?.perDose, 1)
+    }
+
+    func testParse_perDose_range_takesLowerNumber() {
+        let lines = ["Ibuprofen", "200mg", "Take 1 to 2 tablets every 4 hours"]
+        XCTAssertEqual(MedicationParser.parse(lines: lines)?.perDose, 1)
+    }
+
+    func testParse_perDose_absentWhenNoInstruction() {
+        let lines = ["Metformin", "500 mg", "100 Tablets"]
+        XCTAssertEqual(MedicationParser.parse(lines: lines)?.perDose, 0)
+    }
+
+    func testParse_fullPharmacyLabel_allFields() {
+        // A realistic dispensed-pharmacy label: brand, generic, strength, QTY, and directions.
+        let lines = [
+            "VYVANSE",
+            "Lisdexamfetamine",
+            "50 mg",
+            "Qty: 30 capsules",
+            "Take 1 capsule in the morning",
+        ]
+        let result = MedicationParser.parse(lines: lines)
+        XCTAssertNotNil(result)
+        XCTAssertEqual(result?.strength, "50")
+        XCTAssertEqual(result?.strengthUnit, "mg")
+        XCTAssertEqual(result?.count, 30)
+        XCTAssertEqual(result?.perDose, 1)
+        XCTAssertEqual(result?.form, "capsule")
+        XCTAssertNotNil(result?.instructions)
+    }
 }

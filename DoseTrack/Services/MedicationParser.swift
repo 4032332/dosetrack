@@ -1,10 +1,31 @@
 // DoseTrack/Services/MedicationParser.swift
-// Turns the lines of text Vision recognised on a medication box into a structured scan result
-// (name, strength, count, form). Deliberately conservative: it would rather return nil and let
-// the user pick the name from the raw lines than confidently fill in the wrong thing.
+// Turns lines of text (from Vision OCR of a medication box, or the live DataScanner feed) into a
+// structured scan result: name, strength, supply quantity, form, and — reasoned from any dosing
+// instructions found — how many units are taken per dose. Deliberately conservative: it would
+// rather leave a field blank and let the user fill it than confidently fill in the wrong thing.
 
 import CoreGraphics
 import Foundation
+
+// MARK: - Result model
+
+struct MedicationScanResult {
+    var name: String
+    var strength: String        // numeric part, e.g. "500"
+    var strengthUnit: String    // e.g. "mg"
+    var count: Int              // supply quantity in the pack, e.g. 30 (0 = not found)
+    var form: String            // e.g. "tablet"
+    var perDose: Int            // units taken per dose, reasoned from instructions (0 = not found)
+    var instructions: String?   // the raw dosing-instruction line, if one was found
+    var rawLines: [String]      // all recognised lines (for the manual-pick fallback / debugging)
+
+    /// Which fields the parser managed to populate — drives the live scanner's "captured" tick
+    /// list and the "have we got enough to use this?" gate (a name is the minimum).
+    var hasName: Bool { !name.trimmingCharacters(in: .whitespaces).isEmpty }
+    var hasStrength: Bool { !strength.isEmpty }
+    var hasSupply: Bool { count > 0 }
+    var hasPerDose: Bool { perDose > 0 }
+}
 
 enum MedicationParser {
 
@@ -18,9 +39,10 @@ enum MedicationParser {
         let strings = lines.map(\.text)
 
         let strength = extractStrength(from: strings)
-        let count = extractCount(from: strings)
+        let supply = extractSupply(from: strings)
         let form = extractForm(from: strings)
         let name = extractName(from: lines)
+        let dosing = extractPerDose(from: strings)
 
         guard let name, !name.isEmpty else { return nil }
 
@@ -28,8 +50,10 @@ enum MedicationParser {
             name: name,
             strength: strength?.value ?? "",
             strengthUnit: strength?.unit ?? "mg",
-            count: count ?? 0,
+            count: supply ?? 0,
             form: form ?? "tablet",
+            perDose: dosing?.perDose ?? 0,
+            instructions: dosing?.line,
             rawLines: strings
         )
     }
@@ -71,20 +95,89 @@ enum MedicationParser {
         return nil
     }
 
-    // MARK: - Count: "30 tablets", "28 CAPSULES", "100 tab", "30's"
+    // MARK: - Supply quantity (pack size -> currentCount)
 
-    private static let countPattern = try! NSRegularExpression(
-        pattern: #"(\d+)\s*(?:x\s*)?(?:tablets?|caps?(?:ules?)?|caplets?|softgels?|sachets?|doses?|puffs?|patches?|vials?|ampoules?|injections?|lozenges?|pastilles?|gummies|tabs?|'s)\b"#,
+    /// Dose-form words used by both the supply and per-dose patterns.
+    private static let formWords = "tablets?|caps?(?:ules?)?|caplets?|softgels?|sachets?|doses?|puffs?|patches?|vials?|ampoules?|lozenges?|pastilles?|gummies|pills?|sprays?|drops?|tabs?"
+
+    /// Explicit pack-size markers: "QTY 30", "Qty: 30", "Quantity 30", "Pack of 30", "30 Pack".
+    /// Prioritised over a bare "N tablets" because it's unambiguous.
+    private static let qtyPattern = try! NSRegularExpression(
+        pattern: #"\b(?:qty|quantity|pack(?:\s+of)?|contents?)\b[^\d]{0,6}(\d+)\b|\b(\d+)\s*(?:'s\b|pack\b)"#,
         options: .caseInsensitive
     )
 
-    private static func extractCount(from lines: [String]) -> Int? {
+    /// A bare "30 tablets" / "28 CAPSULES" count. Used for supply only on NON-instruction lines
+    /// (so "take 1 tablet three times a day" is never mistaken for a supply of 1).
+    private static let countPattern = try! NSRegularExpression(
+        pattern: #"(\d+)\s*(?:x\s*)?(?:\#(formWords))\b"#,
+        options: .caseInsensitive
+    )
+
+    private static func extractSupply(from lines: [String]) -> Int? {
+        // 1. Explicit QTY/Quantity/Pack markers win — try these across every line first.
         for line in lines {
+            let ns = line as NSString
+            let range = NSRange(location: 0, length: ns.length)
+            if let match = qtyPattern.firstMatch(in: line, range: range) {
+                for groupIndex in 1..<match.numberOfRanges {
+                    let r = match.range(at: groupIndex)
+                    if r.location != NSNotFound, let n = Int(ns.substring(with: r)), n > 0, n <= 1000 {
+                        return n
+                    }
+                }
+            }
+        }
+        // 2. Otherwise a bare "N tablets", but only on non-instruction lines.
+        for line in lines where !isInstructionLine(line) {
             let ns = line as NSString
             let range = NSRange(location: 0, length: ns.length)
             if let match = countPattern.firstMatch(in: line, range: range) {
                 let numStr = ns.substring(with: match.range(at: 1))
                 if let n = Int(numStr), n > 0, n <= 1000 { return n }
+            }
+        }
+        return nil
+    }
+
+    // MARK: - Per-dose quantity (reasoned from dosing instructions -> quantityAmount)
+
+    /// Words that mark a line as a dosing instruction rather than pack/marketing text.
+    private static let dosingVerbs = ["take", "use", "apply", "swallow", "insert", "inhale", "instil", "chew", "dissolve"]
+
+    private static func isInstructionLine(_ line: String) -> Bool {
+        let lc = line.lowercased()
+        // A leading/space-bounded verb, plus a plausible dosing context, so a brand line that
+        // merely contains "use" as a substring isn't misread as an instruction.
+        let hasVerb = dosingVerbs.contains { verb in
+            lc == verb || lc.hasPrefix(verb + " ") || lc.contains(" " + verb + " ")
+        }
+        return hasVerb
+    }
+
+    private static let numberWords: [String: Int] = [
+        "one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6,
+        "seven": 7, "eight": 8, "nine": 9, "ten": 10, "eleven": 11, "twelve": 12,
+    ]
+
+    /// The number that immediately precedes a dose-form word ("2 tablets", "one capsule"). This
+    /// is the per-dose amount — crucially NOT the frequency number, because the frequency number
+    /// precedes "times"/"daily" ("3 times a day"), never a form word. Handles ranges ("1 to 2
+    /// tablets") by taking the lower number.
+    private static let perDosePattern = try! NSRegularExpression(
+        pattern: #"\b(\d+|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\b(?:\s+(?:to|-|–|or)\s+(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten))?\s+(?:\#(formWords))\b"#,
+        options: .caseInsensitive
+    )
+
+    private static func extractPerDose(from lines: [String]) -> (perDose: Int, line: String)? {
+        for line in lines where isInstructionLine(line) {
+            let ns = line as NSString
+            let range = NSRange(location: 0, length: ns.length)
+            guard let match = perDosePattern.firstMatch(in: line, range: range) else { continue }
+            let token = ns.substring(with: match.range(at: 1)).lowercased()
+            let value = Int(token) ?? numberWords[token]
+            if let value, value > 0, value <= 12 {
+                return (value, (line as String).trimmingCharacters(in: .whitespacesAndNewlines))
             }
         }
         return nil
@@ -127,7 +220,7 @@ enum MedicationParser {
         "australian", "new zealand", "contains", "each ", "take ", "swallow",
         "before", "after", "consult", "doctor", "pharmacist", "www.", ".com", "http",
         "manufactured", "distributed", "product of", "made in", "use by", "read the",
-        "not exceed", "recommended", "if symptoms", "professional",
+        "not exceed", "recommended", "if symptoms", "professional", "qty", "quantity",
     ]
 
     private static func isBoilerplate(_ line: String) -> Bool {
