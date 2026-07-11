@@ -64,7 +64,7 @@ private struct LiveMedicationScannerView: View {
     }
 
     private var instructionBanner: some View {
-        Text("Point at the medication box — hold steady until the details fill in below.")
+        Text("Point at the label until the details fill in below. For a round bottle, rotate it slowly to read the whole label.")
             .font(.footnote.weight(.medium))
             .foregroundStyle(.white)
             .multilineTextAlignment(.center)
@@ -100,10 +100,14 @@ private struct LiveMedicationScannerView: View {
             .controlSize(.large)
             .disabled(!(model.result?.hasName ?? false))
 
-            Button("Enter Manually") {
-                onUse(MedicationScanResult(name: "", strength: "", strengthUnit: "mg",
-                                           count: 0, form: "tablet", perDose: 0,
-                                           instructions: nil, rawLines: model.result?.rawLines ?? []))
+            HStack {
+                Button("Rescan") { model.resetAccumulation?() }
+                Spacer()
+                Button("Enter Manually") {
+                    onUse(MedicationScanResult(name: "", strength: "", strengthUnit: "mg",
+                                               count: 0, form: "tablet", perDose: 0,
+                                               instructions: nil, rawLines: model.result?.rawLines ?? []))
+                }
             }
             .font(.subheadline)
             .foregroundStyle(.secondary)
@@ -136,6 +140,9 @@ private struct LiveMedicationScannerView: View {
 @MainActor
 final class LiveScanModel: ObservableObject {
     @Published var result: MedicationScanResult? = nil
+    /// Set by the DataScanner coordinator; called by the card's "Rescan" button to clear the
+    /// accumulated text and start fresh.
+    var resetAccumulation: (() -> Void)?
 }
 
 // MARK: - DataScanner wrapper + delegate
@@ -179,6 +186,7 @@ private struct DataScannerRepresentable: UIViewControllerRepresentable {
         )
         scanner.delegate = context.coordinator
         context.coordinator.scanner = scanner
+        model.resetAccumulation = { [weak coordinator = context.coordinator] in coordinator?.reset() }
         try? scanner.startScanning()
         return scanner
     }
@@ -197,7 +205,22 @@ private struct DataScannerRepresentable: UIViewControllerRepresentable {
         weak var scanner: DataScannerViewController?
         private var overlays: [RecognizedItem.ID: UIView] = [:]
 
+        /// Text accumulated across ALL frames this session (see ScanTextAccumulator). This is what
+        /// makes a cylindrical bottle work — the wrapped label is never fully visible in one frame,
+        /// so the user rotates the bottle and each field is captured once and retained rather than
+        /// lost when it scrolls off. Cleared by the card's "Rescan" button.
+        private var accumulator = ScanTextAccumulator()
+
         init(model: LiveScanModel) { self.model = model }
+
+        /// Clears the accumulated text — used when the user taps "Rescan" (e.g. they've aimed at a
+        /// different medication and don't want stale text from the last one bleeding in).
+        func reset() {
+            accumulator.removeAll()
+            overlays.values.forEach { $0.removeFromSuperview() }
+            overlays.removeAll()
+            model.result = nil
+        }
 
         func dataScanner(_ dataScanner: DataScannerViewController, didAdd addedItems: [RecognizedItem], allItems: [RecognizedItem]) {
             refresh(with: allItems, in: dataScanner)
@@ -212,7 +235,8 @@ private struct DataScannerRepresentable: UIViewControllerRepresentable {
             refresh(with: allItems, in: dataScanner)
         }
 
-        /// Re-parse the currently-visible text and redraw the field-labelled highlight boxes.
+        /// Fold the currently-visible text into the running accumulation, re-parse the whole
+        /// accumulation, and redraw the field-labelled highlight boxes over the visible items.
         private func refresh(with allItems: [RecognizedItem], in dataScanner: DataScannerViewController) {
             let viewHeight = max(dataScanner.view.bounds.height, 1)
 
@@ -222,16 +246,18 @@ private struct DataScannerRepresentable: UIViewControllerRepresentable {
                 return nil
             }
 
-            // Feed the parser: real bounding-box heights let the name heuristic pick the tallest
-            // (= most prominent) line, exactly as with a still image.
-            let lines: [RecognizedLine] = texts.map { entry in
+            // Accumulate this frame's text (keeps the longest variant + greatest height per line).
+            for entry in texts {
                 let h = boundingRect(for: entry.item.bounds).height / viewHeight
-                return RecognizedLine(text: entry.transcript, heightFraction: h)
+                accumulator.add(text: entry.transcript, height: h)
             }
-            let parsed = MedicationParser.parse(lines: lines)
+
+            // Parse the full accumulation, not just this frame — the crux of reading a wrapped label.
+            let parsed = MedicationParser.parse(lines: accumulator.lines)
             model.result = parsed
 
-            // Redraw highlights for whichever visible items map to a field.
+            // Highlight whichever CURRENTLY-visible items map to a field (you can only draw a box
+            // over text that's on screen right now, even though the parse spans the accumulation).
             var live: Set<RecognizedItem.ID> = []
             for entry in texts {
                 guard let tag = tag(for: entry.transcript, parsedName: parsed?.name) else { continue }
@@ -242,12 +268,12 @@ private struct DataScannerRepresentable: UIViewControllerRepresentable {
                 if box.superview == nil { dataScanner.overlayContainerView.addSubview(box) }
                 overlays[entry.item.id] = box
             }
-            // Drop overlays whose item no longer maps to a field.
             for (id, view) in overlays where !live.contains(id) {
                 view.removeFromSuperview()
                 overlays.removeValue(forKey: id)
             }
         }
+
 
         private func boundingRect(for bounds: RecognizedItem.Bounds) -> CGRect {
             let xs = [bounds.topLeft.x, bounds.topRight.x, bounds.bottomLeft.x, bounds.bottomRight.x]

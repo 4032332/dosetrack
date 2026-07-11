@@ -27,6 +27,48 @@ struct MedicationScanResult {
     var hasPerDose: Bool { perDose > 0 }
 }
 
+// MARK: - Live-scan text accumulator
+
+/// Accumulates recognised text across many camera frames for the live scanner, deduping the same
+/// line (normalised: lowercased, whitespace-collapsed) and keeping the longest variant seen plus
+/// the greatest height it appeared at. This is what lets the live scanner read a cylindrical
+/// bottle: the label wraps around the curve so no single frame shows all of it — the user rotates
+/// the bottle and each line is captured once and retained, instead of being lost when it scrolls
+/// off the current frame. Pure value type so the retention logic is unit-testable without a camera.
+struct ScanTextAccumulator {
+    private(set) var entries: [String: (text: String, height: CGFloat)] = [:]
+    /// Upper bound so a long session can't grow unbounded (real labels have well under this).
+    let cap: Int
+
+    init(cap: Int = 200) { self.cap = cap }
+
+    mutating func add(text: String, height: CGFloat) {
+        let key = Self.normalize(text)
+        guard !key.isEmpty else { return }
+        if let existing = entries[key] {
+            entries[key] = (
+                text: text.count > existing.text.count ? text : existing.text,
+                height: max(existing.height, height)
+            )
+        } else if entries.count < cap {
+            entries[key] = (text: text, height: height)
+        }
+    }
+
+    mutating func removeAll() { entries.removeAll() }
+
+    /// The accumulated text as parser input.
+    var lines: [RecognizedLine] {
+        entries.values.map { RecognizedLine(text: $0.text, heightFraction: $0.height) }
+    }
+
+    static func normalize(_ s: String) -> String {
+        s.lowercased()
+            .replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+}
+
 enum MedicationParser {
 
     // MARK: - Entry points
