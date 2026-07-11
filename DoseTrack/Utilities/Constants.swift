@@ -42,17 +42,39 @@ enum Constants {
     enum MedicationColors {
         /// The full colour palette offered when picking a medication's colour, and in the
         /// Colour Coding preferences screen where a colour can be assigned a tag (e.g.
-        /// "Morning Batch", "Pain Relief"). Expanded from the original fixed set of 8 so users
-        /// with many medications have enough distinct colours to actually colour-code by
-        /// category — the picker that shows these scrolls horizontally (see
-        /// AddEditMedicationView.ColourPickerGrid) so this list can keep growing.
+        /// "Morning Batch", "Pain Relief"). The picker that shows these scrolls horizontally
+        /// (see AddEditMedicationView.ColourPickerGrid).
+        ///
+        /// Curated deliberately to ~16 entries rather than a larger set: the goal is that
+        /// every colour reads as visibly DIFFERENT from every other one at a small swatch
+        /// size (a ~30pt filled tile or dot), not just different in hex value. The previous
+        /// 24-colour palette had several near-duplicate blues/greens/oranges that were
+        /// impossible to tell apart at a glance, which defeats the point of a colour tag —
+        /// fewer, more distinct colours make a better legend than more, muddier ones. Each
+        /// hue is also chosen to stay separable under common colour-vision deficiencies
+        /// (no pair that relies solely on a red/green distinction, and warm/cool tones are
+        /// paired with brightness or saturation differences, not hue alone). Spans: brand
+        /// blue, a second clearly-different blue, red, orange, amber/yellow, warm green,
+        /// teal/cyan, purple, magenta/pink, and a neutral brown/slate for a non-primary
+        /// option. Reducing the count is intentional — do not re-expand this back toward
+        /// two dozen without re-checking pairwise distinctness.
         static let palette: [String] = [
-            "#5B8AF0", "#FF6B6B", "#4ECDC4", "#45B7D1",
-            "#96CEB4", "#FFEAA7", "#DDA0DD", "#98D8C8",
-            "#F4845F", "#F76E11", "#EF5B5B", "#FFC93C",
-            "#3EC1D3", "#2E86AB", "#6A4C93", "#B5838D",
-            "#588157", "#A3B18A", "#E76F51", "#264653",
-            "#FF9F1C", "#8ECAE6", "#219EBC", "#023047",
+            "#5B8AF0", // brand blue
+            "#0EA5E9", // sky blue — clearly distinct from brand blue (lighter, more cyan)
+            "#E63946", // red
+            "#F97316", // orange
+            "#FFC93C", // amber / yellow
+            "#588157", // warm green
+            "#14B8A6", // teal / cyan
+            "#7C5CD6", // purple
+            "#EC4899", // magenta / pink
+            "#264653", // deep slate — neutral, dark, non-primary option
+            "#B5838D", // dusty rose — distinct from both red and pink by desaturation
+            "#8B5E34", // brown — neutral warm option
+            "#2E86AB", // steel blue — third, deeper blue distinct from the two above
+            "#E76F51", // burnt coral — distinct from red/orange by warmth and saturation
+            "#A78BFA", // lavender — distinct from purple by lightness
+            "#84CC16", // lime — distinct from warm green and teal by hue and brightness
         ]
     }
 

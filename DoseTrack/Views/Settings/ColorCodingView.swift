@@ -15,6 +15,13 @@ struct ColorCodingView: View {
     var body: some View {
         List {
             Section {
+                Text("Colour coding is an optional personal legend — a way to group your medications at a glance without changing anything about how they work.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .listRowInsets(EdgeInsets(top: 12, leading: 16, bottom: 4, trailing: 16))
+            }
+
+            Section {
                 LazyVGrid(columns: columns, spacing: 16) {
                     ForEach(Constants.MedicationColors.palette, id: \.self) { hex in
                         ColorTagSwatch(hex: hex, tagName: store.name(forHex: hex)) {
@@ -24,7 +31,7 @@ struct ColorCodingView: View {
                 }
                 .padding(.vertical, 8)
             } footer: {
-                Text("Tap a colour to give it a meaning — for example, tag one colour \"Morning Batch\" and another \"Night Batch\", or split by Medication / Vitamin / Supplement. This is just a personal legend; it doesn't change how any medication works.")
+                Text("Tap a colour above to give it a meaning — for example, tag one colour \"Morning Batch\" and another \"Night Batch\", or split by Medication / Vitamin / Supplement. Then, when adding or editing a medication, pick that same colour so it carries the tag. It's purely visual: it doesn't move, merge, or change how any medication or reminder behaves — you can retag or remove a tag any time.")
                     .font(.caption)
             }
 
