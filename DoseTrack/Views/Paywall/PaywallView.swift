@@ -104,7 +104,7 @@ struct PaywallView: View {
                     .frame(width: 132, height: 132)
                     .shadow(color: .black.opacity(0.18), radius: 12, y: 6)
 
-                Text("DoseTrack Pro")
+                Text("DoseTrack Plus")
                     .font(.system(size: 30, weight: .heavy, design: .rounded))
                     .foregroundStyle(.white)
                 Text("Unlimited medications, PDF reports,\nand caring for a loved one.")
@@ -190,7 +190,7 @@ struct PaywallView: View {
         // (e.g. Pro isn't live in App Store Connect), tapping them did nothing, which looked like
         // a broken paywall rather than an honestly-labelled "not available yet" state.
         VStack(spacing: 8) {
-            Label("Pro pricing is coming soon", systemImage: "hourglass")
+            Label("Plus pricing is coming soon", systemImage: "hourglass")
                 .font(.subheadline.weight(.medium))
                 .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity)

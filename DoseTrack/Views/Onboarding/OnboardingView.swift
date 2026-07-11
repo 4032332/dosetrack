@@ -146,7 +146,7 @@ private struct WelcomePage: View {
                                subtitle: "No surprise paywalls on core reminder functionality")
                     FeatureRow(icon: "person.2.fill", color: .purple,
                                title: "Caregiver sharing",
-                               subtitle: "Pro subscribers can invite a caregiver to help manage medications")
+                               subtitle: "DoseTrack Plus subscribers can invite a caregiver to help manage medications")
                 }
                 .padding(.horizontal, 28)
 

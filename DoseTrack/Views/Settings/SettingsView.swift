@@ -11,7 +11,6 @@ struct SettingsView: View {
     @EnvironmentObject private var subscriptionManager: SubscriptionManager
     @EnvironmentObject private var auth: AuthManager
     @EnvironmentObject private var caregiverManager: CaregiverManager
-    @EnvironmentObject private var watchManager: WatchConnectivityManager
 
     @AppStorage("patientName")           private var patientName: String = ""
     @AppStorage("selectedAvatar")           private var selectedAvatar: String = "milli"
@@ -19,14 +18,11 @@ struct SettingsView: View {
     private var customPhotoData: Data? {
         customAvatarDataBase64.isEmpty ? nil : Data(base64Encoded: customAvatarDataBase64)
     }
-    @AppStorage("defaultSnoozeDuration") private var defaultSnoozeDuration: Int = 30
 
     @State private var showingPaywall = false
     @State private var showingDeleteConfirm = false
-    @State private var testNotificationSent = false
     @State private var showingSignUp = false
     @State private var showingEnterInviteCode = false
-    @State private var watchSyncTriggered = false
     @Binding var showingAccountSwitcher: Bool
 
     // Hidden Developer Options unlock: tap the version row 7x, then enter the passcode.
@@ -62,8 +58,8 @@ struct SettingsView: View {
                     }
                 }
 
-                // MARK: Profile & Account (merged)
-                Section("Profile") {
+                // MARK: Profile (profile row + current tier + restore)
+                Section {
                     NavigationLink {
                         ProfileView()
                             .environmentObject(auth)
@@ -73,14 +69,12 @@ struct SettingsView: View {
                                         isPro: subscriptionManager.isProSubscriber,
                                         size: 44,
                                         customImageData: customPhotoData)
-                            VStack(alignment: .leading, spacing: 2) {
+                            VStack(alignment: .leading, spacing: 4) {
                                 Text(patientName.isEmpty ? "Set up your profile" : patientName)
                                     .font(.body.weight(patientName.isEmpty ? .regular : .medium))
                                     .foregroundStyle(patientName.isEmpty ? .secondary : .primary)
                                 if subscriptionManager.isProSubscriber {
-                                    Text("DoseTrack Pro ✦")
-                                        .font(.caption.weight(.semibold))
-                                        .foregroundStyle(.yellow)
+                                    PlusBadge()
                                 } else {
                                     Text(auth.userEmail.isEmpty ? "Guest account" : auth.userEmail)
                                         .font(.caption)
@@ -91,181 +85,83 @@ struct SettingsView: View {
                         }
                         .padding(.vertical, 4)
                     }
-                }
 
-                // MARK: Subscription
-                Section("Subscription") {
+                    // Current tier row
                     if subscriptionManager.isProSubscriber {
                         HStack {
-                            SettingsLabel(title: "DoseTrack Pro", systemImage: "star.fill", tint: .yellow)
+                            SettingsLabel(title: "DoseTrack Plus", systemImage: "star.fill", tint: Color(hex: "#3B5FCC"))
                             Spacer()
-                            Text("Active ✦")
-                                .foregroundStyle(.secondary)
-                                .font(.subheadline)
-                        }
-                        Button {
-                            Task { await subscriptionManager.restorePurchases() }
-                        } label: {
-                            SettingsLabel(title: "Restore Purchases", systemImage: "arrow.clockwise", tint: .gray)
+                            Text("Active").foregroundStyle(.secondary).font(.subheadline)
                         }
                     } else {
                         Button {
                             showingPaywall = true
                         } label: {
                             HStack {
-                                SettingsLabel(title: "Upgrade to DoseTrack Pro", systemImage: "star.fill", tint: .yellow)
+                                SettingsLabel(title: "Upgrade to DoseTrack Plus", systemImage: "star.fill", tint: Color(hex: "#3B5FCC"))
                                 Spacer()
                                 Image(systemName: "chevron.right")
                                     .foregroundStyle(.secondary)
                                     .font(.caption)
                             }
                         }
+                    }
 
-                        Text("5 medications free forever. DoseTrack Pro unlocks unlimited medications, PDF reports, and caring for a loved one's medications.")
+                    Button {
+                        Task { await subscriptionManager.restorePurchases() }
+                    } label: {
+                        SettingsLabel(title: "Restore Purchases", systemImage: "arrow.clockwise", tint: .gray)
+                    }
+                } header: {
+                    Text("Profile")
+                } footer: {
+                    if !subscriptionManager.isProSubscriber {
+                        Text("5 medications free forever. DoseTrack Plus unlocks unlimited medications, PDF reports, and caring for a loved one's medications.")
                             .font(.caption)
-                            .foregroundStyle(.secondary)
                     }
                 }
 
-                // MARK: Notifications
-                Section {
-                    // Authorization status banner
-                    let status = NotificationManager.shared.authorizationStatus
-                    if status == .denied {
-                        HStack(spacing: 10) {
-                            Image(systemName: "bell.slash.fill")
-                                .foregroundStyle(.red)
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("Notifications are disabled")
-                                    .font(.subheadline.weight(.medium))
-                                    .foregroundStyle(.red)
-                                Text("Tap below to enable them in iOS Settings.")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-                        .padding(.vertical, 4)
-                    } else if status == .notDetermined {
-                        Button {
-                            Task {
-                                // Result unused deliberately — refreshAll runs regardless, and
-                                // NotificationManager's own @Published authorizationStatus is
-                                // what this screen observes to reflect granted/denied.
-                                _ = await NotificationManager.shared.requestAuthorization()
-                                NotificationScheduler.shared.refreshAll(context: context)
-                            }
+                // MARK: Caregiving
+                if !auth.isGuest {
+                    Section {
+                        NavigationLink {
+                            CaregiverInviteView()
                         } label: {
-                            HStack {
-                                SettingsLabel(title: "Enable Notifications", systemImage: "bell.badge.fill", tint: .red, titleColor: Color.accentColor)
-                                Spacer()
+                            SettingsLabel(title: "Invite a Caregiver", systemImage: "person.2.fill", tint: .blue)
+                        }
+
+                        // Caring for someone else is the PAID capability (DoseTrack Plus): the
+                        // caregiver is the one gaining "manage another person's medications," so
+                        // they carry the subscription — not the patient. Non-subscribers still
+                        // see this row, ghosted, and tapping routes to the paywall.
+                        if subscriptionManager.isProSubscriber {
+                            Button { showingEnterInviteCode = true } label: {
+                                SettingsLabel(title: "Care for Someone", systemImage: "person.badge.shield.checkmark", tint: .teal)
+                            }
+                        } else {
+                            GhostedProRow(isPro: false, onLockedTap: { showingPaywall = true }) {
+                                SettingsLabel(title: "Care for Someone", systemImage: "person.badge.shield.checkmark", tint: .teal)
                             }
                         }
-                    } else {
-                        HStack(spacing: 10) {
-                            Image(systemName: "bell.fill")
-                                .foregroundStyle(.green)
-                            Text("Notifications enabled")
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                        }
-                        .padding(.vertical, 2)
-                    }
-
-                    Button {
-                        sendTestNotification()
-                    } label: {
-                        HStack {
-                            SettingsLabel(
-                                title: testNotificationSent ? "Test Sent ✓ (background the app)" : "Send Test Notification",
-                                systemImage: "bell.fill",
-                                tint: .red,
-                                titleColor: testNotificationSent ? .green : .primary
-                            )
-                            Spacer()
-                        }
-                    }
-                    .disabled(status == .denied)
-
-                    HStack {
-                        SettingsLabel(title: "Default Snooze", systemImage: "clock.fill", tint: .gray)
-                        Spacer()
-                        Picker("", selection: $defaultSnoozeDuration) {
-                            Text("10 min").tag(10)
-                            Text("15 min").tag(15)
-                            Text("30 min").tag(30)
-                            Text("1 hour").tag(60)
-                        }
-                        .pickerStyle(.menu)
-                    }
-
-                    // Link to iOS notification settings for full control
-                    Button {
-                        if let url = URL(string: UIApplication.openNotificationSettingsURLString) {
-                            UIApplication.shared.open(url)
-                        }
-                    } label: {
-                        SettingsLabel(title: "iOS Notification Settings", systemImage: "gear", tint: .gray)
-                    }
-                } header: {
-                    Text("Notifications")
-                } footer: {
-                    if NotificationManager.shared.authorizationStatus == .authorized {
-                        Text("Test notifications appear when the app is in the background.")
-                            .font(.caption)
+                    } header: {
+                        Text("Caregiving")
+                    } footer: {
+                        Text("Inviting a caregiver is free. Caring for someone else's medications is a DoseTrack Plus feature.")
                     }
                 }
 
-                // MARK: Apple Watch
-                Section {
-                    HStack(spacing: 10) {
-                        Image(systemName: watchManager.isWatchReachable ? "applewatch.radiowaves.left.and.right" : "applewatch.slash")
-                            .foregroundStyle(watchManager.isWatchReachable ? .green : .secondary)
-                        Text(watchManager.isWatchReachable ? "Watch connected" : "Watch not reachable right now")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                    }
-                    .padding(.vertical, 2)
-
-                    Button {
-                        watchManager.syncTodayMedications(context: context)
-                        watchSyncTriggered = true
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { watchSyncTriggered = false }
-                    } label: {
-                        HStack {
-                            SettingsLabel(
-                                title: watchSyncTriggered ? "Sync Sent ✓" : "Sync to Watch",
-                                systemImage: "arrow.triangle.2.circlepath",
-                                tint: .blue,
-                                titleColor: watchSyncTriggered ? .green : .primary
-                            )
-                            Spacer()
-                        }
-                    }
-                } header: {
-                    Text("Apple Watch")
-                } footer: {
-                    Text("The watch normally updates on its own whenever a dose is logged or a medication changes. Use this if it looks out of date — e.g. right after pairing, or if the watch wasn't in range earlier.")
-                        .font(.caption)
-                }
-
-                // MARK: Preferences
+                // MARK: Preferences (all navigation rows)
                 Section("Preferences") {
+                    NavigationLink {
+                        NotificationSettingsView()
+                    } label: {
+                        SettingsLabel(title: "Notifications", systemImage: "bell.badge.fill", tint: .red)
+                    }
+
                     NavigationLink {
                         AppPreferencesView()
                     } label: {
                         SettingsLabel(title: "App Preferences", systemImage: "slider.horizontal.3", tint: .gray)
-                    }
-
-                    NavigationLink {
-                        MealTimesView()
-                    } label: {
-                        SettingsLabel(title: "Daily Routine Times", systemImage: "sun.max.fill", tint: .orange)
-                    }
-
-                    NavigationLink {
-                        ColorCodingView()
-                    } label: {
-                        SettingsLabel(title: "Colour Coding", systemImage: "paintpalette.fill", tint: .pink)
                     }
 
                     GhostedProRow(isPro: subscriptionManager.isProSubscriber, onLockedTap: { showingPaywall = true }) {
@@ -279,51 +175,23 @@ struct SettingsView: View {
                             SettingsLabel(title: "App Icon", systemImage: "app.badge.fill", tint: .indigo)
                         }
                     }
-                }
 
-                // MARK: Data & Privacy
-                Section {
-                    // Being cared for is FREE. The patient is often a child or a person with a
-                    // disability who shouldn't have to pay — they just generate an invite for
-                    // their caregiver. Hidden for guests, who have no real Supabase account to
-                    // attach the relationship to.
-                    if !auth.isGuest {
-                        NavigationLink {
-                            CaregiverInviteView()
-                        } label: {
-                            SettingsLabel(title: "Invite a Caregiver", systemImage: "person.2.fill", tint: .blue)
-                        }
-
-                        // Caring for someone else is the PAID capability (DoseTrack Pro): the
-                        // caregiver is the one gaining "manage another person's medications," so
-                        // they carry the subscription — not the patient. Non-subscribers still
-                        // see this row, ghosted, and tapping routes to the paywall.
-                        if subscriptionManager.isProSubscriber {
-                            Button { showingEnterInviteCode = true } label: {
-                                SettingsLabel(title: "Care for Someone", systemImage: "person.badge.shield.checkmark", tint: .teal)
-                            }
-                        } else {
-                            GhostedProRow(isPro: false, onLockedTap: { showingPaywall = true }) {
-                                SettingsLabel(title: "Care for Someone", systemImage: "person.badge.shield.checkmark", tint: .teal)
-                            }
-                        }
-                    }
-                } header: {
-                    Text("Caregiving")
-                } footer: {
-                    Text("Inviting a caregiver is free. Caring for someone else's medications is a DoseTrack Pro feature.")
-                }
-
-                // MARK: Data & Privacy
-                Section("Data & Privacy") {
                     NavigationLink {
-                        DisclaimerView()
+                        MealTimesView()
                     } label: {
-                        SettingsLabel(title: "Privacy & Disclaimer", systemImage: "hand.raised.fill", tint: .gray)
+                        SettingsLabel(title: "Routine Preferences", systemImage: "sun.max.fill", tint: .orange)
                     }
 
-                    Link(destination: Constants.ExternalLinks.privacyPolicy) {
-                        SettingsLabel(title: "Privacy Policy", systemImage: "doc.text.fill", tint: .blue)
+                    NavigationLink {
+                        ColorCodingView()
+                    } label: {
+                        SettingsLabel(title: "Medication Preferences", systemImage: "paintpalette.fill", tint: .pink)
+                    }
+
+                    NavigationLink {
+                        WatchSyncView()
+                    } label: {
+                        SettingsLabel(title: "Apple Watch Sync", systemImage: "applewatch", tint: .blue)
                     }
                 }
 
@@ -347,6 +215,16 @@ struct SettingsView: View {
                         }
                     }
 
+                    NavigationLink {
+                        DisclaimerView()
+                    } label: {
+                        SettingsLabel(title: "Privacy & Disclaimer", systemImage: "hand.raised.fill", tint: .gray)
+                    }
+
+                    Link(destination: Constants.ExternalLinks.privacyPolicy) {
+                        SettingsLabel(title: "Privacy Policy", systemImage: "doc.text.fill", tint: .blue)
+                    }
+
                     Button {
                         // Native in-app rating prompt (previously this opened apps.apple.com's
                         // home page, which did nothing useful). Apple rate-limits how often the
@@ -362,10 +240,7 @@ struct SettingsView: View {
                     } label: {
                         SettingsLabel(title: "Sign Out", systemImage: "rectangle.portrait.and.arrow.right", tint: .gray)
                     }
-                }
 
-                // MARK: Danger zone
-                Section {
                     Button {
                         showingDeleteConfirm = true
                     } label: {
@@ -412,9 +287,6 @@ struct SettingsView: View {
                     } else {
                         devPasscodeError = true
                         devPasscodeEntry = ""
-                        // Re-present the alert on the next run loop turn so the user can
-                        // retry — setting isPresented back to true in the same turn a
-                        // SwiftUI alert dismisses from is unreliable.
                         DispatchQueue.main.async { showingDevPasscodePrompt = true }
                     }
                 }
@@ -441,15 +313,6 @@ struct SettingsView: View {
         _ = await subscriptionManager.checkEntitlement()
     }
 
-    private func sendTestNotification() {
-        Task {
-            await NotificationManager.shared.sendTestNotification()
-            testNotificationSent = true
-            try? await Task.sleep(for: .seconds(3))
-            testNotificationSent = false
-        }
-    }
-
     private func deleteAllData() {
         // Local batch delete, then merge the changes into the live context so the UI updates
         // without a relaunch (NSBatchDeleteRequest bypasses the context by default).
@@ -470,6 +333,165 @@ struct SettingsView: View {
 
         // Delete the cloud copy too, or the next pullAll restores everything.
         Task { await SupabaseSyncManager.shared.deleteAllRemoteData() }
+    }
+}
+
+// MARK: - Plus tier badge
+
+/// High-contrast chip marking the DoseTrack Plus tier — replaces the old low-contrast gold text
+/// (`Text("… Pro ✦").foregroundStyle(.yellow)`) that was hard to read on a white row for low-vision
+/// users. A filled brand-blue capsule with white text passes contrast comfortably.
+private struct PlusBadge: View {
+    var body: some View {
+        HStack(spacing: 3) {
+            Image(systemName: "star.fill").font(.system(size: 9, weight: .bold))
+            Text("PLUS").font(.system(size: 11, weight: .heavy))
+        }
+        .foregroundStyle(.white)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 3)
+        .background(Color(hex: "#3B5FCC"), in: Capsule())
+    }
+}
+
+// MARK: - Notifications sub-screen
+
+/// The notification controls, moved out of the main Settings list into a dedicated "Notifications"
+/// row's destination so the Preferences section is a clean set of navigation rows.
+private struct NotificationSettingsView: View {
+    @Environment(\.managedObjectContext) private var context
+    @ObservedObject private var notif = NotificationManager.shared
+    @AppStorage("defaultSnoozeDuration") private var defaultSnoozeDuration: Int = 30
+    @State private var testNotificationSent = false
+
+    var body: some View {
+        List {
+            Section {
+                let status = notif.authorizationStatus
+                if status == .denied {
+                    HStack(spacing: 10) {
+                        Image(systemName: "bell.slash.fill").foregroundStyle(.red)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Notifications are disabled")
+                                .font(.subheadline.weight(.medium))
+                                .foregroundStyle(.red)
+                            Text("Tap below to enable them in iOS Settings.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .padding(.vertical, 4)
+                } else if status == .notDetermined {
+                    Button {
+                        Task {
+                            _ = await NotificationManager.shared.requestAuthorization()
+                            NotificationScheduler.shared.refreshAll(context: context)
+                        }
+                    } label: {
+                        SettingsLabel(title: "Enable Notifications", systemImage: "bell.badge.fill", tint: .red, titleColor: Color.accentColor)
+                    }
+                } else {
+                    HStack(spacing: 10) {
+                        Image(systemName: "bell.fill").foregroundStyle(.green)
+                        Text("Notifications enabled")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.vertical, 2)
+                }
+
+                Button {
+                    sendTestNotification()
+                } label: {
+                    SettingsLabel(
+                        title: testNotificationSent ? "Test Sent ✓ (background the app)" : "Send Test Notification",
+                        systemImage: "bell.fill",
+                        tint: .red,
+                        titleColor: testNotificationSent ? .green : .primary
+                    )
+                }
+                .disabled(notif.authorizationStatus == .denied)
+
+                HStack {
+                    SettingsLabel(title: "Default Snooze", systemImage: "clock.fill", tint: .gray)
+                    Spacer()
+                    Picker("", selection: $defaultSnoozeDuration) {
+                        Text("10 min").tag(10)
+                        Text("15 min").tag(15)
+                        Text("30 min").tag(30)
+                        Text("1 hour").tag(60)
+                    }
+                    .pickerStyle(.menu)
+                }
+
+                Button {
+                    if let url = URL(string: UIApplication.openNotificationSettingsURLString) {
+                        UIApplication.shared.open(url)
+                    }
+                } label: {
+                    SettingsLabel(title: "iOS Notification Settings", systemImage: "gear", tint: .gray)
+                }
+            } footer: {
+                if notif.authorizationStatus == .authorized {
+                    Text("Test notifications appear when the app is in the background.")
+                        .font(.caption)
+                }
+            }
+        }
+        .navigationTitle("Notifications")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private func sendTestNotification() {
+        Task {
+            await NotificationManager.shared.sendTestNotification()
+            testNotificationSent = true
+            try? await Task.sleep(for: .seconds(3))
+            testNotificationSent = false
+        }
+    }
+}
+
+// MARK: - Apple Watch sub-screen
+
+/// The Apple Watch connection status + manual sync, moved into the "Apple Watch Sync" row's
+/// destination.
+private struct WatchSyncView: View {
+    @Environment(\.managedObjectContext) private var context
+    @EnvironmentObject private var watchManager: WatchConnectivityManager
+    @State private var watchSyncTriggered = false
+
+    var body: some View {
+        List {
+            Section {
+                HStack(spacing: 10) {
+                    Image(systemName: watchManager.isWatchReachable ? "applewatch.radiowaves.left.and.right" : "applewatch.slash")
+                        .foregroundStyle(watchManager.isWatchReachable ? .green : .secondary)
+                    Text(watchManager.isWatchReachable ? "Watch connected" : "Watch not reachable right now")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.vertical, 2)
+
+                Button {
+                    watchManager.syncTodayMedications(context: context)
+                    watchSyncTriggered = true
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { watchSyncTriggered = false }
+                } label: {
+                    SettingsLabel(
+                        title: watchSyncTriggered ? "Sync Sent ✓" : "Sync to Watch",
+                        systemImage: "arrow.triangle.2.circlepath",
+                        tint: .blue,
+                        titleColor: watchSyncTriggered ? .green : .primary
+                    )
+                }
+            } footer: {
+                Text("The watch normally updates on its own whenever a dose is logged or a medication changes. Use this if it looks out of date — e.g. right after pairing, or if the watch wasn't in range earlier.")
+                    .font(.caption)
+            }
+        }
+        .navigationTitle("Apple Watch")
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
 
@@ -500,7 +522,7 @@ private struct SettingsLabel: View {
     }
 }
 
-/// Wraps a Pro-only settings row so free-tier users see it dimmed with a lock badge instead of
+/// Wraps a Plus-only settings row so free-tier users see it dimmed with a lock badge instead of
 /// it being hidden entirely — showing what they're missing is the point (nudges toward upgrading)
 /// rather than pretending the feature doesn't exist. Still fully tappable: `onLockedTap` should
 /// present the paywall, since a fully "unusable" (non-interactive) row would bury the exact
@@ -551,7 +573,7 @@ struct DisclaimerView: View {
                 Text("DoseTrack is a reminder tool only. It does not provide medical advice, diagnosis, or treatment. Always follow your healthcare provider's instructions regarding medications.")
                 Text("Data Privacy")
                     .font(.title2.bold())
-                Text("All medication data is stored locally on your device. No personal health information is sent to external servers without your explicit consent. Family sharing (DoseTrack Pro feature) syncs data only with caregivers you explicitly invite.")
+                Text("All medication data is stored locally on your device. No personal health information is sent to external servers without your explicit consent. Family sharing (a DoseTrack Plus feature) syncs data only with caregivers you explicitly invite.")
                 Text("If you have questions about your medications, consult your pharmacist or doctor.")
                     .foregroundStyle(.secondary)
             }
@@ -578,4 +600,5 @@ private extension Bundle {
         .environmentObject(SubscriptionManager())
         .environmentObject(AuthManager.shared)
         .environmentObject(CaregiverManager.shared)
+        .environmentObject(WatchConnectivityManager.shared)
 }

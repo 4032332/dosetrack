@@ -129,10 +129,14 @@ struct AvatarBadge: View {
                 }
 
             if isPro {
-                Image(systemName: "star.circle.fill")
-                    .font(.system(size: size * 0.32))
-                    .foregroundStyle(.yellow)
-                    .background(Circle().fill(.white).padding(1))
+                // High-contrast Plus marker: a filled brand-blue disc with a white star, ringed in
+                // white so it reads clearly against any avatar. (Was a low-contrast yellow star.)
+                Image(systemName: "star.fill")
+                    .font(.system(size: size * 0.16, weight: .bold))
+                    .foregroundStyle(.white)
+                    .padding(size * 0.06)
+                    .background(Circle().fill(Color(hex: "#3B5FCC")))
+                    .overlay(Circle().stroke(.white, lineWidth: max(1, size * 0.03)))
                     .offset(x: 2, y: 2)
             }
         }
