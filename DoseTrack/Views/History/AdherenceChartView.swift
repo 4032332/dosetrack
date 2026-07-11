@@ -24,11 +24,12 @@ struct AdherenceChartView: View {
             }
         }
         .chartXAxis {
-            // `.month(.narrow)` renders as a single letter (e.g. "J" for both June and
-            // July), which is ambiguous — numeric day/month is unambiguous everywhere.
+            // Week view (short range): a single narrow weekday letter reads as the
+            // familiar M T W T F S S strip. Longer ranges keep numeric day/month —
+            // weekday letters would be ambiguous once a range spans multiple weeks.
             if showXLabels {
                 AxisMarks(values: .stride(by: .day)) { value in
-                    AxisValueLabel(format: .dateTime.day().month(.defaultDigits))
+                    AxisValueLabel(format: .dateTime.weekday(.narrow))
                 }
             } else {
                 AxisMarks(values: .stride(by: .weekOfYear)) { value in
