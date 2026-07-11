@@ -67,6 +67,20 @@ extension Medication {
         return currentCount <= refillThreshold || daysOfSupply < 7
     }
 
+    /// True once supply has been sitting at exactly 0 for more than a full day — the trigger for
+    /// the Medications tab's "remove it or update your supply?" nudge. `updatedAt` is used as the
+    /// "since when" marker: `DoseLoggingService` only touches it as part of decrementing supply
+    /// (and stops touching it once supply reaches 0, since the decrement is guarded on
+    /// `currentCount > 0`), so for a medication that's been sitting at 0 it reflects the moment
+    /// it ran out. The one inexactness: editing an unrelated field (name, colour) while at 0
+    /// supply also bumps `updatedAt` and delays the nudge by another day — an acceptable
+    /// approximation rather than adding a dedicated "ran out at" timestamp for this alone.
+    var isOutOfStockOverADay: Bool {
+        guard totalDosesPerDay > 0, currentCount == 0 else { return false }
+        guard let updatedAt else { return false }
+        return updatedAt.timeIntervalSinceNow < -86400
+    }
+
     var wrappedName: String { name ?? "" }
     var wrappedDosage: String { dosage ?? "" }
     var wrappedUnit: String { unit ?? "pill" }

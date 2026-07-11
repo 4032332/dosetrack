@@ -11,6 +11,10 @@ struct ScheduleDraft: Identifiable {
     var daysOfWeek: [Int] = []
     var isEnabled: Bool = true
     var intervalDays: Int = 1
+    /// Set when this draft was generated from "Link to routine" (e.g. "Bedtime") — Today then
+    /// shows the routine name instead of a clock time. Cleared whenever the user hand-edits the
+    /// time directly, since it may no longer match the routine's own time.
+    var routineLabel: String? = nil
 }
 
 @MainActor
@@ -93,7 +97,8 @@ final class AddEditMedicationViewModel: ObservableObject {
                     frequency: s.wrappedFrequency,
                     daysOfWeek: s.daysOfWeekArray,
                     isEnabled: s.isEnabled,
-                    intervalDays: Int(s.intervalDays)
+                    intervalDays: Int(s.intervalDays),
+                    routineLabel: s.wrappedRoutineLabel
                 )
             }
             if schedules.isEmpty { schedules = [ScheduleDraft()] }
@@ -184,6 +189,7 @@ final class AddEditMedicationViewModel: ObservableObject {
             s.daysOfWeekArray = draft.daysOfWeek
             s.isEnabled = draft.isEnabled
             s.intervalDays = Int16(min(draft.intervalDays, Int(Int16.max)))
+            s.routineLabel = draft.routineLabel
             s.medication = med
             s.updatedAt = Date()
         }

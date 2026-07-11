@@ -33,7 +33,12 @@ struct DoseRowView: View {
             Spacer()
 
             VStack(alignment: .trailing, spacing: 4) {
-                Text(TimeFormatPreference.string(for: entry.scheduledAt, preference: timeFormat))
+                // A schedule linked to a Daily Routine Time (e.g. "Bedtime") is really keyed to
+                // that routine, not a fixed clock time — the actual fire time follows wherever
+                // the user has that routine set in Settings. Showing the routine name is more
+                // meaningful than a clock time that's really just a byproduct of it, and stays
+                // correct even if the user later moves the routine's time.
+                Text(entry.schedule.wrappedRoutineLabel ?? TimeFormatPreference.string(for: entry.scheduledAt, preference: timeFormat))
                     .font(.caption.monospacedDigit())
                     .foregroundStyle(.secondary)
                 if entry.isUpcoming {
@@ -47,7 +52,7 @@ struct DoseRowView: View {
         .accessibilityElement(children: .combine)
         .accessibilityLabel(
             "\(entry.medication.wrappedName), \(entry.medication.wrappedDosage), " +
-            "due at \(TimeFormatPreference.string(for: entry.scheduledAt, preference: timeFormat)), " +
+            "due at \(entry.schedule.wrappedRoutineLabel ?? TimeFormatPreference.string(for: entry.scheduledAt, preference: timeFormat)), " +
             "\(entry.isUpcoming ? "upcoming" : entry.status.displayName)"
         )
     }

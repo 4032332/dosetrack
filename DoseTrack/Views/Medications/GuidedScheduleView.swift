@@ -292,7 +292,7 @@ struct GuidedScheduleView: View {
             return (ta.hour, ta.minute) < (tb.hour, tb.minute)
         }.map { meal in
             let t = meal.time(in: mealTimes)
-            return makeDraft(hour: t.hour, minute: t.minute)
+            return makeDraft(hour: t.hour, minute: t.minute, routineLabel: meal.label)
         }
     }
 
@@ -345,6 +345,10 @@ struct GuidedScheduleView: View {
                             let c = Calendar.current.dateComponents([.hour, .minute], from: date)
                             draft.hour = c.hour ?? 8
                             draft.minute = c.minute ?? 0
+                            // Hand-editing the time detaches it from whatever routine it was
+                            // linked to — Today should go back to showing the clock time, since
+                            // it's no longer guaranteed to match that routine's own time.
+                            draft.routineLabel = nil
                         }
                     ), displayedComponents: .hourAndMinute)
                     .labelsHidden()
@@ -386,11 +390,12 @@ struct GuidedScheduleView: View {
         step = .howOften
     }
 
-    private func makeDraft(hour: Int, minute: Int) -> ScheduleDraft {
+    private func makeDraft(hour: Int, minute: Int, routineLabel: String? = nil) -> ScheduleDraft {
         ScheduleDraft(
             hour: hour, minute: minute,
             frequency: everyDay ? "daily" : "custom",
-            daysOfWeek: everyDay ? [] : daysOfWeek
+            daysOfWeek: everyDay ? [] : daysOfWeek,
+            routineLabel: routineLabel
         )
     }
 

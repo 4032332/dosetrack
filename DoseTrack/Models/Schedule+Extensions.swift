@@ -46,4 +46,10 @@ extension Schedule {
     }
 
     var wrappedFrequency: String { frequency ?? "daily" }
+
+    /// The Daily Routine Time this schedule was linked to (e.g. "Bedtime", "Wake Up"), if any —
+    /// set only when created via GuidedScheduleView's "Link to routine" path. `nil` for schedules
+    /// on a manually-chosen or interval-generated time, since those aren't tied to a routine that
+    /// could move independently of the schedule's own hour/minute.
+    var wrappedRoutineLabel: String? { routineLabel }
 }

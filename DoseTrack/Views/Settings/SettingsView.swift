@@ -267,6 +267,18 @@ struct SettingsView: View {
                     } label: {
                         SettingsLabel(title: "Colour Coding", systemImage: "paintpalette.fill", tint: .pink)
                     }
+
+                    GhostedProRow(isPro: subscriptionManager.isProSubscriber, onLockedTap: { showingPaywall = true }) {
+                        if subscriptionManager.isProSubscriber {
+                            NavigationLink {
+                                AppIconPickerView()
+                            } label: {
+                                SettingsLabel(title: "App Icon", systemImage: "app.badge.fill", tint: .indigo)
+                            }
+                        } else {
+                            SettingsLabel(title: "App Icon", systemImage: "app.badge.fill", tint: .indigo)
+                        }
+                    }
                 }
 
                 // MARK: Data & Privacy
@@ -285,22 +297,14 @@ struct SettingsView: View {
                         // Caring for someone else is the PAID capability (DoseTrack Pro): the
                         // caregiver is the one gaining "manage another person's medications," so
                         // they carry the subscription — not the patient. Non-subscribers still
-                        // see this row (for discovery) but are routed to the paywall.
-                        Button {
-                            if subscriptionManager.isProSubscriber {
-                                showingEnterInviteCode = true
-                            } else {
-                                showingPaywall = true
-                            }
-                        } label: {
-                            HStack {
+                        // see this row, ghosted, and tapping routes to the paywall.
+                        if subscriptionManager.isProSubscriber {
+                            Button { showingEnterInviteCode = true } label: {
                                 SettingsLabel(title: "Care for Someone", systemImage: "person.badge.shield.checkmark", tint: .teal)
-                                if !subscriptionManager.isProSubscriber {
-                                    Spacer()
-                                    Image(systemName: "star.fill")
-                                        .font(.caption)
-                                        .foregroundStyle(.yellow)
-                                }
+                            }
+                        } else {
+                            GhostedProRow(isPro: false, onLockedTap: { showingPaywall = true }) {
+                                SettingsLabel(title: "Care for Someone", systemImage: "person.badge.shield.checkmark", tint: .teal)
                             }
                         }
                     }
@@ -492,6 +496,36 @@ private struct SettingsLabel: View {
                 }
             Text(title)
                 .foregroundStyle(titleColor)
+        }
+    }
+}
+
+/// Wraps a Pro-only settings row so free-tier users see it dimmed with a lock badge instead of
+/// it being hidden entirely — showing what they're missing is the point (nudges toward upgrading)
+/// rather than pretending the feature doesn't exist. Still fully tappable: `onLockedTap` should
+/// present the paywall, since a fully "unusable" (non-interactive) row would bury the exact
+/// upsell moment a user tapping out of curiosity is the best time to show.
+private struct GhostedProRow<Content: View>: View {
+    let isPro: Bool
+    let onLockedTap: () -> Void
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        if isPro {
+            content()
+        } else {
+            Button(action: onLockedTap) {
+                HStack {
+                    content()
+                        .opacity(0.4)
+                    Spacer()
+                    Image(systemName: "lock.fill")
+                        .font(.caption)
+                        .foregroundStyle(.yellow)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
         }
     }
 }

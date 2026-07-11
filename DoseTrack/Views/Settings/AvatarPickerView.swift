@@ -8,13 +8,13 @@ struct AvatarOption: Identifiable {
     var id: String { key }
     let key: String           // stored in AppStorage / used as asset name
     let name: String
-    let assetName: String?    // nil for Milli (uses "OnboardingWelcome")
+    let assetName: String?    // nil for a fallback-emoji-only avatar
     let fallbackEmoji: String
     let gradient: [Color]
 }
 
 let allAvatars: [AvatarOption] = [
-    AvatarOption(key: "milli",   name: "Milli",           assetName: "OnboardingWelcome",
+    AvatarOption(key: "milli",   name: "Milli",           assetName: "SplashHero",
                  fallbackEmoji: "💊", gradient: [Color(hex: "5B8AF0"), Color(hex: "3B5FCC")]),
     AvatarOption(key: "bear",    name: "Doctor Bear",      assetName: "Avatar_bear",
                  fallbackEmoji: "🐻", gradient: [Color(hex: "8D6E63"), Color(hex: "5D4037")]),

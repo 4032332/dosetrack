@@ -169,7 +169,14 @@ struct HistoryView: View {
                                 showingPaywall = true
                             }
                         } label: {
-                            Label("Adherence Report (PDF)", systemImage: "doc.richtext")
+                            // Menu items don't support custom opacity/badge styling, so a locked
+                            // (non-Pro) state is signalled by swapping the icon to a lock glyph —
+                            // still tappable, still routes to the paywall, matching the "show
+                            // what they're missing, don't hide it" pattern used elsewhere.
+                            Label(
+                                "Adherence Report (PDF)",
+                                systemImage: subscriptionManager.isProSubscriber ? "doc.richtext" : "lock.fill"
+                            )
                         }
                     } label: {
                         Image(systemName: "square.and.arrow.up")

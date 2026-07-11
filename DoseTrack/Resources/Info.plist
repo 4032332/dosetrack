@@ -21,6 +21,34 @@
 				<string>AppIcon</string>
 			</array>
 		</dict>
+		<!-- Pro-only alternate icons (AppIconManager / AppIconPickerView). Loose PNGs under
+		     DoseTrack/Resources/AlternateIcons — not in the Assets.xcassets AppIcon.appiconset —
+		     since alternate icons set via UIApplication.setAlternateIconName must be plain bundle
+		     files, each name here matched against "<name>@2x.png" / "<name>@3x.png" on disk. -->
+		<key>CFBundleAlternateIcons</key>
+		<dict>
+			<key>AltIconDark</key>
+			<dict>
+				<key>CFBundleIconFiles</key>
+				<array>
+					<string>AltIconDark</string>
+				</array>
+			</dict>
+			<key>AltIconMint</key>
+			<dict>
+				<key>CFBundleIconFiles</key>
+				<array>
+					<string>AltIconMint</string>
+				</array>
+			</dict>
+			<key>AltIconLavender</key>
+			<dict>
+				<key>CFBundleIconFiles</key>
+				<array>
+					<string>AltIconLavender</string>
+				</array>
+			</dict>
+		</dict>
 	</dict>
 	<key>CFBundleIdentifier</key>
 	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>

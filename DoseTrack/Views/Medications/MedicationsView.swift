@@ -16,6 +16,10 @@ struct MedicationsView: View {
 
     @State private var isEditMode: EditMode = .inactive
     @Binding var showingAccountSwitcher: Bool
+    /// Session-only dismissal for the out-of-stock nudge — reappears next time the tab is opened
+    /// if the medication is still at 0 supply, so it can't be permanently swept under the rug
+    /// without actually resolving it (remove or restock).
+    @State private var dismissedOutOfStockIds: Set<UUID> = []
 
     init(showingAccountSwitcher: Binding<Bool> = .constant(false)) {
         self._showingAccountSwitcher = showingAccountSwitcher
@@ -114,8 +118,29 @@ struct MedicationsView: View {
         }
     }
 
+    private var outOfStockMedications: [Medication] {
+        viewModel.medications.filter { med in
+            guard let id = med.id else { return false }
+            return med.isOutOfStockOverADay && !dismissedOutOfStockIds.contains(id)
+        }
+    }
+
     private var medicationsList: some View {
         List {
+            ForEach(outOfStockMedications) { med in
+                OutOfStockNudgeCard(
+                    medication: med,
+                    onUpdateSupply: { viewModel.requestEdit(med) },
+                    onRemove: { viewModel.requestDelete(med) },
+                    onDismiss: {
+                        if let id = med.id { dismissedOutOfStockIds.insert(id) }
+                    }
+                )
+                .listRowInsets(EdgeInsets())
+                .listRowSeparator(.hidden)
+                .listRowBackground(Color.clear)
+            }
+
             ForEach(viewModel.medications) { med in
                 Button {
                     viewModel.requestEdit(med)
@@ -258,6 +283,71 @@ struct MedicationColorTile: View {
                 .foregroundStyle(medication.color)
         }
         .frame(width: size, height: size)
+    }
+}
+
+// MARK: - Out-of-stock nudge
+
+/// Shown at the top of the Medications list for any medication that's been sitting at 0 supply
+/// for more than a day — a gentle nudge to either restock it or take it off the active list,
+/// rather than a schedule silently reminding the user to take doses that don't exist. Non-
+/// blocking: the rest of the list stays fully usable underneath it.
+private struct OutOfStockNudgeCard: View {
+    let medication: Medication
+    let onUpdateSupply: () -> Void
+    let onRemove: () -> Void
+    let onDismiss: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.subheadline)
+                    .foregroundStyle(.orange)
+                    .padding(.top, 2)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("\(medication.wrappedName) is out of stock")
+                        .font(.subheadline.weight(.semibold))
+                    Text("It's been at 0 supply for over a day. Remove it or update your supply?")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer(minLength: 0)
+
+                Button(action: onDismiss) {
+                    Image(systemName: "xmark")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+            }
+
+            HStack(spacing: 10) {
+                Button(action: onUpdateSupply) {
+                    Text("Update Supply")
+                        .font(.caption.weight(.semibold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 7)
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.small)
+
+                Button(role: .destructive, action: onRemove) {
+                    Text("Remove")
+                        .font(.caption.weight(.semibold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 7)
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+            }
+        }
+        .padding(12)
+        .background(Color.orange.opacity(0.1), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .padding(.horizontal, 16)
+        .padding(.vertical, 4)
     }
 }
 

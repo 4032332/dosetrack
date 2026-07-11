@@ -358,6 +358,7 @@ final class SupabaseSyncManager: ObservableObject {
             sched.daysOfWeek   = row.daysOfWeek as NSArray
             sched.intervalDays = row.intervalDays
             sched.isEnabled    = row.isEnabled
+            sched.routineLabel = row.routineLabel
             sched.medication   = med
             sched.updatedAt    = row.updatedAt
         }
@@ -525,6 +526,7 @@ struct ScheduleRow: Codable {
     var daysOfWeek: [Int]
     var intervalDays: Int16
     var isEnabled: Bool
+    var routineLabel: String?
     var updatedAt: Date
 
     enum CodingKeys: String, CodingKey {
@@ -534,6 +536,7 @@ struct ScheduleRow: Codable {
         case daysOfWeek = "days_of_week"
         case intervalDays = "interval_days"
         case isEnabled = "is_enabled"
+        case routineLabel = "routine_label"
         case updatedAt = "updated_at"
     }
 
@@ -547,6 +550,7 @@ struct ScheduleRow: Codable {
         daysOfWeek       = schedule.daysOfWeekArray
         intervalDays     = schedule.intervalDays
         isEnabled        = schedule.isEnabled
+        routineLabel     = schedule.wrappedRoutineLabel
         updatedAt        = schedule.updatedAt ?? Date()
     }
 }

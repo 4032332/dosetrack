@@ -55,13 +55,12 @@ struct TodayWatchView: View {
                 )
 
             HStack(spacing: 10) {
-                // Milli avatar
-                Image("MilliHero")
+                // Milli avatar — WatchHero is a transparent cut-out (no baked-in background), so
+                // it drops straight onto the gradient with no box/circle backing needed.
+                Image("WatchHero")
                     .resizable()
                     .scaledToFit()
                     .frame(width: 38, height: 38)
-                    .clipShape(Circle())
-                    .background(Circle().fill(.white.opacity(0.2)))
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(allDone ? "All done! 🎉" : "Today's doses")
@@ -155,7 +154,7 @@ struct TodayWatchView: View {
 
     private var emptyState: some View {
         VStack(spacing: 8) {
-            Image("MilliHero")
+            Image("WatchHero")
                 .resizable()
                 .scaledToFit()
                 .frame(width: 50, height: 50)
