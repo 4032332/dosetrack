@@ -222,6 +222,16 @@ final class SupabaseSyncManager: ObservableObject {
         } catch { print("deleteMedication error: \(error)") }
     }
 
+    /// Removes a single dose log server-side — used when a user un-takes an accidentally
+    /// checked-off dose. Best-effort; guarded for guests/unauth'd states.
+    func deleteDoseLog(id: UUID) async {
+        guard AuthManager.shared.isSignedIn, !AuthManager.shared.isGuest else { return }
+        do {
+            try await client.from("dose_logs")
+                .delete().eq("id", value: id.uuidString).execute()
+        } catch { print("deleteDoseLog error: \(error)") }
+    }
+
     /// Deletes all of the signed-in user's rows from Supabase. Best-effort; guarded so guests
     /// (no server data) and unauth'd states are no-ops. Called by Settings > Delete All Data —
     /// without this, the local wipe alone was undone by the very next pullAll() on relaunch.

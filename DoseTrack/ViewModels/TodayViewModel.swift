@@ -85,6 +85,19 @@ final class TodayViewModel: ObservableObject {
         log(entry: entry, status: .skipped, notes: reason)
     }
 
+    /// Un-takes an accidentally checked-off dose — deletes its log and restores supply.
+    func untake(_ entry: DoseEntry) {
+        DoseLoggingService.shared.untake(
+            medication: entry.medication,
+            schedule: entry.schedule,
+            scheduledAt: entry.scheduledAt,
+            existingLog: entry.existingLog,
+            context: context,
+            pushUserId: ActiveAccountResolver.shared.activeUserId
+        )
+        refresh()
+    }
+
     /// Marks every not-yet-taken entry in `entries` as taken in one pass — used for the
     /// "mark all taken" action on a group of doses due at the same time. Refreshes once at
     /// the end rather than once per entry, so the celebration pulse (and any UI observing
@@ -225,14 +238,17 @@ final class TodayViewModel: ObservableObject {
 
         var alerts: [MedicationAlert] = []
 
-        for med in medications {
-            // Uses Medication.isRefillWarning — the single canonical low-supply definition also
-            // used by the Medications list icon and Restock urgency colouring. This used to be a
-            // separate, looser copy here (`count > 0 && daysLeft < 7`, hardcoded 7 instead of the
-            // user's threshold) that disagreed with the other two screens.
-            if med.isRefillWarning {
-                alerts.append(.lowRefill(med, remaining: Int(med.currentCount)))
+        // Low-supply alerts, MOST URGENT FIRST — the medication that runs out soonest goes at the
+        // top. Sorted by days of supply remaining, tie-broken by raw count. (Uses the canonical
+        // Medication.isRefillWarning, shared with Restock urgency colouring.)
+        let lowRefillMeds = medications
+            .filter { $0.isRefillWarning }
+            .sorted {
+                if $0.daysOfSupply != $1.daysOfSupply { return $0.daysOfSupply < $1.daysOfSupply }
+                return $0.currentCount < $1.currentCount
             }
+        for med in lowRefillMeds {
+            alerts.append(.lowRefill(med, remaining: Int(med.currentCount)))
         }
 
         // Contraceptive tracker alert (stored in UserDefaults by ContraceptiveTrackerView)

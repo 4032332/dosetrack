@@ -7,8 +7,13 @@ struct DoseActionSheet: View {
     let onTaken: () -> Void
     let onSkipped: (String?) -> Void
     let onSnooze: () -> Void
+    let onUntake: () -> Void
     @Environment(\.dismiss) private var dismiss
     @AppStorage("timeFormat") private var timeFormat: String = "system"
+
+    /// An already-taken (and not merely upcoming) dose gets the undo affordance instead of the
+    /// take/skip/snooze actions — for correcting an accidental check-off.
+    private var isTaken: Bool { entry.status == .taken && !entry.isUpcoming }
 
     @State private var showingSkipReasonChoice = false
     @State private var showingReasonEntry = false
@@ -42,20 +47,27 @@ struct DoseActionSheet: View {
 
             Divider()
 
-            actionButton(title: "Mark as Taken", icon: "checkmark.circle.fill", color: .green) {
-                haptic(.medium)
-                UINotificationFeedbackGenerator().notificationOccurred(.success)
-                onTaken(); dismiss()
-            }
-            Divider().padding(.leading)
-            actionButton(title: "Skip This Dose", icon: "arrow.right.circle.fill", color: .orange) {
-                haptic(.light)
-                showingSkipReasonChoice = true
-            }
-            Divider().padding(.leading)
-            actionButton(title: "Snooze 30 Minutes", icon: "clock.fill", color: .blue) {
-                haptic(.light)
-                onSnooze(); dismiss()
+            if isTaken {
+                actionButton(title: "Mark as Not Taken", icon: "arrow.uturn.backward.circle.fill", color: .orange) {
+                    haptic(.medium)
+                    onUntake(); dismiss()
+                }
+            } else {
+                actionButton(title: "Mark as Taken", icon: "checkmark.circle.fill", color: .green) {
+                    haptic(.medium)
+                    UINotificationFeedbackGenerator().notificationOccurred(.success)
+                    onTaken(); dismiss()
+                }
+                Divider().padding(.leading)
+                actionButton(title: "Skip This Dose", icon: "arrow.right.circle.fill", color: .orange) {
+                    haptic(.light)
+                    showingSkipReasonChoice = true
+                }
+                Divider().padding(.leading)
+                actionButton(title: "Snooze 30 Minutes", icon: "clock.fill", color: .blue) {
+                    haptic(.light)
+                    onSnooze(); dismiss()
+                }
             }
 
             Divider().padding(.top, 8)
@@ -67,7 +79,7 @@ struct DoseActionSheet: View {
                 .padding()
         }
         .background(.background)
-        .presentationDetents([.height(320)])
+        .presentationDetents([.height(isTaken ? 220 : 320)])
         .presentationDragIndicator(.hidden)
         .confirmationDialog(
             "Record a reason for skipping?",

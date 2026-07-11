@@ -158,7 +158,8 @@ struct TodayView: View {
                     entry: entry,
                     onTaken:   { viewModel.markTaken(entry) },
                     onSkipped: { reason in viewModel.markSkipped(entry, reason: reason) },
-                    onSnooze:  { viewModel.snooze(entry) }
+                    onSnooze:  { viewModel.snooze(entry) },
+                    onUntake:  { viewModel.untake(entry) }
                 )
             }
         }

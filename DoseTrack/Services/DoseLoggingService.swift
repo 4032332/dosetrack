@@ -78,4 +78,42 @@ final class DoseLoggingService {
         // updateApplicationContext for background delivery when not immediately reachable).
         WatchConnectivityManager.shared.syncTodayMedications(context: context)
     }
+
+    /// Reverses a logged dose — used when a user un-takes an accidentally checked-off dose. Deletes
+    /// the log, restores the supply that logging "taken" decremented (skipped never decremented, so
+    /// only a previously-taken log adds back), and mirrors the same side effects as `log` (widget
+    /// reload, Supabase delete, watch re-sync). The pending reminder that `log` cancelled is
+    /// restored on the next `NotificationScheduler.refreshAll` (app open) rather than here.
+    func untake(
+        medication: Medication,
+        schedule: Schedule,
+        scheduledAt: Date,
+        existingLog: DoseLog?,
+        context: NSManagedObjectContext,
+        pushUserId: UUID?
+    ) {
+        guard let existingLog else { return }
+        let wasTaken = existingLog.status == DoseStatus.taken.rawValue
+        let logId = existingLog.id
+        let now = Date()
+
+        if wasTaken {
+            let scheduleCount = medication.schedulesArray.filter { $0.isEnabled }.count
+            let perDose = SupplyMath.quantityPerDose(
+                totalDosesPerDay: Int(medication.totalDosesPerDay),
+                enabledScheduleCount: scheduleCount
+            )
+            medication.currentCount += Int32(perDose)
+            medication.updatedAt = now
+        }
+
+        context.delete(existingLog)
+        context.saveOrReport()
+
+        WidgetCenter.shared.reloadAllTimelines()
+        if let logId {
+            Task { await SupabaseSyncManager.shared.deleteDoseLog(id: logId) }
+        }
+        WatchConnectivityManager.shared.syncTodayMedications(context: context)
+    }
 }

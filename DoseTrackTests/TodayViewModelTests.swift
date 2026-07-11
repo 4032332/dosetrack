@@ -72,6 +72,32 @@ final class TodayViewModelTests: XCTestCase {
         XCTAssertEqual(logs.first?.doseStatus, .taken)
     }
 
+    func testUntake_deletesLogAndRestoresSupply() throws {
+        let med = Medication.create(in: context, name: "Aspirin", dosage: "81mg")
+        med.currentCount = 30
+        med.totalDosesPerDay = 1
+        let schedule = Schedule.create(in: context, medication: med, hour: 8, minute: 0)
+        try context.save()
+
+        let entry = DoseEntry(
+            id: UUID(), medication: med, schedule: schedule,
+            scheduledAt: Date(), status: .missed, existingLog: nil
+        )
+        sut.markTaken(entry)
+        XCTAssertEqual(med.currentCount, 29, "Taking decrements supply by one per-dose unit")
+
+        // Rebuild the entry with the now-existing taken log, as the UI would when re-tapping.
+        let log = try XCTUnwrap(try context.fetch(DoseLog.fetchRequest()).first)
+        let takenEntry = DoseEntry(
+            id: UUID(), medication: med, schedule: schedule,
+            scheduledAt: entry.scheduledAt, status: .taken, existingLog: log
+        )
+        sut.untake(takenEntry)
+
+        XCTAssertTrue(try context.fetch(DoseLog.fetchRequest()).isEmpty, "Untake deletes the log")
+        XCTAssertEqual(med.currentCount, 30, "Untake restores the decremented supply")
+    }
+
     func testMarkSkipped_writesNewLog() throws {
         let med = Medication.create(in: context, name: "Metformin", dosage: "500mg")
         let schedule = Schedule.create(in: context, medication: med, hour: 9, minute: 0)
