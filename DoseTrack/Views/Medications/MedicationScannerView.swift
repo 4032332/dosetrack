@@ -77,16 +77,20 @@ private struct LiveMedicationScannerView: View {
     private var capturedCard: some View {
         let r = model.result
         return VStack(spacing: 12) {
-            capturedRow(label: "Name", value: r?.name, found: r?.hasName ?? false)
+            capturedRow(label: "Name", value: r?.name, found: r?.hasName ?? false,
+                        onRetry: { model.retryField?(.name) })
             capturedRow(label: "Strength",
                         value: (r?.hasStrength ?? false) ? "\(r!.strength)\(r!.strengthUnit)" : nil,
-                        found: r?.hasStrength ?? false)
+                        found: r?.hasStrength ?? false,
+                        onRetry: { model.retryField?(.strength) })
             capturedRow(label: "Supply",
                         value: (r?.hasSupply ?? false) ? "\(r!.count) \(r!.form)s" : nil,
-                        found: r?.hasSupply ?? false)
+                        found: r?.hasSupply ?? false,
+                        onRetry: { model.retryField?(.supply) })
             capturedRow(label: "Per dose",
                         value: (r?.hasPerDose ?? false) ? "\(r!.perDose) \(r!.form)\(r!.perDose == 1 ? "" : "s")" : nil,
-                        found: r?.hasPerDose ?? false)
+                        found: r?.hasPerDose ?? false,
+                        onRetry: { model.retryField?(.dose) })
 
             Button {
                 if let r, r.hasName { onUse(r) }
@@ -118,7 +122,7 @@ private struct LiveMedicationScannerView: View {
         .padding(.bottom, 12)
     }
 
-    private func capturedRow(label: String, value: String?, found: Bool) -> some View {
+    private func capturedRow(label: String, value: String?, found: Bool, onRetry: @escaping () -> Void) -> some View {
         HStack(spacing: 10) {
             Image(systemName: found ? "checkmark.circle.fill" : "circle.dashed")
                 .foregroundStyle(found ? Color.green : Color.secondary)
@@ -131,6 +135,17 @@ private struct LiveMedicationScannerView: View {
                 .foregroundStyle(found ? .primary : .tertiary)
                 .lineLimit(1)
                 .truncationMode(.tail)
+            // Retry appears once a value has been captured — re-reads just this field (e.g. the
+            // scanner grabbed the wrong strength) without restarting the whole scan.
+            if found {
+                Button(action: onRetry) {
+                    Image(systemName: "arrow.clockwise")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.blue)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Retry \(label)")
+            }
         }
     }
 }
@@ -143,6 +158,9 @@ final class LiveScanModel: ObservableObject {
     /// Set by the DataScanner coordinator; called by the card's "Rescan" button to clear the
     /// accumulated text and start fresh.
     var resetAccumulation: (() -> Void)?
+    /// Set by the coordinator; called by a captured-row's retry button to forget just that one
+    /// field's text and re-read it, without restarting the whole scan.
+    fileprivate var retryField: ((FieldTag) -> Void)?
 }
 
 // MARK: - DataScanner wrapper + delegate
@@ -187,6 +205,7 @@ private struct DataScannerRepresentable: UIViewControllerRepresentable {
         scanner.delegate = context.coordinator
         context.coordinator.scanner = scanner
         model.resetAccumulation = { [weak coordinator = context.coordinator] in coordinator?.reset() }
+        model.retryField = { [weak coordinator = context.coordinator] field in coordinator?.retryField(field) }
         try? scanner.startScanning()
         return scanner
     }
@@ -225,6 +244,18 @@ private struct DataScannerRepresentable: UIViewControllerRepresentable {
             subjectOverlay?.removeFromSuperview()
             subjectOverlay = nil
             model.result = nil
+        }
+
+        /// Forget the accumulated text behind ONE field and re-parse, so the next frames re-read
+        /// just that field. "Behind a field" = the lines currently classified as that field on
+        /// screen (same classification that drives the highlight boxes), so retrying Strength
+        /// discards the strength text, retrying Name discards the name/dispensing line, etc. If the
+        /// text is still in view it's simply re-read; if the user has moved on, the field clears
+        /// until they re-aim — which is the point of a per-field retry.
+        func retryField(_ field: FieldTag) {
+            let name = model.result?.name
+            accumulator.removeMatching { tag(for: $0, parsedName: name) == field }
+            model.result = MedicationParser.parse(lines: accumulator.lines)
         }
 
         func dataScanner(_ dataScanner: DataScannerViewController, didAdd addedItems: [RecognizedItem], allItems: [RecognizedItem]) {

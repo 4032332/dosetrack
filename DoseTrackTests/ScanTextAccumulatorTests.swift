@@ -66,4 +66,17 @@ final class ScanTextAccumulatorTests: XCTestCase {
         acc.add(text: "", height: 0.2)
         XCTAssertTrue(acc.lines.isEmpty)
     }
+
+    func test_removeMatching_dropsOnlyMatchingLines() {
+        // Per-field retry: forget just the strength text, keep the rest.
+        var acc = ScanTextAccumulator()
+        acc.add(text: "MINIPRESS", height: 0.3)
+        acc.add(text: "1 mg", height: 0.2)
+        acc.add(text: "100 tablets", height: 0.15)
+        acc.removeMatching { $0.lowercased().contains("mg") }
+        let remaining = acc.lines.map(\.text)
+        XCTAssertFalse(remaining.contains("1 mg"))
+        XCTAssertTrue(remaining.contains("MINIPRESS"))
+        XCTAssertTrue(remaining.contains("100 tablets"))
+    }
 }

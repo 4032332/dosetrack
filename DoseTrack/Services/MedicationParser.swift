@@ -57,6 +57,13 @@ struct ScanTextAccumulator {
 
     mutating func removeAll() { entries.removeAll() }
 
+    /// Drop accumulated lines matching a predicate — used by the live scanner's per-field "retry",
+    /// which forgets the text behind one field (e.g. the strength lines) so the next frames re-read
+    /// just that field instead of the user restarting the whole scan.
+    mutating func removeMatching(_ predicate: (String) -> Bool) {
+        for (key, value) in entries where predicate(value.text) { entries.removeValue(forKey: key) }
+    }
+
     /// The accumulated text as parser input.
     var lines: [RecognizedLine] {
         entries.values.map { RecognizedLine(text: $0.text, heightFraction: $0.height) }
