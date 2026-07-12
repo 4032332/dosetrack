@@ -36,42 +36,14 @@ struct GuidedScheduleView: View {
     @State private var spacingChoice: SpacingChoice = .manual
     @State private var intervalFirstTime = defaultTime(hour: 8, minute: 0)
     @State private var intervalHours = 8
-    @State private var selectedMeals: Set<MealSlot> = []
-    @State private var mealTimes: MealTimes = MealTimes.load()
+    @State private var selectedRoutineIDs: Set<UUID> = []
+    @State private var routineStore: RoutineStore = RoutineStore.load()
     @State private var manualTimes: [Date] = [defaultTime(hour: 8, minute: 0)]
 
     private enum SpacingChoice { case fixedInterval, meals, manual }
 
-    private enum MealSlot: String, CaseIterable, Identifiable {
-        case wakeUp, breakfast, morningTea, lunch, afternoonTea, dinner, dessert, midnightSnack, bedtime
-        var id: String { rawValue }
-        var label: String {
-            switch self {
-            case .wakeUp: return "Wake up"
-            case .breakfast: return "Breakfast"
-            case .morningTea: return "Morning Tea"
-            case .lunch: return "Lunch"
-            case .afternoonTea: return "Afternoon Tea"
-            case .dinner: return "Dinner"
-            case .dessert: return "Dessert"
-            case .midnightSnack: return "Midnight Snack"
-            case .bedtime: return "Bedtime"
-            }
-        }
-        func time(in meals: MealTimes) -> MealTime {
-            switch self {
-            case .wakeUp: return meals.wakeUp
-            case .breakfast: return meals.breakfast
-            case .morningTea: return meals.morningTea
-            case .lunch: return meals.lunch
-            case .afternoonTea: return meals.afternoonTea
-            case .dinner: return meals.dinner
-            case .dessert: return meals.dessert
-            case .midnightSnack: return meals.midnightSnack
-            case .bedtime: return meals.bedtime
-            }
-        }
-    }
+    /// The routines offered on the selection step, in chronological order.
+    private var availableRoutines: [Routine] { routineStore.sorted }
 
     private static func defaultTime(hour: Int, minute: Int) -> Date {
         var c = Calendar.current.dateComponents([.year, .month, .day], from: Date())
@@ -263,37 +235,33 @@ struct GuidedScheduleView: View {
 
     private var mealSelectionQuestion: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Which routine times? (\(selectedMeals.count) of \(timesPerDay) selected)")
+            Text("Which routine times? (\(selectedRoutineIDs.count) of \(timesPerDay) selected)")
                 .font(.headline)
-            ForEach(MealSlot.allCases) { meal in
-                let time = meal.time(in: mealTimes)
+            ForEach(availableRoutines) { routine in
                 Toggle(isOn: Binding(
-                    get: { selectedMeals.contains(meal) },
+                    get: { selectedRoutineIDs.contains(routine.id) },
                     set: { isOn in
-                        if isOn { selectedMeals.insert(meal) } else { selectedMeals.remove(meal) }
+                        if isOn { selectedRoutineIDs.insert(routine.id) } else { selectedRoutineIDs.remove(routine.id) }
                     }
                 )) {
                     HStack {
-                        Text(meal.label)
+                        Text(routine.name)
                         Spacer()
-                        Text(formattedTime(hour: time.hour, minute: time.minute))
+                        Text(formattedTime(hour: routine.hour, minute: routine.minute))
                             .foregroundStyle(.secondary)
                     }
                 }
             }
             Button("Next") { applyGeneratedSchedulesFromMeals(); step = .review }
-                .disabled(selectedMeals.count != timesPerDay)
+                .disabled(selectedRoutineIDs.count != timesPerDay)
         }
     }
 
     private func applyGeneratedSchedulesFromMeals() {
-        schedules = selectedMeals.sorted { a, b in
-            let ta = a.time(in: mealTimes); let tb = b.time(in: mealTimes)
-            return (ta.hour, ta.minute) < (tb.hour, tb.minute)
-        }.map { meal in
-            let t = meal.time(in: mealTimes)
-            return makeDraft(hour: t.hour, minute: t.minute, routineLabel: meal.label)
-        }
+        let chosen = availableRoutines.filter { selectedRoutineIDs.contains($0.id) }
+        schedules = chosen
+            .sorted { ($0.hour, $0.minute) < ($1.hour, $1.minute) }
+            .map { makeDraft(hour: $0.hour, minute: $0.minute, routineLabel: $0.name) }
     }
 
     // MARK: - Manual times (used for timesPerDay == 1 too, as a single-item case)
@@ -385,7 +353,7 @@ struct GuidedScheduleView: View {
         spacingChoice = .manual
         intervalFirstTime = Self.defaultTime(hour: 8, minute: 0)
         intervalHours = 8
-        selectedMeals = []
+        selectedRoutineIDs = []
         manualTimes = [Self.defaultTime(hour: 8, minute: 0)]
         step = .howOften
     }

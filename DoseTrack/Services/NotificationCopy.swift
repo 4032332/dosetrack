@@ -18,9 +18,9 @@ enum NotificationCopy {
     static func randomLine(medicationName: String, unit: String, hour: Int) -> String {
         var pool = general
         pool += typeLines(for: unit)
-        let routine = MealTimes.load()
-        if isNear(hour: hour, to: routine.wakeUp.hour) { pool += wakeUpLines }
-        if isNear(hour: hour, to: routine.bedtime.hour) { pool += bedtimeLines }
+        let routines = RoutineStore.load()
+        if isNear(hour: hour, to: routines.wakeUp.hour) { pool += wakeUpLines }
+        if isNear(hour: hour, to: routines.bedtime.hour) { pool += bedtimeLines }
         let template = pool.randomElement() ?? "Time to take your {name}."
         return template.replacingOccurrences(of: "{name}", with: medicationName)
     }

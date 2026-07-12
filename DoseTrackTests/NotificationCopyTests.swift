@@ -5,8 +5,14 @@ import XCTest
 final class NotificationCopyTests: XCTestCase {
 
     override func setUpWithError() throws {
-        // Pin routine times to the known defaults (Wake Up 07:00, Bedtime 22:00) so gating tests
+        // Pin routine times to the known defaults (Wake Up 06:00, Bedtime 21:00) so gating tests
         // aren't affected by whatever a prior test run left in UserDefaults.
+        UserDefaults.standard.removeObject(forKey: "routines")
+        UserDefaults.standard.removeObject(forKey: "mealTimes")
+    }
+
+    override func tearDownWithError() throws {
+        UserDefaults.standard.removeObject(forKey: "routines")
         UserDefaults.standard.removeObject(forKey: "mealTimes")
     }
 
@@ -117,7 +123,7 @@ final class NotificationCopyTests: XCTestCase {
     // MARK: - Time-of-day gating (relative to Wake Up / Bedtime routine times)
 
     func testRandomLine_nearDefaultWakeUpHour_canProduceWakeUpLine() {
-        // Default Wake Up is 07:00; 08:00 is within the ±2h window.
+        // Default Wake Up is 06:00; 08:00 is within the ±2h window.
         var sawWakeUpLine = false
         for _ in 0..<400 {
             let line = NotificationCopy.randomLine(medicationName: "Med", unit: "tablet", hour: 8)
@@ -137,7 +143,7 @@ final class NotificationCopyTests: XCTestCase {
     }
 
     func testRandomLine_nearDefaultBedtimeHour_canProduceBedtimeLine() {
-        // Default Bedtime is 22:00; 23:00 is within the ±2h window.
+        // Default Bedtime is 21:00; 23:00 is within the ±2h window.
         var sawBedtimeLine = false
         for _ in 0..<400 {
             let line = NotificationCopy.randomLine(medicationName: "Med", unit: "tablet", hour: 23)
@@ -150,11 +156,19 @@ final class NotificationCopyTests: XCTestCase {
     }
 
     func testRandomLine_bedtimeWindow_wrapsPastMidnight() {
-        // Default Bedtime is 22:00, so 00:00 (2h later, wrapping past midnight) should still
-        // count as "near bedtime" — this is the wraparound case that a naive |a-b| would miss.
+        // Set an explicit late Bedtime (23:00) so that 01:00 (2h later, wrapping past midnight)
+        // should still count as "near bedtime" — the wraparound case a naive |a-b| would miss.
+        var store = RoutineStore.default
+        if let idx = store.routines.firstIndex(where: { $0.anchor == .bedtime }) {
+            store.routines[idx].hour = 23
+            store.routines[idx].minute = 0
+        }
+        store.save()
+        defer { UserDefaults.standard.removeObject(forKey: "routines") }
+
         var sawBedtimeLine = false
         for _ in 0..<400 {
-            let line = NotificationCopy.randomLine(medicationName: "Med", unit: "tablet", hour: 0)
+            let line = NotificationCopy.randomLine(medicationName: "Med", unit: "tablet", hour: 1)
             if line.contains("asleep") || line.contains("bed") || line.contains("dream") || line.contains("drift") || line.contains("pillow") {
                 sawBedtimeLine = true
                 break

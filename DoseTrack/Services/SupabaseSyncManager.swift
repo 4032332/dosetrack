@@ -426,18 +426,30 @@ final class SupabaseSyncManager: ObservableObject {
         if let dob = row.patientDob, let ts = DOBFormat.timestamp(from: dob) {
             d.set(ts, forKey: "patientDOBInterval")
         }
-        let meals = MealTimes(
-            wakeUp: MealTime(hour: row.mealWakeUpHour ?? MealTimes.default.wakeUp.hour, minute: row.mealWakeUpMinute ?? MealTimes.default.wakeUp.minute),
-            breakfast: MealTime(hour: row.mealBreakfastHour ?? MealTimes.default.breakfast.hour, minute: row.mealBreakfastMinute ?? MealTimes.default.breakfast.minute),
-            morningTea: MealTime(hour: row.mealMorningTeaHour ?? MealTimes.default.morningTea.hour, minute: row.mealMorningTeaMinute ?? MealTimes.default.morningTea.minute),
-            lunch: MealTime(hour: row.mealLunchHour ?? MealTimes.default.lunch.hour, minute: row.mealLunchMinute ?? MealTimes.default.lunch.minute),
-            afternoonTea: MealTime(hour: row.mealAfternoonTeaHour ?? MealTimes.default.afternoonTea.hour, minute: row.mealAfternoonTeaMinute ?? MealTimes.default.afternoonTea.minute),
-            dinner: MealTime(hour: row.mealDinnerHour ?? MealTimes.default.dinner.hour, minute: row.mealDinnerMinute ?? MealTimes.default.dinner.minute),
-            dessert: MealTime(hour: row.mealDessertHour ?? MealTimes.default.dessert.hour, minute: row.mealDessertMinute ?? MealTimes.default.dessert.minute),
-            midnightSnack: MealTime(hour: row.mealMidnightSnackHour ?? MealTimes.default.midnightSnack.hour, minute: row.mealMidnightSnackMinute ?? MealTimes.default.midnightSnack.minute),
-            bedtime: MealTime(hour: row.mealBedtimeHour ?? MealTimes.default.bedtime.hour, minute: row.mealBedtimeMinute ?? MealTimes.default.bedtime.minute)
-        )
-        meals.save(to: d)
+        // Daily Routine Times. Prefer the authoritative `routines` JSON column (added in the
+        // routines migration); fall back to the legacy per-meal columns for rows written before
+        // that column existed, converting them into the new routine model on the way in.
+        if let json = row.routines,
+           let data = json.data(using: .utf8),
+           let store = try? JSONDecoder().decode(RoutineStore.self, from: data) {
+            store.ensuringAnchors().save(to: d)
+        } else {
+            let meals = MealTimes(
+                wakeUp: MealTime(hour: row.mealWakeUpHour ?? MealTimes.default.wakeUp.hour, minute: row.mealWakeUpMinute ?? MealTimes.default.wakeUp.minute),
+                breakfast: MealTime(hour: row.mealBreakfastHour ?? MealTimes.default.breakfast.hour, minute: row.mealBreakfastMinute ?? MealTimes.default.breakfast.minute),
+                morningTea: MealTime(hour: row.mealMorningTeaHour ?? MealTimes.default.morningTea.hour, minute: row.mealMorningTeaMinute ?? MealTimes.default.morningTea.minute),
+                lunch: MealTime(hour: row.mealLunchHour ?? MealTimes.default.lunch.hour, minute: row.mealLunchMinute ?? MealTimes.default.lunch.minute),
+                afternoonTea: MealTime(hour: row.mealAfternoonTeaHour ?? MealTimes.default.afternoonTea.hour, minute: row.mealAfternoonTeaMinute ?? MealTimes.default.afternoonTea.minute),
+                dinner: MealTime(hour: row.mealDinnerHour ?? MealTimes.default.dinner.hour, minute: row.mealDinnerMinute ?? MealTimes.default.dinner.minute),
+                dessert: MealTime(hour: row.mealDessertHour ?? MealTimes.default.dessert.hour, minute: row.mealDessertMinute ?? MealTimes.default.dessert.minute),
+                midnightSnack: MealTime(hour: row.mealMidnightSnackHour ?? MealTimes.default.midnightSnack.hour, minute: row.mealMidnightSnackMinute ?? MealTimes.default.midnightSnack.minute),
+                bedtime: MealTime(hour: row.mealBedtimeHour ?? MealTimes.default.bedtime.hour, minute: row.mealBedtimeMinute ?? MealTimes.default.bedtime.minute)
+            )
+            meals.save(to: d)
+            // Seed the new routines blob from the legacy columns so the next push carries the
+            // JSON representation forward.
+            RoutineStore(migratingFrom: meals).save(to: d)
+        }
     }
 }
 
@@ -630,6 +642,10 @@ struct UserSettingsRow: Codable {
     var mealWakeUpMinute: Int?
     var mealBedtimeHour: Int?
     var mealBedtimeMinute: Int?
+    /// Authoritative Daily Routine Times, JSON-encoded `RoutineStore`. The per-meal columns above
+    /// are kept in sync from this (best-effort) so clients that predate this column still read
+    /// roughly-correct meal times; new clients read this and ignore them.
+    var routines: String?
 
     enum CodingKeys: String, CodingKey {
         case userId = "user_id"
@@ -665,6 +681,7 @@ struct UserSettingsRow: Codable {
         case mealWakeUpMinute = "meal_wake_up_minute"
         case mealBedtimeHour = "meal_bedtime_hour"
         case mealBedtimeMinute = "meal_bedtime_minute"
+        case routines
     }
 
     init(userId: UUID) {
@@ -690,7 +707,14 @@ struct UserSettingsRow: Codable {
             // couldn't be parsed back (see applySettings).
             patientDob = DOBFormat.string(from: Date(timeIntervalSince1970: dobInterval))
         }
-        let meals = MealTimes.load(from: d)
+        // Daily Routine Times: the RoutineStore is authoritative. Encode it to the `routines`
+        // JSON column, and derive the legacy per-meal columns from it so pre-migration clients
+        // still read sensible values.
+        let store = RoutineStore.load(from: d)
+        if let data = try? JSONEncoder().encode(store) {
+            routines = String(data: data, encoding: .utf8)
+        }
+        let meals = store.asMealTimes()
         mealBreakfastHour = meals.breakfast.hour
         mealBreakfastMinute = meals.breakfast.minute
         mealMorningTeaHour = meals.morningTea.hour
