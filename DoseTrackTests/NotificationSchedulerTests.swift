@@ -250,6 +250,24 @@ final class NotificationSchedulerTests: XCTestCase {
         XCTAssertTrue(NotificationScheduler.useCriticalSound(criticalEnabled: true))
         XCTAssertFalse(NotificationScheduler.useCriticalSound(criticalEnabled: false))
     }
+
+    // MARK: - Notification grouping (stacking)
+
+    func test_groupByMinute_groupsSameMinute_separatesDifferent() {
+        let cal = Calendar.current
+        func at(_ h: Int, _ m: Int, day: Int = 1) -> Date {
+            cal.date(from: DateComponents(year: 2026, month: 7, day: day, hour: h, minute: m))!
+        }
+        // Three at 07:00, one at 07:30, one at 07:00 the NEXT day.
+        let dates = [at(7, 0), at(7, 0), at(7, 0), at(7, 30), at(7, 0, day: 2)]
+        let groups = NotificationScheduler.groupByMinute(dates, date: { $0 }, calendar: cal)
+        let sizes = groups.map(\.count).sorted()
+        XCTAssertEqual(sizes, [1, 1, 3], "Three same-minute doses group; the 07:30 and next-day 07:00 stand alone")
+    }
+
+    func test_groupByMinute_empty() {
+        XCTAssertTrue(NotificationScheduler.groupByMinute([Date](), date: { $0 }).isEmpty)
+    }
 }
 
 // MARK: - Internal method exposure for testing

@@ -37,11 +37,13 @@ final class NotificationScheduler {
         }
 
         var requests: [UNNotificationRequest] = []
+        var pending: [PendingDose] = []
 
         for medication in medications {
             for schedule in medication.schedulesArray where schedule.isEnabled {
                 if schedule.wrappedFrequency == "custom" && schedule.intervalDays > 1 {
-                    // Interval-based schedule (e.g. contraceptives) — compute from last DoseLog
+                    // Interval-based schedule (e.g. contraceptives) — compute from last DoseLog.
+                    // These stay individual (never stacked): they're each a distinct, infrequent event.
                     let intervalRequests = buildIntervalRequests(
                         for: medication,
                         schedule: schedule,
@@ -50,17 +52,21 @@ final class NotificationScheduler {
                     )
                     requests.append(contentsOf: intervalRequests)
                 } else {
-                    let scheduleRequests = buildRequests(
+                    pending.append(contentsOf: collectDoses(
                         for: medication,
                         schedule: schedule,
                         from: now,
                         to: horizon,
                         calendar: calendar
-                    )
-                    requests.append(contentsOf: scheduleRequests)
+                    ))
                 }
             }
         }
+
+        // Turn the collected doses into requests — grouped into one-per-minute reminders when
+        // "Group Reminders" is on, otherwise one request per dose. Also records each schedule's
+        // notification ids (for later cancellation).
+        requests.append(contentsOf: buildDoseRequests(from: pending, calendar: calendar))
 
         // Sort by fire date and take the earliest 64 (iOS's pending-notification cap) so a
         // medication added later never silently loses all its reminders to one added earlier.
@@ -115,6 +121,28 @@ final class NotificationScheduler {
     /// meaningfully switches sound/interruption level either way.
     static func useCriticalSound(criticalEnabled: Bool) -> Bool {
         criticalEnabled
+    }
+
+    // MARK: - Privacy Focused Notifications
+
+    /// When on, reminders never name the medication — protecting the user's medical info on the
+    /// lock screen / Watch. Read fresh each build so a settings change takes effect on reschedule.
+    static var privacyMode: Bool { UserDefaults.standard.bool(forKey: "privacyNotifications") }
+    static let privacyTitle = "Medication Reminder"
+    static let privacyBody = "Please open DoseTrack for more information."
+
+    /// When on, all doses due at the same minute are delivered as ONE grouped reminder instead of
+    /// a separate notification per medication.
+    static var stackingEnabled: Bool { UserDefaults.standard.bool(forKey: "stackNotifications") }
+
+    /// Groups doses that fire at the same wall-clock minute (the key iOS also collapses a routine
+    /// to). Pure + static so the grouping is unit-testable. Returns groups in no particular order.
+    static func groupByMinute<T>(_ items: [T], date: (T) -> Date, calendar: Calendar = .current) -> [[T]] {
+        let grouped = Dictionary(grouping: items) { item -> String in
+            let c = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: date(item))
+            return "\(c.year ?? 0)-\(c.month ?? 0)-\(c.day ?? 0)-\(c.hour ?? 0)-\(c.minute ?? 0)"
+        }
+        return Array(grouped.values)
     }
 
     /// Cancel all pending notifications for a single medication.
@@ -187,70 +215,144 @@ final class NotificationScheduler {
 
     // MARK: - Private
 
-    private func buildRequests(
+    /// One due dose, before it's turned into a (possibly grouped) notification request.
+    private struct PendingDose {
+        let fireDate: Date
+        let medicationName: String
+        let unit: String
+        let hour: Int
+        let medicationId: String
+        let scheduleId: String
+        let routineLabel: String?
+        let schedule: Schedule
+    }
+
+    /// Enumerate the due doses for one schedule across the horizon (skipping any already logged),
+    /// WITHOUT building notifications yet — so refreshAll can decide whether to group them.
+    private func collectDoses(
         for medication: Medication,
         schedule: Schedule,
         from start: Date,
         to end: Date,
         calendar: Calendar
-    ) -> [UNNotificationRequest] {
-        var requests: [UNNotificationRequest] = []
-        var ids: [String] = []
-
+    ) -> [PendingDose] {
+        var doses: [PendingDose] = []
         var cursor = start
         while cursor <= end {
             let weekday = calendar.component(.weekday, from: cursor) // 1=Sun..7=Sat
-
             if isDue(schedule: schedule, onWeekday: weekday) {
                 var components = calendar.dateComponents([.year, .month, .day], from: cursor)
                 components.hour = Int(schedule.hour)
                 components.minute = Int(schedule.minute)
                 components.second = 0
 
-                guard let fireDate = calendar.date(from: components),
-                      fireDate > start else {
-                    cursor = calendar.date(byAdding: .day, value: 1, to: cursor) ?? end
-                    continue
+                if let fireDate = calendar.date(from: components), fireDate > start,
+                   !Self.doseAlreadyLogged(medication: medication, at: fireDate, calendar: calendar) {
+                    doses.append(PendingDose(
+                        fireDate: fireDate,
+                        medicationName: medication.wrappedName,
+                        unit: medication.wrappedUnit,
+                        hour: Int(schedule.hour),
+                        medicationId: medication.id?.uuidString ?? "",
+                        scheduleId: schedule.id?.uuidString ?? "",
+                        routineLabel: schedule.wrappedRoutineLabel,
+                        schedule: schedule
+                    ))
                 }
-
-                // Don't (re)schedule a reminder for a dose that's already been logged taken or
-                // skipped for this exact slot. Without this, a dose marked taken early still had
-                // its reminder fire at the due time, and any refresh (app launch) would re-create
-                // a reminder that was just cancelled on logging.
-                if Self.doseAlreadyLogged(medication: medication, at: fireDate, calendar: calendar) {
-                    cursor = calendar.date(byAdding: .day, value: 1, to: cursor) ?? end
-                    continue
-                }
-
-                let id = notificationId(medicationId: medication.id, schedule: schedule, fireDate: fireDate)
-                ids.append(id)
-
-                let content = makeContent(
-                    medicationName: medication.wrappedName,
-                    unit: medication.wrappedUnit,
-                    hour: Int(schedule.hour),
-                    medicationId: medication.id?.uuidString ?? "",
-                    scheduleId: schedule.id?.uuidString ?? "",
-                    scheduledAt: fireDate
-                )
-
-                // UNCalendarNotificationTrigger — survives device restarts
-                let triggerComponents = calendar.dateComponents(
-                    [.year, .month, .day, .hour, .minute],
-                    from: fireDate
-                )
-                let trigger = UNCalendarNotificationTrigger(dateMatching: triggerComponents, repeats: false)
-                requests.append(UNNotificationRequest(identifier: id, content: content, trigger: trigger))
             }
-
             cursor = calendar.date(byAdding: .day, value: 1, to: cursor) ?? end
         }
+        return doses
+    }
 
-        // Persist ids back onto the schedule so we can cancel later
-        // (best-effort; main context save not guaranteed here)
-        schedule.notificationIdsArray = ids
+    /// Build notification requests from collected doses. With "Group Reminders" on, doses sharing a
+    /// wall-clock minute become ONE grouped reminder; otherwise it's one request per dose. Records
+    /// each schedule's notification ids so they can be cancelled later.
+    private func buildDoseRequests(from pending: [PendingDose], calendar: Calendar) -> [UNNotificationRequest] {
+        var requests: [UNNotificationRequest] = []
+        // schedule objectID → ids, so multi-schedule stacks still let each schedule track its ids.
+        var idsBySchedule: [ObjectIdentifier: (schedule: Schedule, ids: [String])] = [:]
+        func record(_ schedule: Schedule, _ id: String) {
+            let key = ObjectIdentifier(schedule)
+            idsBySchedule[key, default: (schedule, [])].ids.append(id)
+        }
 
+        func trigger(for fireDate: Date) -> UNCalendarNotificationTrigger {
+            let comps = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: fireDate)
+            return UNCalendarNotificationTrigger(dateMatching: comps, repeats: false)
+        }
+
+        if Self.stackingEnabled {
+            for group in Self.groupByMinute(pending, date: { $0.fireDate }, calendar: calendar) {
+                guard let first = group.first else { continue }
+                if group.count == 1 {
+                    requests.append(singleRequest(for: first, trigger: trigger(for: first.fireDate), record: record))
+                } else {
+                    // One grouped reminder for the whole minute/routine.
+                    let stackId = "dt.stack.\(Int(first.fireDate.timeIntervalSince1970))"
+                    let content = makeStackedContent(for: group)
+                    requests.append(UNNotificationRequest(identifier: stackId, content: content, trigger: trigger(for: first.fireDate)))
+                    for dose in group { record(dose.schedule, stackId) }
+                }
+            }
+        } else {
+            for dose in pending {
+                requests.append(singleRequest(for: dose, trigger: trigger(for: dose.fireDate), record: record))
+            }
+        }
+
+        // Persist ids back onto each schedule (best-effort; main context save not guaranteed here).
+        for (_, entry) in idsBySchedule { entry.schedule.notificationIdsArray = entry.ids }
         return requests
+    }
+
+    private func singleRequest(
+        for dose: PendingDose,
+        trigger: UNCalendarNotificationTrigger,
+        record: (Schedule, String) -> Void
+    ) -> UNNotificationRequest {
+        let id = notificationId(medicationId: dose.schedule.medication?.id, schedule: dose.schedule, fireDate: dose.fireDate)
+        record(dose.schedule, id)
+        let content = makeContent(
+            medicationName: dose.medicationName,
+            unit: dose.unit,
+            hour: dose.hour,
+            medicationId: dose.medicationId,
+            scheduleId: dose.scheduleId,
+            scheduledAt: dose.fireDate
+        )
+        return UNNotificationRequest(identifier: id, content: content, trigger: trigger)
+    }
+
+    /// A grouped reminder for several doses due at once. Names no medication (the whole point is one
+    /// reminder for the stack); uses the shared routine name when they all share one ("Bedtime").
+    private func makeStackedContent(for group: [PendingDose]) -> UNMutableNotificationContent {
+        let content = UNMutableNotificationContent()
+        let count = group.count
+        if Self.privacyMode {
+            content.title = Self.privacyTitle
+            content.body = Self.privacyBody
+        } else {
+            let sharedRoutine = group.allSatisfy { $0.routineLabel == group.first?.routineLabel } ? group.first?.routineLabel : nil
+            if let routine = sharedRoutine, !routine.isEmpty {
+                content.title = "\(routine) medications"
+                content.body = "\(count) medications due for your \(routine.lowercased()) routine. Open DoseTrack to take them."
+            } else {
+                content.title = "Medication Reminder"
+                content.body = "You have \(count) medications due now. Open DoseTrack to take them."
+            }
+        }
+        let criticalEnabled = UserDefaults.standard.object(forKey: "criticalAlertsEnabled") as? Bool ?? true
+        if Self.useCriticalSound(criticalEnabled: criticalEnabled) {
+            content.sound = .defaultCritical
+            content.interruptionLevel = .critical
+        } else {
+            content.sound = .default
+            content.interruptionLevel = .timeSensitive
+        }
+        // No per-dose actions on a stack (they'd be ambiguous) — tapping opens the app to review.
+        content.userInfo = ["scheduledAt": (group.first?.fireDate ?? Date()).timeIntervalSince1970]
+        return content
     }
 
     private func isDue(schedule: Schedule, onWeekday weekday: Int) -> Bool {
@@ -276,8 +378,15 @@ final class NotificationScheduler {
         scheduledAt: Date
     ) -> UNMutableNotificationContent {
         let content = UNMutableNotificationContent()
-        content.title = medicationName
-        content.body = NotificationCopy.randomLine(medicationName: medicationName, unit: unit, hour: hour)
+        if Self.privacyMode {
+            // Privacy Focused Notifications: never reveal the medication name on the lock screen /
+            // Watch. The reminder just prompts the user to open the app.
+            content.title = Self.privacyTitle
+            content.body = Self.privacyBody
+        } else {
+            content.title = medicationName
+            content.body = NotificationCopy.randomLine(medicationName: medicationName, unit: unit, hour: hour)
+        }
         let criticalEnabled = UserDefaults.standard.object(forKey: "criticalAlertsEnabled") as? Bool ?? true
         if Self.useCriticalSound(criticalEnabled: criticalEnabled) {
             content.sound = .defaultCritical
@@ -341,8 +450,11 @@ final class NotificationScheduler {
                 scheduleId: schedule.id?.uuidString ?? "",
                 scheduledAt: dueDate
             )
-            content.title = medication.wrappedName
-            content.body = "Your \(medication.wrappedName) is due today."
+            // makeContent already applied privacy mode; only name the medication when it's off.
+            if !Self.privacyMode {
+                content.title = medication.wrappedName
+                content.body = "Your \(medication.wrappedName) is due today."
+            }
             let triggerComponents = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: dueDate)
             let trigger = UNCalendarNotificationTrigger(dateMatching: triggerComponents, repeats: false)
             requests.append(UNNotificationRequest(identifier: dueId, content: content, trigger: trigger))
@@ -355,8 +467,13 @@ final class NotificationScheduler {
             if warnDate > now {
                 let warnId = "dt.interval.warn.\(medication.id?.uuidString ?? "").\(Int(dueDate.timeIntervalSince1970))"
                 let content = UNMutableNotificationContent()
-                content.title = "\(medication.wrappedName) Due Soon"
-                content.body = "Your \(medication.wrappedName) is due in \(lead) days."
+                if Self.privacyMode {
+                    content.title = Self.privacyTitle
+                    content.body = Self.privacyBody
+                } else {
+                    content.title = "\(medication.wrappedName) Due Soon"
+                    content.body = "Your \(medication.wrappedName) is due in \(lead) days."
+                }
                 content.sound = .default
                 content.categoryIdentifier = Constants.Notification.categoryMedicationDue
                 content.userInfo = [

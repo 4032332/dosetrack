@@ -350,6 +350,8 @@ private struct NotificationSettingsView: View {
     @Environment(\.managedObjectContext) private var context
     @ObservedObject private var notif = NotificationManager.shared
     @AppStorage("defaultSnoozeDuration") private var defaultSnoozeDuration: Int = 30
+    @AppStorage("privacyNotifications") private var privacyNotifications: Bool = false
+    @AppStorage("stackNotifications") private var stackNotifications: Bool = false
     @State private var testNotificationSent = false
 
     var body: some View {
@@ -425,9 +427,32 @@ private struct NotificationSettingsView: View {
                         .font(.caption)
                 }
             }
+
+            // MARK: Privacy & grouping
+            Section {
+                Toggle(isOn: $privacyNotifications) {
+                    SettingsLabel(title: "Privacy Focused Notifications", systemImage: "eye.slash.fill", tint: .indigo)
+                }
+            } footer: {
+                Text("Opt to hide the names of medications from iPhone and Watch notifications to protect your medical information. Reminders will simply say to open DoseTrack.")
+                    .font(.caption)
+            }
+
+            Section {
+                Toggle(isOn: $stackNotifications) {
+                    SettingsLabel(title: "Group Reminders", systemImage: "square.stack.3d.up.fill", tint: .teal)
+                }
+            } footer: {
+                Text("Opt to receive one reminder for all medications due at the same time or routine. Open DoseTrack to review and take them individually.")
+                    .font(.caption)
+            }
         }
         .navigationTitle("Notifications")
         .navigationBarTitleDisplayMode(.inline)
+        // Rescheduling rebuilds every pending reminder with the new privacy/grouping behaviour, so
+        // the change takes effect without waiting for the next app-open refresh.
+        .onChange(of: privacyNotifications) { _, _ in NotificationScheduler.shared.refreshAll(context: context) }
+        .onChange(of: stackNotifications) { _, _ in NotificationScheduler.shared.refreshAll(context: context) }
     }
 
     private func sendTestNotification() {
