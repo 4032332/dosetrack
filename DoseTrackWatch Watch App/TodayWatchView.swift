@@ -209,11 +209,19 @@ private struct WatchDoseRow: View {
 
                 Spacer()
 
-                // Time + status chip
+                // Routine name (e.g. "Bedtime") if the schedule is linked to a Daily Routine
+                // Time, otherwise the clock time — mirrors iOS Today.
                 VStack(alignment: .trailing, spacing: 2) {
-                    Text(medication.scheduledAt, style: .time)
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundStyle(.secondary)
+                    Group {
+                        if let label = medication.routineLabel, !label.isEmpty {
+                            Text(label)
+                        } else {
+                            Text(medication.scheduledAt, style: .time)
+                        }
+                    }
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
                     if medication.isTaken {
                         Text("Done")
                             .font(.system(size: 9, weight: .semibold))

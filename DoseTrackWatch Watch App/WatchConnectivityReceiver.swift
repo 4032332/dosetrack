@@ -13,6 +13,9 @@ struct WatchMedication: Identifiable, Codable {
     let scheduledAt: Date
     var isTaken: Bool
     var scheduleId: String
+    /// Present when the schedule is linked to a Daily Routine Time (e.g. "Bedtime"); the watch
+    /// shows this instead of a clock time, mirroring iOS Today.
+    var routineLabel: String? = nil
 }
 
 @MainActor

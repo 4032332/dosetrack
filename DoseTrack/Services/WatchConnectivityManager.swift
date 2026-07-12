@@ -77,7 +77,11 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
                     ($0.value(forKey: "status") as? String) == "taken"
                 }
 
-                watchMedications.append([
+                // A schedule linked to a Daily Routine Time carries its routine name (e.g.
+                // "Bedtime"); the watch shows that instead of a clock time, mirroring iOS Today.
+                let routineLabel = schedule.value(forKey: "routineLabel") as? String
+
+                var entry: [String: Any] = [
                     "id": medId,
                     "name": name,
                     "dosage": dosage,
@@ -85,7 +89,9 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
                     "scheduledAt": scheduledAt.timeIntervalSince1970,
                     "isTaken": isTaken,
                     "scheduleId": scheduleId
-                ])
+                ]
+                if let routineLabel { entry["routineLabel"] = routineLabel }
+                watchMedications.append(entry)
             }
         }
 
