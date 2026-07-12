@@ -4,12 +4,15 @@ import SwiftUI
 // MARK: - Preferences View
 
 struct AppPreferencesView: View {
+    @EnvironmentObject private var subscriptionManager: SubscriptionManager
     @AppStorage("timeFormat")        private var timeFormat: String = "system"
     @AppStorage("hapticsEnabled")    private var hapticsEnabled: Bool = true
     @AppStorage("showDoseBadge")     private var showDoseBadge: Bool = true
     @AppStorage("compactRows")       private var compactRows: Bool = false
 
     @AppStorage("appearanceOverride") private var appearanceOverride: String = "light"
+
+    @State private var showingPaywall = false
 
     var body: some View {
         List {
@@ -52,10 +55,27 @@ struct AppPreferencesView: View {
                 }
             }
 
+            // MARK: App Icon (DoseTrack Plus)
+            Section {
+                GhostedProRow(isPro: subscriptionManager.isProSubscriber, onLockedTap: { showingPaywall = true }) {
+                    if subscriptionManager.isProSubscriber {
+                        NavigationLink {
+                            AppIconPickerView()
+                        } label: {
+                            Label("App Icon", systemImage: "app.badge.fill")
+                        }
+                    } else {
+                        Label("App Icon", systemImage: "app.badge.fill")
+                    }
+                }
+            } footer: {
+                Text("Choosing an alternate app icon is a DoseTrack Plus feature.")
+            }
         }
         .scrollIndicators(.visible)
         .navigationTitle("Preferences")
         .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $showingPaywall) { PaywallView() }
         // Every preference here is also mirrored to Supabase's user_settings row so it survives
         // reinstalls/other devices (see UserSettingsRow). Without pushing on change, a signed-in
         // (non-guest) user's toggle would appear to work locally but get silently overwritten
@@ -75,4 +95,5 @@ struct AppPreferencesView: View {
 
 #Preview {
     NavigationStack { AppPreferencesView() }
+        .environmentObject(SubscriptionManager())
 }

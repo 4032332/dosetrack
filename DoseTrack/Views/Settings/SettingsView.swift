@@ -164,18 +164,6 @@ struct SettingsView: View {
                         SettingsLabel(title: "App Preferences", systemImage: "slider.horizontal.3", tint: .gray)
                     }
 
-                    GhostedProRow(isPro: subscriptionManager.isProSubscriber, onLockedTap: { showingPaywall = true }) {
-                        if subscriptionManager.isProSubscriber {
-                            NavigationLink {
-                                AppIconPickerView()
-                            } label: {
-                                SettingsLabel(title: "App Icon", systemImage: "app.badge.fill", tint: .indigo)
-                            }
-                        } else {
-                            SettingsLabel(title: "App Icon", systemImage: "app.badge.fill", tint: .indigo)
-                        }
-                    }
-
                     NavigationLink {
                         MealTimesView()
                     } label: {
@@ -527,7 +515,7 @@ private struct SettingsLabel: View {
 /// rather than pretending the feature doesn't exist. Still fully tappable: `onLockedTap` should
 /// present the paywall, since a fully "unusable" (non-interactive) row would bury the exact
 /// upsell moment a user tapping out of curiosity is the best time to show.
-private struct GhostedProRow<Content: View>: View {
+struct GhostedProRow<Content: View>: View {
     let isPro: Bool
     let onLockedTap: () -> Void
     @ViewBuilder let content: () -> Content
