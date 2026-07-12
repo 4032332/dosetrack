@@ -115,21 +115,25 @@ enum MedicationParser {
     }
 
     // Longer unit alternatives (mg/ml, mg/5ml) come first so the regex prefers them over a bare
-    // "mg" when both could match.
+    // "mg" when both could match. `µg` (the micro glyph) and `mcg` both mean micrograms — real
+    // labels use either (e.g. clonidine "100 µg").
     private static let strengthPattern = try! NSRegularExpression(
-        pattern: #"(\d+(?:\.\d+)?)\s*(mg\/(?:5ml|ml)|micrograms?|mcg|mg|iu|ml|g|%)"#,
+        pattern: #"(\d+(?:\.\d+)?)\s*(mg\/(?:5ml|ml)|micrograms?|mcg|µg|mg|iu|ml|g|%)"#,
         options: .caseInsensitive
     )
 
     private static func extractStrength(from lines: [String]) -> StrengthMatch? {
-        for line in lines {
+        // Skip dosing-instruction lines: titration wording like "increase the dose by 0.5mg until
+        // reaching 4mg" is full of mg numbers that are NOT the medication's strength. The strength
+        // lives on the name/pack line, so a non-instruction line is always the right source.
+        for line in lines where !isInstructionLine(line) {
             let ns = line as NSString
             let range = NSRange(location: 0, length: ns.length)
             if let match = strengthPattern.firstMatch(in: line, range: range) {
                 let value = ns.substring(with: match.range(at: 1))
                 var unit = ns.substring(with: match.range(at: 2)).lowercased()
                 // Normalise spelled-out / variant units to what the form picker expects.
-                if unit.hasPrefix("microgram") { unit = "mcg" }
+                if unit.hasPrefix("microgram") || unit == "µg" { unit = "mcg" }
                 let full = ns.substring(with: match.range)
                 return StrengthMatch(full: full, value: value, unit: unit)
             }
@@ -157,20 +161,27 @@ enum MedicationParser {
     )
 
     private static func extractSupply(from lines: [String]) -> Int? {
-        // 1. Explicit QTY/Quantity/Pack markers win — try these across every line first.
+        // 1. Explicit QTY/Quantity/Pack markers win — try these across every line first. But a
+        //    "Pack 1 of 2" dispensing marker (which pack this is, out of a repeat set) must NOT be
+        //    read as a quantity, so a captured number immediately followed by "of" is rejected.
         for line in lines {
             let ns = line as NSString
             let range = NSRange(location: 0, length: ns.length)
+            let lower = line.lowercased() as NSString
             if let match = qtyPattern.firstMatch(in: line, range: range) {
                 for groupIndex in 1..<match.numberOfRanges {
                     let r = match.range(at: groupIndex)
-                    if r.location != NSNotFound, let n = Int(ns.substring(with: r)), n > 0, n <= 1000 {
-                        return n
-                    }
+                    guard r.location != NSNotFound, let n = Int(ns.substring(with: r)), n > 0, n <= 1000 else { continue }
+                    let after = r.location + r.length
+                    let ctx = after < ns.length
+                        ? lower.substring(with: NSRange(location: after, length: min(4, ns.length - after))).trimmingCharacters(in: .whitespaces)
+                        : ""
+                    if ctx.hasPrefix("of ") || ctx == "of" { continue }
+                    return n
                 }
             }
         }
-        // 2. Otherwise a bare "N tablets", but only on non-instruction lines.
+        // 2. A bare "N tablets" / "28 CAPSULES", but only on non-instruction lines.
         for line in lines where !isInstructionLine(line) {
             let ns = line as NSString
             let range = NSRange(location: 0, length: ns.length)
@@ -179,7 +190,78 @@ enum MedicationParser {
                 if let n = Int(numStr), n > 0, n <= 1000 { return n }
             }
         }
+        // 3. Pharmacy dispensing line, e.g. "100 MINIPRESS 1MG TAB (prazosin)" or
+        //    "MELOXICAM TABLETS 15mg 30 (…)". The pack quantity is the standalone integer on a
+        //    line that also carries a strength AND a form word — but it's NOT adjacent to a form
+        //    word (strategy 2 already handles that), so it's easy to miss. Pull the non-strength
+        //    integer from such a line.
+        for line in lines where !isInstructionLine(line) {
+            if let n = supplyFromDispensingLine(line) { return n }
+        }
         return nil
+    }
+
+    private static let formWordPattern = try! NSRegularExpression(
+        pattern: #"\b(?:\#(formWords))\b"#, options: .caseInsensitive
+    )
+    private static let integerTokenPattern = try! NSRegularExpression(
+        pattern: #"\d+"#, options: []
+    )
+
+    /// Extract the pack quantity from a pharmacy dispensing line: a line carrying both a strength
+    /// and a dose-form word. The quantity is the standalone integer that is NOT the strength's
+    /// number, NOT inside parentheses (that's usually a generic/brand name), and NOT part of a
+    /// "Pack 1 of 2" marker. Prefers a plausible pack size (>= a few units).
+    private static func supplyFromDispensingLine(_ line: String) -> Int? {
+        let ns = line as NSString
+        let full = NSRange(location: 0, length: ns.length)
+        // Must look like a dispensing/name line: has a strength and a form word.
+        guard let strength = strengthPattern.firstMatch(in: line, range: full),
+              formWordPattern.firstMatch(in: line, range: full) != nil else { return nil }
+
+        // Ranges to exclude: the strength's own number, and anything inside parentheses.
+        let strengthNumberRange = strength.range(at: 1)
+        let parenRanges = parentheticalRanges(in: ns)
+        let lower = line.lowercased() as NSString
+
+        var candidates: [(value: Int, location: Int)] = []
+        integerTokenPattern.enumerateMatches(in: line, range: full) { m, _, _ in
+            guard let m else { return }
+            let r = m.range
+            if NSIntersectionRange(r, strengthNumberRange).length > 0 { return }
+            if parenRanges.contains(where: { NSIntersectionRange(r, $0).length > 0 }) { return }
+            // Skip "N of M" pack markers (either side of "of").
+            let token = ns.substring(with: r)
+            let after = r.location + r.length
+            let afterCtx = after < ns.length ? lower.substring(with: NSRange(location: after, length: min(4, ns.length - after))) : ""
+            if afterCtx.trimmingCharacters(in: .whitespaces).hasPrefix("of ") || afterCtx.trimmingCharacters(in: .whitespaces) == "of" { return }
+            if let n = Int(token), n > 0, n <= 1000 { candidates.append((n, r.location)) }
+        }
+        guard !candidates.isEmpty else { return nil }
+        // Prefer a realistic pack size (>= 4 rules out a stray "1"/"2" from e.g. "MR" tab codes),
+        // taking the earliest such; otherwise fall back to the first integer found.
+        return candidates.first(where: { $0.value >= 4 })?.value ?? candidates.first?.value
+    }
+
+    private static func parentheticalRanges(in ns: NSString) -> [NSRange] {
+        var ranges: [NSRange] = []
+        var depth = 0
+        var start = 0
+        for i in 0..<ns.length {
+            let c = ns.character(at: i)
+            if c == UInt16(UnicodeScalar("(").value) {
+                if depth == 0 { start = i }
+                depth += 1
+            } else if c == UInt16(UnicodeScalar(")").value) {
+                if depth > 0 {
+                    depth -= 1
+                    if depth == 0 { ranges.append(NSRange(location: start, length: i - start + 1)) }
+                }
+            }
+        }
+        // An unclosed "(" (label truncated at a bottle edge) — treat the rest of the line as paren.
+        if depth > 0 { ranges.append(NSRange(location: start, length: ns.length - start)) }
+        return ranges
     }
 
     // MARK: - Per-dose quantity (reasoned from dosing instructions -> quantityAmount)
@@ -303,7 +385,14 @@ enum MedicationParser {
             guard isNameCandidate(stripped) else { return nil }
             return (stripped, line.heightFraction)
         }
-        guard !candidates.isEmpty else { return nil }
+        guard !candidates.isEmpty else {
+            // Nothing survived stripping — fall back to the name embedded in a dispensing line
+            // (its form word would have flagged it boilerplate above).
+            for text in lines.map(\.text) {
+                if let n = nameFromDispensingLine(text) { return clean(n) }
+            }
+            return nil
+        }
 
         // If we have real height data, the tallest candidate is the name — brand/generic names
         // are the dominant text on a box, a much stronger signal than casing or position.
@@ -319,6 +408,41 @@ enum MedicationParser {
             return first.isUppercase && candidate.name.count <= 40 && !candidate.name.contains("  ")
         })
         return (properNoun ?? candidates[0]).name
+    }
+
+    /// Dose-form descriptors that appear on a dispensing line around the name but aren't part of
+    /// it (release-profile codes, form abbreviations, common manufacturer tags).
+    private static let dispensingDescriptors: Set<String> = [
+        "mr", "sr", "xr", "cr", "er", "ec", "odt", "xl", "hcl",
+        "tab", "tabs", "tablet", "tablets", "cap", "caps", "caplet", "caplets",
+        "capsule", "capsules", "orally", "wgr",
+    ]
+
+    /// The medication name as it appears on a pharmacy dispensing line ("100 MINIPRESS 1MG TAB
+    /// (prazosin)" → "MINIPRESS"; "MELOXICAM TABLETS 15mg 30 (…)" → "MELOXICAM"). Only applied to a
+    /// qualifying dispensing line (strength + form word), and used as a last-resort name source
+    /// when the height/casing heuristics find nothing — e.g. a cylindrical bottle whose only clear
+    /// text is the wrapped dispensing line, where the form word would otherwise flag it boilerplate.
+    private static func nameFromDispensingLine(_ line: String) -> String? {
+        let full = NSRange(location: 0, length: (line as NSString).length)
+        guard strengthPattern.firstMatch(in: line, range: full) != nil,
+              formWordPattern.firstMatch(in: line, range: full) != nil else { return nil }
+        // Drop parenthetical content (alt names / mfr codes), then tokenise.
+        var stripped = line
+        while let open = stripped.firstIndex(of: "("), let close = stripped[open...].firstIndex(of: ")") {
+            stripped.replaceSubrange(open...close, with: " ")
+        }
+        let tokens = stripped.split(whereSeparator: { $0 == " " || $0 == "-" }).map(String.init)
+        for token in tokens {
+            let clean = token.trimmingCharacters(in: CharacterSet(charactersIn: "®™©*.,:;()"))
+            let lc = clean.lowercased()
+            if clean.count < 3 { continue }
+            if clean.rangeOfCharacter(from: .decimalDigits) != nil { continue }  // strength/qty
+            if dispensingDescriptors.contains(lc) { continue }
+            if clean.filter(\.isLetter).count < clean.count / 2 { continue }
+            return clean
+        }
+        return nil
     }
 
     /// Tidy a chosen name line: collapse whitespace and trim trailing punctuation/®/™.

@@ -167,4 +167,69 @@ final class MedicationScannerParserTests: XCTestCase {
         XCTAssertEqual(result?.form, "capsule")
         XCTAssertNotNil(result?.instructions)
     }
+
+    // MARK: - Real pharmacy dispensing lines (from training photos, IMG_5519–5535)
+    // These lines are the "QTY NAME STRENGTH FORM (alt)" (or name-first) format printed on the
+    // Chemist Warehouse / TerryWhite dispensing label — the highest-confidence single source.
+
+    func testDispensing_minipress_qtyFirst() {
+        // "100 MINIPRESS 1MG TAB (prazosin)" — leading integer is the pack quantity.
+        let r = MedicationParser.parse(lines: ["100 MINIPRESS 1MG TAB ( prazosin )"])
+        XCTAssertEqual(r?.count, 100)
+        XCTAssertEqual(r?.strength, "1")
+        XCTAssertEqual(r?.strengthUnit, "mg")
+    }
+
+    func testDispensing_meloxicam_nameFirstTrailingQty() {
+        // "MELOXICAM TABLETS 15mg 30 (MELOXICAM (SANDOZ))" — qty trails the strength.
+        let r = MedicationParser.parse(lines: ["MELOXICAM TABLETS 15mg 30 ( MELOXICAM (SANDOZ) )"])
+        XCTAssertEqual(r?.count, 30)
+        XCTAssertEqual(r?.strength, "15")
+    }
+
+    func testDispensing_vyvanse_bottleLine() {
+        let r = MedicationParser.parse(lines: ["30 VYVANSE 70MG CAP ( lisdexamfetamine )"])
+        XCTAssertEqual(r?.count, 30)
+        XCTAssertEqual(r?.strength, "70")
+    }
+
+    func testDispensing_clonidine_micrograms() {
+        // µg glyph must be read as micrograms, and the pack integer (200) taken, not the strength.
+        let r = MedicationParser.parse(lines: ["APO-CLONIDINE", "clonidine hydrochloride", "100 µg", "100 TABLETS"])
+        XCTAssertEqual(r?.strengthUnit, "mcg")
+        XCTAssertEqual(r?.strength, "100")
+    }
+
+    func testDispensing_ignoresPackOfMarker() {
+        // "Pack 1 of 2" must never be read as the quantity; the real qty leads the line.
+        let r = MedicationParser.parse(lines: [
+            "200 CLONIDINE (APO) 100mcg TAB ( clonidine )",
+            "Take FOUR tablets at night",
+            "Pack 1 of 2"
+        ])
+        XCTAssertEqual(r?.count, 200)
+        XCTAssertEqual(r?.perDose, 4, "FOUR tablets → 4 per dose")
+    }
+
+    func testStrength_ignoresTitrationDecoyNumbers() {
+        // Minipress titration instruction is full of mg numbers that are NOT the strength.
+        let r = MedicationParser.parse(lines: [
+            "100 MINIPRESS 1MG TAB ( prazosin )",
+            "Take a HALF tablet at night, Every week increase the dose by 0.5mg until reaching 4mg"
+        ])
+        XCTAssertEqual(r?.strength, "1", "Strength must come from the name line, not the titration text")
+        XCTAssertEqual(r?.strengthUnit, "mg")
+    }
+
+    func testStrength_notTakenFromLiteralDoseLabel() {
+        // "DOSE: TO BE TAKEN AS DIRECTED" has no number — must not crash or invent a strength.
+        let r = MedicationParser.parse(lines: [
+            "Minipress",
+            "1 mg prazosin",
+            "DOSE: TO BE TAKEN AS DIRECTED BY THE PHYSICIAN",
+            "100 TABLETS"
+        ])
+        XCTAssertEqual(r?.strength, "1")
+        XCTAssertEqual(r?.count, 100)
+    }
 }
