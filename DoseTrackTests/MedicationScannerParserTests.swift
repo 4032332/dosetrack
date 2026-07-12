@@ -221,6 +221,60 @@ final class MedicationScannerParserTests: XCTestCase {
         XCTAssertEqual(r?.strengthUnit, "mg")
     }
 
+    // MARK: - Live-feedback regressions (IMG_5541–5544): full accumulations with all the noise
+
+    func testFeedback_melatonin_nameFromParenthetical_qtyNotPrice() {
+        // 5541/5544: scanner had picked "LAST REPEAT FOR FURTHER…" as name and "99" (from $44.99)
+        // as supply. Correct: Melatonin, 60.
+        let lines = [
+            "PRESCRIPTION ONLY MEDICINE",
+            "LAST REPEAT FOR FURTHER REPEATS A NEW PRESCRIPTION IS NECESSARY",
+            "60 DOZATIN 2MG MR TAB ( Melatonin )",
+            "Take ONE to TWO tablets Before bed. Swallow whole.",
+            "MR ROBERT BROWN",
+            "10/07/26 1621357 SS 0 Repeats Left",
+            "DR R RAMPERSAD $44.99 Pack 2 of 2",
+            "Chemist Warehouse Westfield North Lakes East",
+        ]
+        let r = MedicationParser.parse(lines: lines)
+        XCTAssertEqual(r?.name, "Melatonin")
+        XCTAssertEqual(r?.strength, "2")
+        XCTAssertEqual(r?.count, 60, "Supply must be 60, not 99 (that's the $44.99 price)")
+    }
+
+    func testFeedback_minipress_nameNotPharmacy() {
+        // 5542: scanner had picked "CHEMIST WAREHOUSE" as name. Correct: prazosin/Minipress.
+        let lines = [
+            "PRESCRIPTION ONLY MEDICINE",
+            "100 MINIPRESS 1MG TAB ( prazosin )",
+            "Take a HALF tablet at night, Every week increase the dose by 0.5mg until reaching 4mg",
+            "MR ROBERT BROWN",
+            "Chemist Warehouse Northlakes Home Co.",
+            "100 TABLETS",
+        ]
+        let r = MedicationParser.parse(lines: lines)
+        XCTAssertEqual(r?.name, "prazosin")
+        XCTAssertNotEqual(r?.name, "CHEMIST WAREHOUSE")
+        XCTAssertEqual(r?.count, 100)
+    }
+
+    func testFeedback_meloxicam_nameNotPatientLine() {
+        // 5543: scanner had picked "MR ROBERT BROWN 28/04/26 Dr…" as name. Correct: Meloxicam.
+        let lines = [
+            "Meloxicam Sandoz",
+            "MELOXICAM TABLETS 15mg 30 ( MELOXICAM (SANDOZ) )",
+            "Take ONE tablet daily with food as directed by the doctor",
+            "MR ROBERT BROWN 28/04/26 Dr Ramesh",
+            "TerryWhite Chemmart Kippa-Ring",
+            "[Full Cost $18.00]",
+        ]
+        let r = MedicationParser.parse(lines: lines)
+        XCTAssertEqual(r?.name, "MELOXICAM")
+        XCTAssertEqual(r?.strength, "15")
+        XCTAssertEqual(r?.count, 30)
+        XCTAssertEqual(r?.perDose, 1)
+    }
+
     func testStrength_notTakenFromLiteralDoseLabel() {
         // "DOSE: TO BE TAKEN AS DIRECTED" has no number — must not crash or invent a strength.
         let r = MedicationParser.parse(lines: [

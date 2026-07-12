@@ -155,8 +155,10 @@ enum MedicationParser {
 
     /// Explicit pack-size markers: "QTY 30", "Qty: 30", "Quantity 30", "Pack of 30", "30 Pack".
     /// Prioritised over a bare "N tablets" because it's unambiguous.
+    // The trailing-"pack" alternative uses a negative lookbehind for a digit or decimal point so a
+    // price's cents can't be mistaken for a quantity: "$44.99 Pack 2 of 2" must NOT yield "99 Pack".
     private static let qtyPattern = try! NSRegularExpression(
-        pattern: #"\b(?:qty|quantity|pack(?:\s+of)?|contents?)\b[^\d]{0,6}(\d+)\b|\b(\d+)\s*(?:'s\b|pack\b)"#,
+        pattern: #"\b(?:qty|quantity|pack(?:\s+of)?|contents?)\b[^\d]{0,6}(\d+)\b|(?<![\d.])(\d+)\s*(?:'s\b|pack\b)"#,
         options: .caseInsensitive
     )
 
@@ -237,6 +239,11 @@ enum MedicationParser {
             let r = m.range
             if NSIntersectionRange(r, strengthNumberRange).length > 0 { return }
             if parenRanges.contains(where: { NSIntersectionRange(r, $0).length > 0 }) { return }
+            // Skip a number that's the cents of a price / part of a decimal ("$44.99" → not "99").
+            if r.location > 0 {
+                let prev = ns.substring(with: NSRange(location: r.location - 1, length: 1))
+                if prev == "." || prev == "$" { return }
+            }
             // Skip "N of M" pack markers (either side of "of").
             let token = ns.substring(with: r)
             let after = r.location + r.length
@@ -352,11 +359,67 @@ enum MedicationParser {
         "before", "after", "consult", "doctor", "pharmacist", "www.", ".com", "http",
         "manufactured", "distributed", "product of", "made in", "use by", "read the",
         "not exceed", "recommended", "if symptoms", "professional", "qty", "quantity",
+        // Pharmacy chains & dispensing-label furniture — these are large/bold on real labels and
+        // were being picked as the name (e.g. "CHEMIST WAREHOUSE").
+        "chemist warehouse", "warehouse", "terrywhite", "chemmart", "priceline", "amcal",
+        "guardian pharmacy", "discount drug", "shop ", "telephone", "tel ", "phone",
+        // Dispensing stickers / repeat furniture ("LAST REPEAT FOR FURTHER REPEATS…").
+        "last repeat", "repeat", "prescription is necessary", "no further", "repeats left",
+        "full cost", "rpt", "dispensed", "pack ", "cause drowsiness", "avoid alcohol",
     ]
 
     private static func isBoilerplate(_ line: String) -> Bool {
         let lc = line.lowercased()
         return boilerplateMarkers.contains(where: { lc.contains($0) })
+    }
+
+    /// Reject lines that are a person (patient/prescriber), a date, or a price — never the drug
+    /// name, but frequently large/prominent on a dispensing label (e.g. "MR ROBERT BROWN 28/04/26
+    /// Dr Ramesh"). Complements `isBoilerplate` for the height-based name path.
+    private static let personTitlePattern = try! NSRegularExpression(
+        pattern: #"^(?:mr|mrs|ms|miss|dr|prof|master)\b[.\s]"#, options: .caseInsensitive
+    )
+    private static let dateOrPricePattern = try! NSRegularExpression(
+        pattern: #"\b\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b|\$\s?\d"#, options: []
+    )
+    private static func isPersonDateOrPrice(_ line: String) -> Bool {
+        let full = NSRange(location: 0, length: (line as NSString).length)
+        if personTitlePattern.firstMatch(in: line, range: full) != nil { return true }
+        if dateOrPricePattern.firstMatch(in: line, range: full) != nil { return true }
+        // A line that also names a doctor ("… Dr Ramesh …") is a prescriber line, not the drug.
+        if line.range(of: #"\bDr\s+[A-Z]"#, options: .regularExpression) != nil { return true }
+        return false
+    }
+
+    /// Manufacturer / sponsor codes that appear in a dispensing line's parenthetical alongside (or
+    /// instead of) the generic name — not a drug name themselves.
+    private static let manufacturerCodes: Set<String> = [
+        "apo", "sandoz", "sz", "wgr", "gh", "an", "mylan", "apx", "rbx", "ga", "gxp", "dp",
+        "amn", "ah", "actavis", "teva", "novartis", "aspen", "viatris", "generichealth", "chemists",
+    ]
+
+    /// True when a single line looks like a pharmacy dispensing line: it carries BOTH a strength
+    /// and a dose-form word (e.g. "100 MINIPRESS 1MG TAB (prazosin)"). This is the line the name,
+    /// strength and quantity all most reliably come from.
+    private static func isDispensingLine(_ line: String) -> Bool {
+        let full = NSRange(location: 0, length: (line as NSString).length)
+        return strengthPattern.firstMatch(in: line, range: full) != nil
+            && formWordPattern.firstMatch(in: line, range: full) != nil
+    }
+
+    /// The generic drug name from a dispensing line's parenthetical — "(Melatonin)" → "Melatonin",
+    /// "(MELOXICAM (SANDOZ))" → "MELOXICAM", "(APO) … (clonidine)" → "clonidine". Skips manufacturer
+    /// codes. Returns the first parenthetical token that looks like a real drug name.
+    private static func genericFromParenthetical(_ line: String) -> String? {
+        let ns = line as NSString
+        for range in parentheticalRanges(in: ns) {
+            let inner = ns.substring(with: range)
+            let tokens = inner.split { !$0.isLetter }.map(String.init)
+            for token in tokens where token.count >= 4 && !manufacturerCodes.contains(token.lowercased()) {
+                return token
+            }
+        }
+        return nil
     }
 
     /// Remove strength ("200 mg") and count ("24 Tablets") fragments from a line. OCR frequently
@@ -381,25 +444,31 @@ enum MedicationParser {
         guard stripped.rangeOfCharacter(from: .letters) != nil else { return false }
         let letters = stripped.filter { $0.isLetter }.count
         guard Double(letters) / Double(stripped.count) >= 0.5 else { return false }
-        return !isBoilerplate(stripped)
+        return !isBoilerplate(stripped) && !isPersonDateOrPrice(stripped)
     }
 
     private static func extractName(from lines: [RecognizedLine]) -> String? {
-        // Strip strength/count noise from each line, then keep the plausible name portions,
-        // carrying each line's height along so the tallest can win below.
+        let texts = lines.map(\.text)
+
+        // 1. The pharmacy dispensing line is the most reliable name source — far more so than text
+        //    height, because stickers ("LAST REPEAT…"), pharmacy logos ("CHEMIST WAREHOUSE") and
+        //    patient/prescriber lines ("MR ROBERT BROWN") are all large and would otherwise win.
+        //    Prefer the parenthetical generic ("(Melatonin)", "(prazosin)"); else the name token
+        //    that leads the line ("MINIPRESS", "MELOXICAM").
+        for line in texts where isDispensingLine(line) {
+            if let generic = genericFromParenthetical(line) { return clean(generic) }
+            if let token = nameFromDispensingLine(line) { return clean(token) }
+        }
+
+        // 2. No dispensing line (a plain manufacturer box or supplement): strip strength/count
+        //    noise from each line, keep the plausible name portions, and let the tallest win —
+        //    on those packs the brand really is the dominant text.
         let candidates: [(name: String, height: CGFloat)] = lines.compactMap { line in
             let stripped = clean(stripNoise(from: line.text))
             guard isNameCandidate(stripped) else { return nil }
             return (stripped, line.heightFraction)
         }
-        guard !candidates.isEmpty else {
-            // Nothing survived stripping — fall back to the name embedded in a dispensing line
-            // (its form word would have flagged it boilerplate above).
-            for text in lines.map(\.text) {
-                if let n = nameFromDispensingLine(text) { return clean(n) }
-            }
-            return nil
-        }
+        guard !candidates.isEmpty else { return nil }
 
         // If we have real height data, the tallest candidate is the name — brand/generic names
         // are the dominant text on a box, a much stronger signal than casing or position.
