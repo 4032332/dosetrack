@@ -41,7 +41,7 @@ struct AppPreferencesView: View {
             }
 
             // MARK: General
-            Section("General") {
+            Section {
                 Toggle(isOn: $hapticsEnabled) {
                     Label("Haptic Feedback", systemImage: "iphone.radiowaves.left.and.right")
                 }
@@ -51,8 +51,12 @@ struct AppPreferencesView: View {
                 }
 
                 Toggle(isOn: $compactRows) {
-                    Label("Compact Dose Rows", systemImage: "list.dash")
+                    Label("Compact Rows", systemImage: "list.dash")
                 }
+            } header: {
+                Text("General")
+            } footer: {
+                Text("Compact Rows shrinks the Today, Medications, and Restock lists to about half height so more fits on screen at once.")
             }
 
             // MARK: App Icon (DoseTrack Plus)

@@ -195,43 +195,95 @@ struct RestockView: View {
 private struct RestockRow: View {
     @ObservedObject var med: Medication
     let onTap: () -> Void
+    @AppStorage("compactRows") private var compactRows: Bool = false
 
     var body: some View {
         Button(action: onTap) {
-            HStack(spacing: 14) {
-                // Shared tinted tile (identical to the Medications list) + a supply-urgency dot,
-                // which is meaningful specifically on this restock-focused screen.
-                MedicationColorTile(medication: med)
-                    .overlay(alignment: .bottomTrailing) {
-                        Circle()
-                            .fill(med.restockColor)
-                            .frame(width: 12, height: 12)
-                            .offset(x: 3, y: 3)
-                    }
-
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(med.wrappedName)
-                        .font(.body.weight(.medium))
-                        .foregroundStyle(.primary)
-                    Text("\(med.wrappedDosage) · \(med.wrappedUnit)")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-
-                Spacer()
-
-                VStack(alignment: .trailing, spacing: 3) {
-                    supplyLabel
-                    if med.escriptData != nil {
-                        Label("E-Script", systemImage: "qrcode")
-                            .font(.caption2)
-                            .foregroundStyle(.purple)
-                    }
-                }
+            Group {
+                if compactRows { compactBody } else { fullBody }
             }
-            .padding(.vertical, 4)
         }
         .foregroundStyle(.primary)
+    }
+
+    private var fullBody: some View {
+        HStack(spacing: 14) {
+            // Shared tinted tile (identical to the Medications list) + a supply-urgency dot,
+            // which is meaningful specifically on this restock-focused screen.
+            MedicationColorTile(medication: med)
+                .overlay(alignment: .bottomTrailing) {
+                    Circle()
+                        .fill(med.restockColor)
+                        .frame(width: 12, height: 12)
+                        .offset(x: 3, y: 3)
+                }
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(med.wrappedName)
+                    .font(.body.weight(.medium))
+                    .foregroundStyle(.primary)
+                Text("\(med.wrappedDosage) · \(med.wrappedUnit)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer()
+
+            VStack(alignment: .trailing, spacing: 3) {
+                supplyLabel
+                if med.escriptData != nil {
+                    Label("E-Script", systemImage: "qrcode")
+                        .font(.caption2)
+                        .foregroundStyle(.purple)
+                }
+            }
+        }
+        .padding(.vertical, 4)
+    }
+
+    // ~Half height: slim colour bar (tinted by supply urgency, which is the meaningful signal on
+    // this screen) replaces the tile; name inline; a compact supply label + E-Script glyph trail.
+    private var compactBody: some View {
+        HStack(spacing: 10) {
+            Capsule()
+                .fill(med.restockColor)
+                .frame(width: 4, height: 22)
+
+            Text(med.wrappedName)
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(.primary)
+                .lineLimit(1)
+
+            Spacer(minLength: 6)
+
+            if med.escriptData != nil {
+                Image(systemName: "qrcode")
+                    .font(.caption2)
+                    .foregroundStyle(.purple)
+            }
+            supplyLabelCompact
+        }
+        .padding(.vertical, 2)
+    }
+
+    // Single-line supply summary for compact mode (the full row stacks days + doses on two lines).
+    @ViewBuilder
+    private var supplyLabelCompact: some View {
+        let count = Int(med.currentCount)
+        if count == 0 {
+            Text("No supply")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.red)
+        } else if count < 3 {
+            Text("\(count) left")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.red)
+        } else {
+            let days = med.daysOfSupply
+            Text("\(days)d left")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(med.restockColor == .yellow ? Color.orange : med.restockColor)
+        }
     }
 
     @ViewBuilder

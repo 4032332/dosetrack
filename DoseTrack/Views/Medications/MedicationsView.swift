@@ -241,8 +241,16 @@ struct MedicationsView: View {
 
 private struct MedicationRowView: View {
     @ObservedObject var medication: Medication
+    @AppStorage("compactRows") private var compactRows: Bool = false
 
     var body: some View {
+        Group {
+            if compactRows { compactBody } else { fullBody }
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    private var fullBody: some View {
         HStack(spacing: 14) {
             // Tinted squircle tile with the form icon — the same treatment used on the Restock
             // list (via MedicationColorTile) so the two screens share one visual language
@@ -262,7 +270,25 @@ private struct MedicationRowView: View {
             // surfaced unambiguously as a Today alert and by the Restock tab's urgency colouring.
         }
         .padding(.vertical, 4)
-        .accessibilityElement(children: .combine)
+    }
+
+    // ~Half height: slim colour bar in place of the tile, name + dose·unit on one line.
+    private var compactBody: some View {
+        HStack(spacing: 10) {
+            Capsule()
+                .fill(medication.color)
+                .frame(width: 4, height: 22)
+
+            Text(medication.wrappedName)
+                .font(.subheadline.weight(.medium))
+                .lineLimit(1)
+            Text("\(medication.wrappedDosage) · \(medication.wrappedUnit)")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+            Spacer(minLength: 0)
+        }
+        .padding(.vertical, 2)
     }
 }
 
