@@ -29,7 +29,10 @@ struct AdherenceChartView: View {
             // weekday letters would be ambiguous once a range spans multiple weeks.
             if showXLabels {
                 AxisMarks(values: .stride(by: .day)) { value in
-                    AxisValueLabel(format: .dateTime.weekday(.narrow))
+                    // `centered: true` centres the weekday letter within the day's band — i.e.
+                    // directly under its bar. Without it the label anchors to the day-boundary
+                    // tick (the bar's leading edge), so every letter sits left of its bar.
+                    AxisValueLabel(format: .dateTime.weekday(.narrow), centered: true)
                 }
             } else {
                 AxisMarks(values: .stride(by: .weekOfYear)) { value in
