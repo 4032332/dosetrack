@@ -116,16 +116,16 @@ Thanks for trying DoseTrack. We'd love your feedback.
 
 ## 3. Monetization / Subscriptions (StoreKit 2)
 
-**In-app branding:** the paid tier is shown to users as **"DoseTrack Plus"**. The StoreKit
-config file and the local subscription *group* are named "DoseTrack Pro" / "Pro Monthly" /
-"Pro Annual" (internal reference names). Keep **customer-facing** display names as "Plus" for
-consistency with the app UI; reference names can stay "Pro" (reviewers/users don't see them).
+**In-app branding:** the paid tier is "DoseTrack Plus" everywhere a human sees it — customer-facing
+display names AND internal reference names all use "Plus". The only exception is the **Product ID**
+strings (`com.robbrown.dosetrack.pro.monthly` / `...pro.annual`), which still contain "pro": product
+IDs are permanent, never shown to users, and hard-coded in the app, so they are left unchanged.
 
 ### Subscription Group
 
 | Field | Value |
 |---|---|
-| **Reference Name** (internal) | DoseTrack Pro |
+| **Reference Name** (internal) | DoseTrack Plus |
 | **Group localization — Display Name** (customer-facing) | `DoseTrack Plus` |
 | Local StoreKit group id | `pro-subscription-group` |
 
@@ -134,7 +134,7 @@ consistency with the app UI; reference names can stay "Pro" (reviewers/users don
 | App Store Connect field | Value |
 |---|---|
 | **Product ID** | `com.robbrown.dosetrack.pro.monthly` |
-| Reference Name (internal) | Pro Monthly |
+| Reference Name (internal) | Plus Monthly |
 | **Display Name** (customer-facing) | `DoseTrack Plus Monthly` |
 | **Description** | `Full access to all DoseTrack Plus features.` |
 | Duration | 1 Month |
@@ -146,7 +146,7 @@ consistency with the app UI; reference names can stay "Pro" (reviewers/users don
 | App Store Connect field | Value |
 |---|---|
 | **Product ID** | `com.robbrown.dosetrack.pro.annual` |
-| Reference Name (internal) | Pro Annual |
+| Reference Name (internal) | Plus Annual |
 | **Display Name** (customer-facing) | `DoseTrack Plus Annual` |
 | **Description** | `Full access to all DoseTrack Plus features — save 37%.` |
 | Duration | 1 Year |

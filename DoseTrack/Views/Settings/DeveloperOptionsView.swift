@@ -38,7 +38,7 @@ struct DeveloperOptionsView: View {
                 Picker("Subscription", selection: proOverrideBinding) {
                     Text("Real StoreKit status").tag(ProOption.real)
                     Text("Force Free").tag(ProOption.forceFree)
-                    Text("Force Pro").tag(ProOption.forcePro)
+                    Text("Force Plus").tag(ProOption.forcePro)
                 }
 
                 Toggle("Caregiver Mode Preview", isOn: Binding(
@@ -48,7 +48,7 @@ struct DeveloperOptionsView: View {
             } header: {
                 Text("Testing Overrides")
             } footer: {
-                Text("Subscription override lets you test Pro-gated features without a real purchase. Caregiver Mode Preview adds a fake \"Test Patient\" to the account switcher so you can see the caregiver interface without a second account. These only work in TestFlight/Xcode builds — they automatically no-op on a real App Store build.")
+                Text("Subscription override lets you test Plus-gated features without a real purchase. Caregiver Mode Preview adds a fake \"Test Patient\" to the account switcher so you can see the caregiver interface without a second account. These only work in TestFlight/Xcode builds — they automatically no-op on a real App Store build.")
             }
         }
         .navigationTitle("Developer Options")

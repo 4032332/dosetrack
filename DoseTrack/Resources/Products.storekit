@@ -6,7 +6,7 @@
     {
       "id" : "pro-subscription-group",
       "localizations" : [],
-      "name" : "DoseTrack Pro",
+      "name" : "DoseTrack Plus",
       "subscriptions" : [
         {
           "adHocOffers" : [],
@@ -22,14 +22,14 @@
           },
           "localizations" : [
             {
-              "description" : "Full access to all DoseTrack Pro features",
-              "displayName" : "DoseTrack Pro Monthly",
+              "description" : "Full access to all DoseTrack Plus features",
+              "displayName" : "DoseTrack Plus Monthly",
               "locale" : "en_US"
             }
           ],
           "productID" : "com.robbrown.dosetrack.pro.monthly",
           "recurringSubscriptionPeriod" : "P1M",
-          "referenceName" : "Pro Monthly",
+          "referenceName" : "Plus Monthly",
           "subscriptionGroupID" : "pro-subscription-group",
           "type" : "RecurringSubscription"
         },
@@ -41,14 +41,14 @@
           "introductoryOffer" : null,
           "localizations" : [
             {
-              "description" : "Full access to all DoseTrack Pro features — save 37%",
-              "displayName" : "DoseTrack Pro Annual",
+              "description" : "Full access to all DoseTrack Plus features — save 37%",
+              "displayName" : "DoseTrack Plus Annual",
               "locale" : "en_US"
             }
           ],
           "productID" : "com.robbrown.dosetrack.pro.annual",
           "recurringSubscriptionPeriod" : "P1Y",
-          "referenceName" : "Pro Annual",
+          "referenceName" : "Plus Annual",
           "subscriptionGroupID" : "pro-subscription-group",
           "type" : "RecurringSubscription"
         }
