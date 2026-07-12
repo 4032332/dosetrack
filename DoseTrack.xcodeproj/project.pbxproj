@@ -90,6 +90,7 @@
 		81FB7687797B34816A18D3FD /* NotificationScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = DFA3D671FBA09F78CAF744E2 /* NotificationScheduler.swift */; };
 		829B499FAE07C722C2425619 /* CaregiverManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E717CD7D819338EACA8690F6 /* CaregiverManagerTests.swift */; };
 		8533FEFD60599D181C4D1AEF /* ConfettiView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DCDF5F2A2D877DBCE0D53836 /* ConfettiView.swift */; };
+		8820DCA3B6B5242F0BD9CCDC /* ScanSubjectLocator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C4D1437D2355D0E27A61D1E /* ScanSubjectLocator.swift */; };
 		8B48DF3CE85DB538565ECD06 /* CaregiverManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = DDCC6A63AA218E60F89B87AA /* CaregiverManager.swift */; };
 		8FB3539A31B3EB4EFAFF1825 /* DoseLoggingServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3835C3FC5AE13F3280F6AF38 /* DoseLoggingServiceTests.swift */; };
 		90FA6E2010482BAFA28A9C27 /* RoutineTimes.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD3D8B5F230B91D687A2E04F /* RoutineTimes.swift */; };
@@ -107,6 +108,7 @@
 		A268478FCA48D8A108362FF6 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = ABAACB239219E084D4E75FD2 /* GoogleSignIn */; };
 		A281A80A50F5524437F5AD94 /* CollapsiblePickers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81DA062623FAFAD8798ED2BF /* CollapsiblePickers.swift */; };
 		A4FB6C53628E12F8B0AF16B7 /* MedicationTextRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2C8FDD911D7FADAF412FF8 /* MedicationTextRecognizer.swift */; };
+		A5E141E15FB69495D5330AB1 /* ScanSubjectLocatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01C11C12BEA411FB723A46A1 /* ScanSubjectLocatorTests.swift */; };
 		A6C3AEEA90CCDC2A548C7FDF /* AltIconLavender@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 612B1AC4B3DC72766681D929 /* AltIconLavender@3x.png */; };
 		A7BF7E3D338864668FBF87CE /* AdherenceCalculatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3C137AE71909B05AA99C229 /* AdherenceCalculatorTests.swift */; };
 		A909A426B5CE460F3BF32C03 /* DoseTrackWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 73C68DD81F8003DB39C9A4E5 /* DoseTrackWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -219,11 +221,13 @@
 		00393D9BC807208C7D3C35E6 /* DisclaimerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DisclaimerView.swift; sourceTree = "<group>"; };
 		0092AEE5F32DECE392F1FBC5 /* PaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallView.swift; sourceTree = "<group>"; };
 		0115A9385AA49A9D72B70082 /* Vision.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Vision.framework; path = System/Library/Frameworks/Vision.framework; sourceTree = SDKROOT; };
+		01C11C12BEA411FB723A46A1 /* ScanSubjectLocatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanSubjectLocatorTests.swift; sourceTree = "<group>"; };
 		020BE8E8783CD63DD6223C2A /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		029DF751591E2CD71D187974 /* MealTimesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealTimesView.swift; sourceTree = "<group>"; };
 		0566CD401968CDF5B32D227F /* SelectAllTextField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelectAllTextField.swift; sourceTree = "<group>"; };
 		06256A2FC39F11A9D6318FBE /* DoseLoggingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DoseLoggingService.swift; sourceTree = "<group>"; };
 		0642B52A4FE3BAEB0C80CDEC /* MissedDoseDetectorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MissedDoseDetectorTests.swift; sourceTree = "<group>"; };
+		0C4D1437D2355D0E27A61D1E /* ScanSubjectLocator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanSubjectLocator.swift; sourceTree = "<group>"; };
 		0D35D9FC76F2B59C118BB1DA /* WatchRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchRootView.swift; sourceTree = "<group>"; };
 		11A7EC4C5C94FE23E59262D0 /* TabNavigator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabNavigator.swift; sourceTree = "<group>"; };
 		1334F53F193DF18162FD3082 /* Placeholder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Placeholder.swift; sourceTree = "<group>"; };
@@ -544,6 +548,7 @@
 				DFA3D671FBA09F78CAF744E2 /* NotificationScheduler.swift */,
 				A56A87A1C5B6E9F4E003903F /* PushTokenManager.swift */,
 				BB4EAC2257487A3F340D6310 /* ReportGenerator.swift */,
+				0C4D1437D2355D0E27A61D1E /* ScanSubjectLocator.swift */,
 				34A75E53E9DD5ED47776C699 /* ScheduleGenerator.swift */,
 				EBAFC4266E63CAD4933926A5 /* SubscriptionManager.swift */,
 				D8F0A5CF3936D62E1ED5B2EF /* SupabaseSyncManager.swift */,
@@ -678,6 +683,7 @@
 				86B90B563094F8A79551AC1B /* RegressionFixTests.swift */,
 				F0867072E3E54124F243E04E /* ReportGeneratorTests.swift */,
 				91EE2257272872A45D6CBFF3 /* RoutineStoreTests.swift */,
+				01C11C12BEA411FB723A46A1 /* ScanSubjectLocatorTests.swift */,
 				92DDE4D1A64539EDD477A11F /* ScanTextAccumulatorTests.swift */,
 				DD01A0081D63EFC4FF3B1510 /* ScheduleGeneratorTests.swift */,
 				1FA89388364D687BFC710600 /* SubscriptionManagerTests.swift */,
@@ -958,6 +964,7 @@
 				FF79D251AEE66C4E0E8E6410 /* RegressionFixTests.swift in Sources */,
 				A1D43B576119BC84DECA642C /* ReportGeneratorTests.swift in Sources */,
 				3BA950E13CC41C8E2FCEE218 /* RoutineStoreTests.swift in Sources */,
+				A5E141E15FB69495D5330AB1 /* ScanSubjectLocatorTests.swift in Sources */,
 				16A12E9E6DE8748ED6DCECF2 /* ScanTextAccumulatorTests.swift in Sources */,
 				7FBD95C52FDB4CE14634CB1E /* ScheduleGeneratorTests.swift in Sources */,
 				CC32A8FABA8182BE6986EDB8 /* SubscriptionManagerTests.swift in Sources */,
@@ -1061,6 +1068,7 @@
 				BA89B46643B897C978D12388 /* RestockView.swift in Sources */,
 				71C3618EEB9801B8A92A5086 /* RootView.swift in Sources */,
 				90FA6E2010482BAFA28A9C27 /* RoutineTimes.swift in Sources */,
+				8820DCA3B6B5242F0BD9CCDC /* ScanSubjectLocator.swift in Sources */,
 				53136E3D6F146CE4520086DB /* SceneDelegate.swift in Sources */,
 				FB10E263F64A40D6F09922AB /* Schedule+CoreDataClass.swift in Sources */,
 				5779CA573B4CF9E77729B6C5 /* Schedule+Extensions.swift in Sources */,

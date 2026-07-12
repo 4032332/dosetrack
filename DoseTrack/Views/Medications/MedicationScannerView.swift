@@ -204,6 +204,9 @@ private struct DataScannerRepresentable: UIViewControllerRepresentable {
         let model: LiveScanModel
         weak var scanner: DataScannerViewController?
         private var overlays: [RecognizedItem.ID: UIView] = [:]
+        /// The single "locked-on subject" highlight — the box/bottle/label region we're reading,
+        /// drawn so the user can see we're focused on the right thing (see ScanSubjectLocator).
+        private var subjectOverlay: UIView?
 
         /// Text accumulated across ALL frames this session (see ScanTextAccumulator). This is what
         /// makes a cylindrical bottle work — the wrapped label is never fully visible in one frame,
@@ -219,6 +222,8 @@ private struct DataScannerRepresentable: UIViewControllerRepresentable {
             accumulator.removeAll()
             overlays.values.forEach { $0.removeFromSuperview() }
             overlays.removeAll()
+            subjectOverlay?.removeFromSuperview()
+            subjectOverlay = nil
             model.result = nil
         }
 
@@ -240,31 +245,43 @@ private struct DataScannerRepresentable: UIViewControllerRepresentable {
         private func refresh(with allItems: [RecognizedItem], in dataScanner: DataScannerViewController) {
             let viewHeight = max(dataScanner.view.bounds.height, 1)
 
-            // Text items only, paired with their transcripts and bounds.
-            let texts: [(item: RecognizedItem, transcript: String)] = allItems.compactMap { item in
-                if case let .text(text) = item { return (item, text.transcript) }
+            // Text items only, paired with their transcripts and on-screen frames.
+            let texts: [(item: RecognizedItem, transcript: String, frame: CGRect)] = allItems.compactMap { item in
+                if case let .text(text) = item { return (item, text.transcript, boundingRect(for: item.bounds)) }
                 return nil
             }
 
-            // Accumulate this frame's text (keeps the longest variant + greatest height per line).
-            for entry in texts {
-                let h = boundingRect(for: entry.item.bounds).height / viewHeight
-                accumulator.add(text: entry.transcript, height: h)
+            // Lock onto the subject: find the box/bottle/label region in THIS frame, so we only
+            // read text that's on it and ignore surrounding noise (background bottles, price
+            // stickers, the far-away patient name). Everything downstream keys off `members`.
+            let locatorItems = texts.map {
+                ScanSubjectLocator.Item(text: $0.transcript, rect: $0.frame, heightFraction: $0.frame.height / viewHeight)
+            }
+            let subject = ScanSubjectLocator.locate(locatorItems)
+
+            // Accumulate ONLY in-subject text (keeps the longest variant + greatest height per
+            // line). Text outside the locked region never enters the accumulation, which is how
+            // background noise is rejected over a whole scanning session.
+            for (i, entry) in texts.enumerated() where subject.memberIndices.contains(i) {
+                accumulator.add(text: entry.transcript, height: entry.frame.height / viewHeight)
             }
 
             // Parse the full accumulation, not just this frame — the crux of reading a wrapped label.
             let parsed = MedicationParser.parse(lines: accumulator.lines)
             model.result = parsed
 
-            // Highlight whichever CURRENTLY-visible items map to a field (you can only draw a box
-            // over text that's on screen right now, even though the parse spans the accumulation).
+            // Draw the locked-on subject region (or clear it if we couldn't lock on).
+            drawSubject(region: subject.region, in: dataScanner)
+
+            // Highlight whichever CURRENTLY-visible, in-subject items map to a field (you can only
+            // draw a box over text that's on screen right now, even though the parse spans the
+            // whole accumulation).
             var live: Set<RecognizedItem.ID> = []
-            for entry in texts {
+            for (i, entry) in texts.enumerated() where subject.memberIndices.contains(i) {
                 guard let tag = tag(for: entry.transcript, parsedName: parsed?.name) else { continue }
                 live.insert(entry.item.id)
-                let frame = boundingRect(for: entry.item.bounds)
                 let box = overlays[entry.item.id] ?? makeOverlay()
-                configure(box, frame: frame, tag: tag)
+                configure(box, frame: entry.frame, tag: tag)
                 if box.superview == nil { dataScanner.overlayContainerView.addSubview(box) }
                 overlays[entry.item.id] = box
             }
@@ -272,6 +289,41 @@ private struct DataScannerRepresentable: UIViewControllerRepresentable {
                 view.removeFromSuperview()
                 overlays.removeValue(forKey: id)
             }
+        }
+
+        /// Draw (or update, or clear) the single subject-region highlight — a dashed rounded box
+        /// with a small "Scanning" chip, so the user can see what the scanner has locked onto.
+        private func drawSubject(region: CGRect?, in dataScanner: DataScannerViewController) {
+            guard let region, region.width > 8, region.height > 8 else {
+                subjectOverlay?.removeFromSuperview()
+                subjectOverlay = nil
+                return
+            }
+            let box = subjectOverlay ?? makeSubjectOverlay()
+            box.frame = region
+            if box.superview == nil { dataScanner.overlayContainerView.insertSubview(box, at: 0) }
+            subjectOverlay = box
+        }
+
+        private func makeSubjectOverlay() -> UIView {
+            let box = UIView()
+            box.backgroundColor = .clear
+            box.layer.borderWidth = 2.5
+            box.layer.borderColor = UIColor.systemGreen.cgColor
+            box.layer.cornerRadius = 12
+            box.layer.borderColor = UIColor.systemGreen.withAlphaComponent(0.9).cgColor
+            let label = UILabel()
+            label.text = "  Scanning  "
+            label.font = .systemFont(ofSize: 11, weight: .bold)
+            label.textColor = .white
+            label.backgroundColor = .systemGreen
+            label.layer.cornerRadius = 4
+            label.clipsToBounds = true
+            label.tag = 98
+            box.addSubview(label)
+            label.sizeToFit()
+            label.frame = CGRect(x: 6, y: -18, width: label.bounds.width + 8, height: 16)
+            return box
         }
 
 
