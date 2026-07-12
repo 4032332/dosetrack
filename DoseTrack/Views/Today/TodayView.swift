@@ -474,7 +474,10 @@ private struct AlertRow: View {
 
     private var title: String {
         switch alert {
-        case .lowRefill(let med, _):          return "\(med.wrappedName) running low"
+        case .lowRefill(let med, let remaining):
+            // A fully depleted supply shouldn't read as merely "running low" — say it's gone,
+            // keeping the same "[med] [status]" shape as the other alerts.
+            return remaining <= 0 ? "\(med.wrappedName) supply depleted" : "\(med.wrappedName) running low"
         case .upcomingDue(let med, _, _):     return "\(med.wrappedName) due soon"
         case .contraceptiveDue(let name, _, _): return "\(name) due soon"
         }
@@ -485,6 +488,7 @@ private struct AlertRow: View {
         case .lowRefill(let med, let remaining):
             let dpd = max(Int(med.totalDosesPerDay), 1)
             let days = remaining / dpd
+            if remaining <= 0 { return "No supply left — refill now" }
             if days == 0 { return "\(remaining) dose\(remaining == 1 ? "" : "s") left — refill now" }
             return "\(days) day\(days == 1 ? "" : "s") supply left (\(remaining) \(med.wrappedUnit)\(remaining == 1 ? "" : "s")) — time to refill"
         case .upcomingDue(_, let date, let days):
