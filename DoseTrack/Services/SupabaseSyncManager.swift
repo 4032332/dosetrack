@@ -450,6 +450,12 @@ final class SupabaseSyncManager: ObservableObject {
             // JSON representation forward.
             RoutineStore(migratingFrom: meals).save(to: d)
         }
+
+        // Free-tier scanner allowance: never let a pull decrease the lifetime count (a stale or
+        // zero server row must not hand a downgraded user fresh free scans).
+        if let remoteScan = row.scanCount {
+            ScanUsageManager.shared.applyRemote(remoteScan)
+        }
     }
 }
 
@@ -646,6 +652,8 @@ struct UserSettingsRow: Codable {
     /// are kept in sync from this (best-effort) so clients that predate this column still read
     /// roughly-correct meal times; new clients read this and ignore them.
     var routines: String?
+    /// Lifetime count of successful medication scans (free-tier scanner allowance).
+    var scanCount: Int?
 
     enum CodingKeys: String, CodingKey {
         case userId = "user_id"
@@ -682,6 +690,7 @@ struct UserSettingsRow: Codable {
         case mealBedtimeHour = "meal_bedtime_hour"
         case mealBedtimeMinute = "meal_bedtime_minute"
         case routines
+        case scanCount = "scan_count"
     }
 
     init(userId: UUID) {
@@ -714,6 +723,7 @@ struct UserSettingsRow: Codable {
         if let data = try? JSONEncoder().encode(store) {
             routines = String(data: data, encoding: .utf8)
         }
+        scanCount = d.integer(forKey: "scanCountUsed")
         let meals = store.asMealTimes()
         mealBreakfastHour = meals.breakfast.hour
         mealBreakfastMinute = meals.breakfast.minute

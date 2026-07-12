@@ -20,6 +20,25 @@ struct AddEditMedicationView: View {
     @State private var showingPhotoLibrary = false
     @State private var escriptToCrop: CropItem?
     @State private var showingScanner = false
+    @State private var showingScanPaywall = false
+    /// True once this add session was populated from a scan — used to count the scan against the
+    /// free-tier allowance only if the medication is actually saved.
+    @State private var cameFromScan = false
+    @ObservedObject private var scanUsage = ScanUsageManager.shared
+
+    /// Entry-point subtitle: entitled users just see the feature blurb; free users see how many of
+    /// their 3 lifetime scans remain, or a Plus prompt once they're spent.
+    private var scanShortcutSubtitle: String {
+        if SubscriptionManager.shared.isProSubscriber
+            || CaregiverManager.shared.ownPatientRelationship?.isActive == true {
+            return "Auto-fill name and strength from the label"
+        }
+        let left = scanUsage.freeScansRemaining
+        if left > 0 {
+            return "\(left) free scan\(left == 1 ? "" : "s") left, then DoseTrack Plus"
+        }
+        return "DoseTrack Plus feature — tap to upgrade"
+    }
 
     var body: some View {
         NavigationStack {
@@ -28,7 +47,11 @@ struct AddEditMedicationView: View {
                 if !viewModel.isEditing {
                     Section {
                         Button {
-                            showingScanner = true
+                            if scanUsage.canScan() {
+                                showingScanner = true
+                            } else {
+                                showingScanPaywall = true
+                            }
                         } label: {
                             HStack(spacing: 12) {
                                 Image(systemName: "camera.viewfinder")
@@ -39,12 +62,13 @@ struct AddEditMedicationView: View {
                                     Text("Scan Medication Box")
                                         .foregroundStyle(.primary)
                                         .font(.body.weight(.medium))
-                                    Text("Auto-fill name and strength from the label")
+                                    Text(scanShortcutSubtitle)
                                         .font(.caption)
                                         .foregroundStyle(.secondary)
                                 }
                                 Spacer()
-                                Image(systemName: "chevron.right")
+                                // Lock when the free allowance is spent (tap opens the paywall).
+                                Image(systemName: scanUsage.canScan() ? "chevron.right" : "lock.fill")
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                             }
@@ -300,6 +324,9 @@ struct AddEditMedicationView: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
                         if let saved = viewModel.save() {
+                            // Count a scanner-originated add against the free allowance only now
+                            // that it's actually saved (cancelling a scan never costs a scan).
+                            if cameFromScan { scanUsage.recordScanSaved() }
                             onSave(saved)
                             dismiss()
                         }
@@ -360,10 +387,14 @@ struct AddEditMedicationView: View {
                         if result.perDose > 0 {
                             viewModel.quantityAmount = result.perDose
                         }
+                        cameFromScan = true
                         showingScanner = false
                     },
                     onCancel: { showingScanner = false }
                 )
+            }
+            .sheet(isPresented: $showingScanPaywall) {
+                PaywallView()
             }
             .sheet(isPresented: $showingEscriptCamera) {
                 RestockCameraPickerView(
