@@ -209,7 +209,10 @@ final class NotificationSchedulerTests: XCTestCase {
         UNUserNotificationCenter.current().getPendingNotificationRequests { requests in
             if let req = requests.first {
                 XCTAssertEqual(req.content.title, "Lisinopril")
-                XCTAssertTrue(req.content.body.contains("10mg"))
+                // The body is a randomised reminder line that names the medication but deliberately
+                // never states the dose/strength (removed in the notification-copy overhaul — the
+                // patient already knows their own dose). So the body must contain the NAME, not "10mg".
+                XCTAssertTrue(req.content.body.contains("Lisinopril"), "body was: \(req.content.body)")
                 XCTAssertEqual(req.content.categoryIdentifier, Constants.Notification.categoryMedicationDue)
             } else {
                 XCTFail("Expected at least one pending notification")

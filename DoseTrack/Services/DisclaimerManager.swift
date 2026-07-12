@@ -10,7 +10,15 @@ import Foundation
 final class DisclaimerManager: ObservableObject {
 
     static let shared = DisclaimerManager()
-    private init() {}
+
+    /// The store the per-identity acceptance flag is cached in. Injectable so tests can use an
+    /// isolated suite instead of the shared `.standard` domain (which otherwise leaks state
+    /// between tests — and between the app and the test host — and made these tests flaky).
+    private let defaults: UserDefaults
+
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
+    }
 
     enum Status: Equatable {
         case unknown   // not yet resolved for the current identity (don't show the app yet)
@@ -35,7 +43,7 @@ final class DisclaimerManager: ObservableObject {
     func evaluate(userId: UUID?, isGuest: Bool) async {
         let id = identity(userId: userId, isGuest: isGuest)
 
-        if UserDefaults.standard.object(forKey: localKey(for: id)) != nil {
+        if defaults.object(forKey: localKey(for: id)) != nil {
             status = .accepted
             return
         }
@@ -48,7 +56,7 @@ final class DisclaimerManager: ObservableObject {
 
         // Real account with no local record (fresh account, or a reinstall): ask the server.
         if await SupabaseSyncManager.shared.hasAcceptedDisclaimer(userId: userId) {
-            UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: localKey(for: id))
+            defaults.set(Date().timeIntervalSince1970, forKey: localKey(for: id))
             status = .accepted
         } else {
             status = .required
@@ -62,7 +70,7 @@ final class DisclaimerManager: ObservableObject {
         // Record locally and proceed IMMEDIATELY — the local flag makes acceptance durable, so
         // the user never waits on (or gets trapped by) a slow/failed server write. The Supabase
         // record is then best-effort in the background.
-        UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: localKey(for: id))
+        defaults.set(Date().timeIntervalSince1970, forKey: localKey(for: id))
         status = .accepted
         if let userId, !isGuest {
             await SupabaseSyncManager.shared.recordDisclaimerAcceptance(userId: userId)

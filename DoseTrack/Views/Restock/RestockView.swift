@@ -18,6 +18,7 @@ struct RestockView: View {
     @State private var escriptPhotoItem: PhotosPickerItem? = nil
     @State private var showingEscriptUpload = false
     @State private var showingCameraPicker = false
+    @State private var escriptToCrop: CropItem? = nil
     @Binding var showingAccountSwitcher: Bool
 
     init(showingAccountSwitcher: Binding<Bool> = .constant(false)) {
@@ -110,33 +111,24 @@ struct RestockView: View {
             } message: {
                 Text("Save your QR code script so you can show it at the pharmacy.")
             }
-            // Photo library picker (handled via PhotosPickerItem onChange)
+            // Photo library picker → crop step (keeps escriptUploadTarget until crop confirms).
             .onChange(of: escriptPhotoItem) { _, newItem in
-                guard let target = escriptUploadTarget, let item = newItem else { return }
+                guard escriptUploadTarget != nil, let item = newItem else { return }
                 Task {
-                    if let data = try? await item.loadTransferable(type: Data.self) {
-                        target.escriptData = data
-                        try? context.save()
-                        if let img = UIImage(data: data) {
-                            showingEscript = (target, img)
-                        }
+                    if let data = try? await item.loadTransferable(type: Data.self),
+                       let img = UIImage(data: data) {
+                        escriptToCrop = CropItem(image: img)
                     }
                     escriptPhotoItem = nil
-                    escriptUploadTarget = nil
                 }
             }
-            // Camera picker
+            // Camera picker → crop step
             .sheet(isPresented: $showingCameraPicker) {
-                if let target = escriptUploadTarget {
+                if escriptUploadTarget != nil {
                     RestockCameraPickerView(
                         onCapture: { image in
-                            if let data = image.jpegData(compressionQuality: 0.85) {
-                                target.escriptData = data
-                                try? context.save()
-                                showingEscript = (target, image)
-                            }
                             showingCameraPicker = false
-                            escriptUploadTarget = nil
+                            escriptToCrop = CropItem(image: image)
                         },
                         onCancel: {
                             showingCameraPicker = false
@@ -144,6 +136,21 @@ struct RestockView: View {
                         }
                     )
                 }
+            }
+            // Crop the uploaded E-Script screenshot before saving it to the target medication.
+            .fullScreenCover(item: $escriptToCrop) { item in
+                ImageCropView(
+                    image: item.image,
+                    onConfirm: { cropped in
+                        if let target = escriptUploadTarget, let data = cropped.jpegData(compressionQuality: 0.85) {
+                            target.escriptData = data
+                            try? context.save()
+                        }
+                        escriptToCrop = nil
+                        escriptUploadTarget = nil
+                    },
+                    onCancel: { escriptToCrop = nil; escriptUploadTarget = nil }
+                )
             }
             // Edit medication sheet
             .sheet(item: $medicationToEdit) { med in

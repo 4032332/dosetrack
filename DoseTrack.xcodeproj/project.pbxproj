@@ -32,6 +32,7 @@
 		335912EEB4077A23F3E0700A /* CaregiverInviteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74716822DA208FC0B80FAC07 /* CaregiverInviteView.swift */; };
 		336A948E449C464DD2A1B81E /* SupplyMath.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17A75568414E936D13FACEEF /* SupplyMath.swift */; };
 		33962C7BDA120E5FC8E3CC75 /* MissedDoseDetectorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0642B52A4FE3BAEB0C80CDEC /* MissedDoseDetectorTests.swift */; };
+		3763A58512F6F3159BB94B00 /* ImageCropView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D850A7D92022B90F26575ACF /* ImageCropView.swift */; };
 		37BC34AB00889BC038C55C6E /* MediumWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = A177488B7127CD2F5DCABCEB /* MediumWidget.swift */; };
 		3AC02CB59E3F208940FCC564 /* AdherenceChartView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15FB0D0175781373455B3A93 /* AdherenceChartView.swift */; };
 		3C8CF57990D8AF763876B214 /* AccountSwitcherPill.swift in Sources */ = {isa = PBXBuildFile; fileRef = AEBCBE124AF08FD49F0BE6BB /* AccountSwitcherPill.swift */; };
@@ -340,6 +341,7 @@
 		CFE3723DC3C2AED5E91CF7BC /* ToastView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToastView.swift; sourceTree = "<group>"; };
 		D0E76F20C497B1349FE92ADF /* BuildEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BuildEnvironment.swift; sourceTree = "<group>"; };
 		D281D1F2A82F1A73F9F256A5 /* WidgetBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetBundle.swift; sourceTree = "<group>"; };
+		D850A7D92022B90F26575ACF /* ImageCropView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageCropView.swift; sourceTree = "<group>"; };
 		D882B65CF2991AA971D2DF0D /* SupabaseSyncManagerTargetUserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseSyncManagerTargetUserTests.swift; sourceTree = "<group>"; };
 		D8F0A5CF3936D62E1ED5B2EF /* SupabaseSyncManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseSyncManager.swift; sourceTree = "<group>"; };
 		DB37B24455EDD3E856F140EB /* DoseTrackWatchApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DoseTrackWatchApp.swift; sourceTree = "<group>"; };
@@ -413,6 +415,7 @@
 			children = (
 				B8DB6178CE8B08859DAC559F /* AddEditMedicationView.swift */,
 				A75207F9029E62A3CEDDA679 /* GuidedScheduleView.swift */,
+				D850A7D92022B90F26575ACF /* ImageCropView.swift */,
 				8F171A7EC3E2D466D5BF55CC /* MedicationDetailView.swift */,
 				EFBF2F1DB4EE6C1B60AB2673 /* MedicationScannerView.swift */,
 				878B68C292228E0060558260 /* MedicationsView.swift */,
@@ -1026,6 +1029,7 @@
 				BC601149CDF3569D6DD837A0 /* GuidedScheduleView.swift in Sources */,
 				CF78CFEB0883C456B2A70708 /* HistoryView.swift in Sources */,
 				B88C9038817C7EB6A325029B /* HistoryViewModel.swift in Sources */,
+				3763A58512F6F3159BB94B00 /* ImageCropView.swift in Sources */,
 				1C754212C521F888A1A4EEBB /* MainTabView.swift in Sources */,
 				AA59320BDF49357220E95DB9 /* MealTimes.swift in Sources */,
 				4F1037004E1446B8180AC548 /* MealTimesView.swift in Sources */,

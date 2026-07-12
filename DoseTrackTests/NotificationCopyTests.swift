@@ -59,15 +59,16 @@ final class NotificationCopyTests: XCTestCase {
         // Even when a med-type + bedtime gate both apply, the general pool must still be in the
         // mix (not overridden) — this is spelled out explicitly: it should still sometimes draw
         // a plain general line, not always the specific one.
-        var sawGeneralLine = false
-        for _ in 0..<300 {
-            let line = NotificationCopy.randomLine(medicationName: "Melatonin", unit: "inhaler", hour: 22)
-            if line == "It's Melatonin time!" || line == "Don't forget to take your Melatonin." {
-                sawGeneralLine = true
-                break
-            }
+        // Robust (non-flaky) check: the inhaler + bedtime gated pools together are only a few
+        // dozen lines, so if the distinct lines seen across many draws far exceed that, the large
+        // general pool must be contributing too. (The previous version waited for one of two
+        // hardcoded general lines, which flaked ~1.4% of the time.)
+        var seen = Set<String>()
+        for _ in 0..<400 {
+            seen.insert(NotificationCopy.randomLine(medicationName: "Melatonin", unit: "inhaler", hour: 22))
         }
-        XCTAssertTrue(sawGeneralLine, "Never drew a general-pool line even though gated pools applied")
+        XCTAssertGreaterThan(seen.count, 45,
+                             "Distinct lines seen (\(seen.count)) should far exceed the gated pools alone, proving general lines are in the mix")
     }
 
     // MARK: - Medication-form gating

@@ -257,11 +257,9 @@ private struct MedicationRowView: View {
                     .foregroundStyle(.secondary)
             }
             Spacer()
-            if medication.isRefillWarning {
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .foregroundStyle(.orange)
-                    .accessibilityLabel("Refill warning")
-            }
+            // Low-supply is deliberately NOT shown here. On a medication list a warning triangle
+            // reads as "don't take this," which is dangerously ambiguous — low supply is already
+            // surfaced unambiguously as a Today alert and by the Restock tab's urgency colouring.
         }
         .padding(.vertical, 4)
         .accessibilityElement(children: .combine)

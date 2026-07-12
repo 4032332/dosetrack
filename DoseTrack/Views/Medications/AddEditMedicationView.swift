@@ -15,6 +15,10 @@ struct AddEditMedicationView: View {
     @State private var showingEscriptSourcePicker = false
     @State private var showingEscriptCamera = false
     @State private var showingEscriptLibrary = false
+    @State private var showingPhotoSourcePicker = false
+    @State private var showingPhotoCamera = false
+    @State private var showingPhotoLibrary = false
+    @State private var escriptToCrop: CropItem?
     @State private var showingScanner = false
 
     var body: some View {
@@ -217,19 +221,19 @@ struct AddEditMedicationView: View {
                 }
                 .onChange(of: escriptPickerItem) { _, item in
                     Task { @MainActor in
-                        viewModel.escriptData = try? await item?.loadTransferable(type: Data.self)
+                        if let data = try? await item?.loadTransferable(type: Data.self),
+                           let img = UIImage(data: data) {
+                            escriptToCrop = CropItem(image: img)   // route through the crop step
+                        }
                     }
                 }
 
-                // MARK: Bottle Photo
-                Section("Bottle Photo (optional)") {
-                    // PhotosPicker's `label` ViewBuilder closure isn't itself MainActor-isolated
-                    // in the current SDK, so reading the MainActor-isolated `viewModel.photoData`
-                    // directly inside it is flagged under strict concurrency checking. Hoisting
-                    // it to a local value here (in body, which is MainActor-isolated) sidesteps
-                    // that — the closure captures a plain Data?, not the actor-isolated property.
+                // MARK: Reference Photo
+                Section {
                     let currentPhotoData = viewModel.photoData
-                    PhotosPicker(selection: $photoPickerItem, matching: .images) {
+                    Button {
+                        showingPhotoSourcePicker = true
+                    } label: {
                         HStack {
                             if let data = currentPhotoData, let img = UIImage(data: data) {
                                 Image(uiImage: img)
@@ -243,13 +247,8 @@ struct AddEditMedicationView: View {
                                     .background(Color.secondary.opacity(0.1))
                                     .clipShape(RoundedRectangle(cornerRadius: 8))
                             }
-                            Text(currentPhotoData == nil ? "Add bottle photo" : "Change photo")
+                            Text(currentPhotoData == nil ? "Add a photo" : "Change photo")
                                 .foregroundStyle(Color.accentColor)
-                        }
-                    }
-                    .onChange(of: photoPickerItem) { _, item in
-                        Task { @MainActor in
-                            viewModel.photoData = try? await item?.loadTransferable(type: Data.self)
                         }
                     }
                     if viewModel.photoData != nil {
@@ -257,6 +256,10 @@ struct AddEditMedicationView: View {
                             viewModel.photoData = nil; photoPickerItem = nil
                         }
                     }
+                } header: {
+                    Text("Reference Photo (optional)")
+                } footer: {
+                    Text("Add a photo of the pills, the box, or the bottle for easy identification.")
                 }
 
                 // MARK: Notes
@@ -365,10 +368,47 @@ struct AddEditMedicationView: View {
             .sheet(isPresented: $showingEscriptCamera) {
                 RestockCameraPickerView(
                     onCapture: { image in
-                        viewModel.escriptData = image.jpegData(compressionQuality: 0.85)
                         showingEscriptCamera = false
+                        escriptToCrop = CropItem(image: image)   // route through the crop step
                     },
                     onCancel: { showingEscriptCamera = false }
+                )
+            }
+            // E-Scripts are added as full screenshots — offer a crop step so the user can trim to
+            // just the QR code and relevant text (or keep the whole thing).
+            .fullScreenCover(item: $escriptToCrop) { img in
+                ImageCropView(
+                    image: img.image,
+                    onConfirm: { cropped in
+                        viewModel.escriptData = cropped.jpegData(compressionQuality: 0.85)
+                        escriptToCrop = nil
+                    },
+                    onCancel: { escriptToCrop = nil }
+                )
+            }
+            // Reference photo: same "Take Photo / Choose from Library" chooser as the E-Script.
+            .confirmationDialog("Add a Photo", isPresented: $showingPhotoSourcePicker) {
+                Button("Take Photo") { DispatchQueue.main.async { showingPhotoCamera = true } }
+                Button("Choose from Photo Library") { DispatchQueue.main.async { showingPhotoLibrary = true } }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("Add a photo of the pills, box, or bottle for easy identification.")
+            }
+            .photosPicker(isPresented: $showingPhotoLibrary, selection: $photoPickerItem, matching: .images)
+            .onChange(of: photoPickerItem) { _, item in
+                Task { @MainActor in
+                    if let data = try? await item?.loadTransferable(type: Data.self) {
+                        viewModel.photoData = data
+                    }
+                }
+            }
+            .sheet(isPresented: $showingPhotoCamera) {
+                RestockCameraPickerView(
+                    onCapture: { image in
+                        viewModel.photoData = image.jpegData(compressionQuality: 0.85)
+                        showingPhotoCamera = false
+                    },
+                    onCancel: { showingPhotoCamera = false }
                 )
             }
         }
@@ -408,6 +448,10 @@ struct EScriptFullscreenView: View {
     let medicationName: String
     @Environment(\.dismiss) private var dismiss
 
+    /// The user's screen brightness before we forced it to max — restored on dismiss. Captured in
+    /// `onAppear` (not as a default) so we always restore the value that was actually in effect.
+    @State private var previousBrightness: CGFloat = UIScreen.main.brightness
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -426,6 +470,15 @@ struct EScriptFullscreenView: View {
                         .foregroundStyle(.white)
                 }
             }
+        }
+        // Crank the screen to full brightness so a pharmacy scanner can read the QR reliably, then
+        // put it back exactly as it was when the viewer closes.
+        .onAppear {
+            previousBrightness = UIScreen.main.brightness
+            UIScreen.main.brightness = 1.0
+        }
+        .onDisappear {
+            UIScreen.main.brightness = previousBrightness
         }
     }
 }
