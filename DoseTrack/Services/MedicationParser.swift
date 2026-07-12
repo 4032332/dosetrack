@@ -217,19 +217,19 @@ enum MedicationParser {
         pattern: #"\d+"#, options: []
     )
 
-    /// Extract the pack quantity from a pharmacy dispensing line: a line carrying both a strength
-    /// and a dose-form word. The quantity is the standalone integer that is NOT the strength's
-    /// number, NOT inside parentheses (that's usually a generic/brand name), and NOT part of a
-    /// "Pack 1 of 2" marker. Prefers a plausible pack size (>= a few units).
+    /// Extract the pack quantity from a pharmacy dispensing line: a line carrying a dose-form word
+    /// (strength optional — e.g. combo meds like "50 PANADEINE FORTE TAB (paracetamol + codeine)"
+    /// print no strength on this line). The quantity is the standalone integer that is NOT the
+    /// strength's number, NOT inside parentheses (a generic/brand name), and NOT part of a
+    /// "Pack 1 of 2" marker or a price. Prefers a plausible pack size (>= a few units).
     private static func supplyFromDispensingLine(_ line: String) -> Int? {
         let ns = line as NSString
         let full = NSRange(location: 0, length: ns.length)
-        // Must look like a dispensing/name line: has a strength and a form word.
-        guard let strength = strengthPattern.firstMatch(in: line, range: full),
-              formWordPattern.firstMatch(in: line, range: full) != nil else { return nil }
+        guard formWordPattern.firstMatch(in: line, range: full) != nil else { return nil }
 
-        // Ranges to exclude: the strength's own number, and anything inside parentheses.
-        let strengthNumberRange = strength.range(at: 1)
+        // Exclude the strength's own number (if any) and anything inside parentheses.
+        let strengthNumberRange = strengthPattern.firstMatch(in: line, range: full)?.range(at: 1)
+            ?? NSRange(location: NSNotFound, length: 0)
         let parenRanges = parentheticalRanges(in: ns)
         let lower = line.lowercased() as NSString
 
@@ -398,15 +398,6 @@ enum MedicationParser {
         "amn", "ah", "actavis", "teva", "novartis", "aspen", "viatris", "generichealth", "chemists",
     ]
 
-    /// True when a single line looks like a pharmacy dispensing line: it carries BOTH a strength
-    /// and a dose-form word (e.g. "100 MINIPRESS 1MG TAB (prazosin)"). This is the line the name,
-    /// strength and quantity all most reliably come from.
-    private static func isDispensingLine(_ line: String) -> Bool {
-        let full = NSRange(location: 0, length: (line as NSString).length)
-        return strengthPattern.firstMatch(in: line, range: full) != nil
-            && formWordPattern.firstMatch(in: line, range: full) != nil
-    }
-
     /// The generic drug name from a dispensing line's parenthetical — "(Melatonin)" → "Melatonin",
     /// "(MELOXICAM (SANDOZ))" → "MELOXICAM", "(APO) … (clonidine)" → "clonidine". Skips manufacturer
     /// codes. Returns the first parenthetical token that looks like a real drug name.
@@ -414,12 +405,53 @@ enum MedicationParser {
         let ns = line as NSString
         for range in parentheticalRanges(in: ns) {
             let inner = ns.substring(with: range)
+            // Skip salt-form qualifiers like "(as magnesium trihydrate)" — not the drug name.
+            if inner.trimmingCharacters(in: CharacterSet(charactersIn: "( )")).lowercased().hasPrefix("as ") { continue }
             let tokens = inner.split { !$0.isLetter }.map(String.init)
-            for token in tokens where token.count >= 4 && !manufacturerCodes.contains(token.lowercased()) {
+            for token in tokens where token.count >= 4
+                && !manufacturerCodes.contains(token.lowercased())
+                && !dispensingDescriptors.contains(token.lowercased()) {
                 return token
             }
         }
         return nil
+    }
+
+    /// Pharmacy/dispensing context markers — their presence means we're looking at a dispensed
+    /// label (where the parenthetical generic is trustworthy and text height is not, because
+    /// stickers/logos dominate) rather than a clean retail box (where the tallest text is the brand).
+    private static func hasDispensingContext(_ lines: [String]) -> Bool {
+        lines.contains { line in
+            let lc = line.lowercased()
+            if ["chemist warehouse", "terrywhite", "chemmart", "priceline", "amcal",
+                "repeat", "dispensed", "full cost"].contains(where: lc.contains) { return true }
+            return isInstructionLine(line) || isPersonDateOrPrice(line)
+        }
+    }
+
+    /// Line-level markers that mean a line is definitely NOT the medication name (pharmacy,
+    /// sticker, regulatory) — distinct from `boilerplateMarkers`, which also excludes form words
+    /// that legitimately appear ON a dispensing name line.
+    private static let nonMedLineMarkers: [String] = [
+        "chemist warehouse", "warehouse", "terrywhite", "chemmart", "priceline", "amcal",
+        "guardian", "telephone", "tel ", "phone", "last repeat", "repeats left",
+        "prescription is necessary", "no further", "full cost", "keep out", "reach of children",
+        "www.", ".com", "dosage", "consult", "directed by", "drowsiness", "avoid alcohol",
+        "aust r", "aust l", "batch", "store ",
+    ]
+
+    /// A line that reliably carries the dispensed medication name: it has a dose-form word and a
+    /// quantity or strength (e.g. "50 PANADEINE FORTE TAB (…)", "MELOXICAM TABLETS 15mg 30"), and
+    /// isn't an instruction, a person/date/price, or pharmacy/regulatory furniture.
+    private static func isMedicationNameLine(_ line: String) -> Bool {
+        guard !isInstructionLine(line), !isPersonDateOrPrice(line) else { return false }
+        let lc = line.lowercased()
+        if nonMedLineMarkers.contains(where: { lc.contains($0) }) { return false }
+        let full = NSRange(location: 0, length: (line as NSString).length)
+        guard formWordPattern.firstMatch(in: line, range: full) != nil else { return false }
+        let hasStrength = strengthPattern.firstMatch(in: line, range: full) != nil
+        let hasLeadingInt = line.range(of: #"^\s*\d+\s"#, options: .regularExpression) != nil
+        return hasStrength || hasLeadingInt
     }
 
     /// Remove strength ("200 mg") and count ("24 Tablets") fragments from a line. OCR frequently
@@ -450,17 +482,26 @@ enum MedicationParser {
     private static func extractName(from lines: [RecognizedLine]) -> String? {
         let texts = lines.map(\.text)
 
-        // 1. The pharmacy dispensing line is the most reliable name source — far more so than text
-        //    height, because stickers ("LAST REPEAT…"), pharmacy logos ("CHEMIST WAREHOUSE") and
-        //    patient/prescriber lines ("MR ROBERT BROWN") are all large and would otherwise win.
-        //    Prefer the parenthetical generic ("(Melatonin)", "(prazosin)"); else the name token
-        //    that leads the line ("MINIPRESS", "MELOXICAM").
-        for line in texts where isDispensingLine(line) {
-            if let generic = genericFromParenthetical(line) { return clean(generic) }
-            if let token = nameFromDispensingLine(line) { return clean(token) }
+        // 1. The dispensing/name line is the most reliable source — far more so than text height,
+        //    because stickers ("LAST REPEAT…"), pharmacy logos ("CHEMIST WAREHOUSE"), garbled CMI
+        //    side-panels and patient/prescriber lines are all large and would otherwise win. Take
+        //    the name token(s) printed on it ("PANADEINE FORTE", "MELOXICAM", "MINIPRESS").
+        for line in texts where isMedicationNameLine(line) {
+            if let token = nameTokenFromLine(line) { return clean(token) }
         }
 
-        // 2. No dispensing line (a plain manufacturer box or supplement): strip strength/count
+        // 2. A parenthetical generic anywhere ("(prazosin)", "(clonidine)") — but only when this is
+        //    clearly a dispensed label (pharmacy/instruction/patient context). This rescues a
+        //    truncated bottle whose name line lost its form word off the curved edge, WITHOUT
+        //    hijacking a clean retail box (where a "(as magnesium trihydrate)"-style parenthetical
+        //    would mislead and the brand should come from text height instead).
+        if hasDispensingContext(texts) {
+            for line in texts {
+                if let generic = genericFromParenthetical(line) { return clean(generic) }
+            }
+        }
+
+        // 3. No dispensing line (a plain manufacturer box or supplement): strip strength/count
         //    noise from each line, keep the plausible name portions, and let the tallest win —
         //    on those packs the brand really is the dominant text.
         let candidates: [(name: String, height: CGFloat)] = lines.compactMap { line in
@@ -492,33 +533,44 @@ enum MedicationParser {
         "mr", "sr", "xr", "cr", "er", "ec", "odt", "xl", "hcl",
         "tab", "tabs", "tablet", "tablets", "cap", "caps", "caplet", "caplets",
         "capsule", "capsules", "orally", "wgr",
+        // Packaging adjectives — "30 enteric coated tablets" must not yield "enteric coated".
+        "enteric", "coated", "uncoated", "film", "scored", "hard", "soft", "chewable",
+        "effervescent", "modified", "release", "prolonged", "extended", "dispersible",
+        "sustained", "controlled", "slow", "oral", "only", "prescription", "medicine",
     ]
 
-    /// The medication name as it appears on a pharmacy dispensing line ("100 MINIPRESS 1MG TAB
-    /// (prazosin)" → "MINIPRESS"; "MELOXICAM TABLETS 15mg 30 (…)" → "MELOXICAM"). Only applied to a
-    /// qualifying dispensing line (strength + form word), and used as a last-resort name source
-    /// when the height/casing heuristics find nothing — e.g. a cylindrical bottle whose only clear
-    /// text is the wrapped dispensing line, where the form word would otherwise flag it boilerplate.
-    private static func nameFromDispensingLine(_ line: String) -> String? {
-        let full = NSRange(location: 0, length: (line as NSString).length)
-        guard strengthPattern.firstMatch(in: line, range: full) != nil,
-              formWordPattern.firstMatch(in: line, range: full) != nil else { return nil }
-        // Drop parenthetical content (alt names / mfr codes), then tokenise.
+    /// The medication name token(s) as printed on a dispensing/name line ("50 PANADEINE FORTE TAB
+    /// (paracetamol + codeine)" → "PANADEINE FORTE"; "100 MINIPRESS 1MG TAB (prazosin)" →
+    /// "MINIPRESS"; "MELOXICAM TABLETS 15mg 30" → "MELOXICAM"). Skips a leading quantity, then
+    /// collects consecutive name words (so multi-word brands survive) and stops at the first
+    /// strength/descriptor after the name.
+    private static func nameTokenFromLine(_ line: String) -> String? {
+        // Drop parenthetical content (alt names / mfr codes) first.
         var stripped = line
         while let open = stripped.firstIndex(of: "("), let close = stripped[open...].firstIndex(of: ")") {
             stripped.replaceSubrange(open...close, with: " ")
         }
-        let tokens = stripped.split(whereSeparator: { $0 == " " || $0 == "-" }).map(String.init)
-        for token in tokens {
-            let clean = token.trimmingCharacters(in: CharacterSet(charactersIn: "®™©*.,:;()"))
-            let lc = clean.lowercased()
-            if clean.count < 3 { continue }
-            if clean.rangeOfCharacter(from: .decimalDigits) != nil { continue }  // strength/qty
-            if dispensingDescriptors.contains(lc) { continue }
-            if clean.filter(\.isLetter).count < clean.count / 2 { continue }
-            return clean
+        let tokens = stripped.split(whereSeparator: { $0 == " " || $0 == "-" || $0 == "/" }).map(String.init)
+        var nameTokens: [String] = []
+        for raw in tokens {
+            let tok = raw.trimmingCharacters(in: CharacterSet(charactersIn: "®™©*.,:;()"))
+            let lc = tok.lowercased()
+            let valid = tok.count >= 3
+                && tok.rangeOfCharacter(from: .decimalDigits) == nil    // not strength/qty
+                && !dispensingDescriptors.contains(lc)
+                && !manufacturerCodes.contains(lc)
+                && tok.filter(\.isLetter).count >= max(1, tok.count / 2)
+            if valid {
+                nameTokens.append(tok)
+            } else if nameTokens.isEmpty {
+                continue          // leading quantity / junk — keep looking for the name
+            } else {
+                break             // reached the strength/form after the name — stop
+            }
         }
-        return nil
+        let name = nameTokens.joined(separator: " ")
+        guard !name.isEmpty, isNameCandidate(name) else { return nil }
+        return name
     }
 
     /// Tidy a chosen name line: collapse whitespace and trim trailing punctuation/®/™.

@@ -237,25 +237,89 @@ final class MedicationScannerParserTests: XCTestCase {
             "Chemist Warehouse Westfield North Lakes East",
         ]
         let r = MedicationParser.parse(lines: lines)
-        XCTAssertEqual(r?.name, "Melatonin")
+        // Name comes from the dispensed name line (the prominent dispensed name), not the noise.
+        XCTAssertEqual(r?.name, "DOZATIN")
         XCTAssertEqual(r?.strength, "2")
         XCTAssertEqual(r?.count, 60, "Supply must be 60, not 99 (that's the $44.99 price)")
     }
 
     func testFeedback_minipress_nameNotPharmacy() {
-        // 5542: scanner had picked "CHEMIST WAREHOUSE" as name. Correct: prazosin/Minipress.
+        // 5542/5549: scanner had picked "CHEMIST WAREHOUSE" / garbled CMI text as name. Correct: Minipress.
         let lines = [
             "PRESCRIPTION ONLY MEDICINE",
             "100 MINIPRESS 1MG TAB ( prazosin )",
             "Take a HALF tablet at night, Every week increase the dose by 0.5mg until reaching 4mg",
             "MR ROBERT BROWN",
+            "DO BY Ple Cor Info fror or 1",
             "Chemist Warehouse Northlakes Home Co.",
             "100 TABLETS",
         ]
         let r = MedicationParser.parse(lines: lines)
-        XCTAssertEqual(r?.name, "prazosin")
+        XCTAssertEqual(r?.name, "MINIPRESS")
         XCTAssertNotEqual(r?.name, "CHEMIST WAREHOUSE")
         XCTAssertEqual(r?.count, 100)
+    }
+
+    func testFeedback_panadeine_comboNoStrengthOnLine() {
+        // 5545: scanner picked the drowsiness sticker as name and no supply. The dispensing line
+        // has form + qty but NO strength (combo strengths are on the box). Name = "PANADEINE
+        // FORTE" (multi-word), qty = 50.
+        let lines = [
+            "This medicine may cause DROWSINESS and may increase the effects of alcohol.",
+            "If affected, do not drive a motor vehicle or operate machinery.",
+            "50 PANADEINE FORTE TAB ( paracetamol + codeine )",
+            "Take ONE to TWO tablets before bed when required",
+            "MR ROBERT BROWN",
+            "DR R RAMPERSAD $16.99",
+            "Chemist Warehouse Northlakes Home Co.",
+        ]
+        let r = MedicationParser.parse(lines: lines)
+        XCTAssertEqual(r?.name, "PANADEINE FORTE")
+        XCTAssertEqual(r?.count, 50)
+    }
+
+    func testFeedback_restavit_nameNotSticker() {
+        // 5550: scanner picked "licine may cause INESS…". Correct: Restavit, qty 20, 25mg.
+        let lines = [
+            "This medicine may cause DROWSINESS and may increase the effects of alcohol.",
+            "RESTAVIT",
+            "20 RESTAVIT 25MG TAB ( doxylamine )",
+            "Take ONE to TWO tablets at bedtime when required",
+            "ROBERT BROWN",
+        ]
+        let r = MedicationParser.parse(lines: lines)
+        XCTAssertEqual(r?.name, "RESTAVIT")
+        XCTAssertEqual(r?.strength, "25")
+        XCTAssertEqual(r?.count, 20)
+    }
+
+    func testFeedback_clonidine_bottleTruncated_nameFromParenthetical() {
+        // 5551: cylindrical bottle, the name line lost its form word off the curved edge. Fall
+        // back to the "(clonidine)" parenthetical (dispensing context present). Not the sticker.
+        let lines = [
+            "Do not stop taking abruptly CLONIDINE (APO) 100",
+            "( clonidine )",
+            "Take FOUR tablets at night",
+            "MR ROBERT BROWN",
+            "Ho may hat achol. tea motor achin",
+            "Chemist Warehouse Westfield North Lakes East",
+        ]
+        let r = MedicationParser.parse(lines: lines)
+        XCTAssertEqual(r?.name, "clonidine")
+    }
+
+    func testManufacturerBox_notHijackedBySaltParenthetical() {
+        // A clean retail box (no dispensing context): the brand comes from text height, NOT the
+        // "(as magnesium trihydrate)" salt qualifier, and NOT "enteric coated".
+        let lines: [RecognizedLine] = [
+            RecognizedLine(text: "ESOPREZE", heightFraction: 0.12),
+            RecognizedLine(text: "esomeprazole (as magnesium trihydrate) 20 mg", heightFraction: 0.03),
+            RecognizedLine(text: "30 enteric coated tablets", heightFraction: 0.025),
+            RecognizedLine(text: "AUST R 349670", heightFraction: 0.02),
+        ]
+        let r = MedicationParser.parse(lines: lines)
+        XCTAssertEqual(r?.name, "ESOPREZE")
+        XCTAssertEqual(r?.count, 30)
     }
 
     func testFeedback_meloxicam_nameNotPatientLine() {
