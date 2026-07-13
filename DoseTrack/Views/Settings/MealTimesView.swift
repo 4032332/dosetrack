@@ -142,6 +142,10 @@ private struct RoutineEditorView: View {
     ) private var medications: FetchedResults<Medication>
 
     @State private var didLinkChange = false
+    /// The linked medications, held as explicit view state so the checkmarks re-render reliably on
+    /// tap — reading it live from each med's schedules (a to-many relationship) did NOT reliably
+    /// refresh the row when a schedule changed, which is why boxes wouldn't toggle/uncheck.
+    @State private var linkedIDs: Set<NSManagedObjectID> = []
 
     private var timeBinding: Binding<Date> {
         Binding(
@@ -182,12 +186,13 @@ private struct RoutineEditorView: View {
                             Text("No medications yet.").foregroundStyle(.secondary)
                         } else {
                             ForEach(medications) { med in
+                                let isOn = linkedIDs.contains(med.objectID)
                                 Button {
-                                    toggleLink(med)
+                                    toggleLink(med, currentlyLinked: isOn)
                                 } label: {
                                     HStack(spacing: 12) {
-                                        Image(systemName: isLinked(med) ? "checkmark.circle.fill" : "circle")
-                                            .foregroundStyle(isLinked(med) ? Color.accentColor : Color.secondary.opacity(0.5))
+                                        Image(systemName: isOn ? "checkmark.circle.fill" : "circle")
+                                            .foregroundStyle(isOn ? Color.accentColor : Color.secondary.opacity(0.5))
                                         VStack(alignment: .leading, spacing: 1) {
                                             Text(med.wrappedName).foregroundStyle(.primary)
                                             Text("\(med.wrappedDosage) · \(med.wrappedUnit)")
@@ -196,6 +201,7 @@ private struct RoutineEditorView: View {
                                         Spacer()
                                     }
                                 }
+                                .buttonStyle(.plain)
                             }
                         }
                     } header: {
@@ -207,6 +213,11 @@ private struct RoutineEditorView: View {
             }
             .navigationTitle(isNew ? "New Routine" : routine.name)
             .navigationBarTitleDisplayMode(.inline)
+            .onAppear {
+                linkedIDs = Set(medications
+                    .filter { m in m.schedulesArray.contains { ($0.routineLabel ?? "") == routine.name } }
+                    .map(\.objectID))
+            }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { finish(save: false) } }
                 ToolbarItem(placement: .confirmationAction) {
@@ -217,15 +228,13 @@ private struct RoutineEditorView: View {
         }
     }
 
-    private func isLinked(_ med: Medication) -> Bool {
-        med.schedulesArray.contains { ($0.routineLabel ?? "") == routine.name }
-    }
-
-    private func toggleLink(_ med: Medication) {
-        if isLinked(med) {
+    private func toggleLink(_ med: Medication, currentlyLinked: Bool) {
+        if currentlyLinked {
             RoutineLinker.unlink(med: med, routineName: routine.name, context: context)
+            linkedIDs.remove(med.objectID)
         } else {
             RoutineLinker.link(med: med, to: routine, context: context)
+            linkedIDs.insert(med.objectID)
         }
         didLinkChange = true
     }
