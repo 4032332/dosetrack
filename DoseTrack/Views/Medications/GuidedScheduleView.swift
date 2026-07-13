@@ -99,7 +99,9 @@ struct GuidedScheduleView: View {
 
     private var summaryText: String {
         guard let first = schedules.first else { return "Not scheduled" }
-        let timeText = formattedTime(hour: first.hour, minute: first.minute)
+        // A routine-linked schedule reads better as its routine name ("Bedtime") than the
+        // underlying clock time — matching how Today shows it.
+        let timeText = first.routineLabel ?? formattedTime(hour: first.hour, minute: first.minute)
         if schedules.count > 1 {
             return "\(schedules.count) times daily, starting \(timeText)"
         }
