@@ -10,7 +10,7 @@
       "subscriptions" : [
         {
           "adHocOffers" : [],
-          "displayPrice" : "3.99",
+          "displayPrice" : "5.99",
           "familySharable" : false,
           "groupNumber" : 1,
           "introductoryOffer" : {
@@ -35,13 +35,13 @@
         },
         {
           "adHocOffers" : [],
-          "displayPrice" : "24.99",
+          "displayPrice" : "39.99",
           "familySharable" : false,
           "groupNumber" : 2,
           "introductoryOffer" : null,
           "localizations" : [
             {
-              "description" : "Full access to all DoseTrack Plus features — save 48%",
+              "description" : "Full access to all DoseTrack Plus features. Best value — one year.",
               "displayName" : "DoseTrack Plus Annual",
               "locale" : "en_US"
             }

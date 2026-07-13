@@ -145,7 +145,7 @@ struct PaywallView: View {
                 PricingCard(
                     product: annual,
                     isSelected: selectedProductId == annual.id,
-                    badge: "Best Value — Save 48%",
+                    badge: annualSavingsBadge,
                     subtitle: "Just \(perMonthPrice(annual))/mo, billed yearly"
                 ) {
                     selectedProductId = annual.id
@@ -214,6 +214,18 @@ struct PaywallView: View {
     private func perMonthPrice(_ product: Product) -> String {
         let monthlyValue = product.price / 12
         return monthlyValue.formatted(product.priceFormatStyle)
+    }
+
+    /// The annual saving vs paying monthly for a year, computed from the LIVE prices so it's
+    /// accurate in every currency (e.g. ~44% at A$5.99/A$39.99) — not a hard-coded number that's
+    /// only right in one region. Falls back to a plain "Best Value" if prices aren't loaded.
+    private var annualSavingsBadge: String {
+        guard let annual, let monthly else { return "Best Value" }
+        let yearlyIfMonthly = NSDecimalNumber(decimal: monthly.price).doubleValue * 12
+        let annualValue = NSDecimalNumber(decimal: annual.price).doubleValue
+        guard yearlyIfMonthly > 0, annualValue < yearlyIfMonthly else { return "Best Value" }
+        let pct = Int((((yearlyIfMonthly - annualValue) / yearlyIfMonthly) * 100).rounded())
+        return pct > 0 ? "Best Value — Save \(pct)%" : "Best Value"
     }
 
     private func purchaseSelected() {
