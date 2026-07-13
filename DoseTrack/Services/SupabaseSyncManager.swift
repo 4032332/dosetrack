@@ -24,9 +24,16 @@ final class SupabaseSyncManager: ObservableObject {
         guard let targetUserId = forUserId ?? AuthManager.shared.session?.user.id else { return }
         do {
             let pullStartedAt = Date()
+            // Incremental dose-log pulls normally fetch only logs newer than the last sync. But if
+            // the local store has NO dose logs (a fresh install, or right after a sign-out wipe),
+            // ignore the watermark and do a full re-pull — otherwise a stale watermark would leave
+            // the history permanently empty even though it's all still on the server.
+            let logCountReq = NSFetchRequest<NSFetchRequestResult>(entityName: "DoseLog")
+            let hasLocalLogs = ((try? context.count(for: logCountReq)) ?? 0) > 0
+            let logsSince = hasLocalLogs ? Self.lastDoseLogSyncAt(for: targetUserId) : nil
             async let meds    = fetchRemoteMedications(userId: targetUserId)
             async let scheds  = fetchRemoteSchedules(userId: targetUserId)
-            async let logs    = fetchRemoteDoseLogs(userId: targetUserId, since: Self.lastDoseLogSyncAt(for: targetUserId))
+            async let logs    = fetchRemoteDoseLogs(userId: targetUserId, since: logsSince)
             async let settings = fetchRemoteSettings(userId: targetUserId)
             let (m, s, l, st) = try await (meds, scheds, logs, settings)
             mergeMedications(m, context: context)
@@ -77,15 +84,21 @@ final class SupabaseSyncManager: ObservableObject {
             for schedule in med.schedulesArray {
                 await pushSchedule(schedule, medicationId: id, userId: targetUserId)
             }
-            // Delete any remote schedule rows for this medication that no longer exist locally.
-            // Editing a medication replaces its schedules with new-UUID rows; without this the
-            // old rows were left orphaned in Supabase and re-materialized as DUPLICATE schedules
-            // on the next pull (one extra Today row per past edit, and stale-time reminders).
-            var deleteQuery = client.from("schedules").delete().eq("medication_id", value: id.uuidString)
-            if !currentIds.isEmpty {
-                deleteQuery = deleteQuery.not("id", operator: .in, value: "(\(currentIds.joined(separator: ",")))")
-            }
-            try await deleteQuery.execute()
+            // Prune remote schedule rows for this medication that no longer exist locally —
+            // editing a medication replaces its schedules with new-UUID rows, and without this the
+            // old rows re-materialised as DUPLICATE schedules on the next pull.
+            //
+            // CRITICAL SAFETY GUARD: only prune when we actually have local schedules to reconcile
+            // against. An EMPTY local set almost always means a sync gap (e.g. immediately after a
+            // local-store wipe on sign-out), NOT a deliberate "remove every schedule". The previous
+            // code ran an unfiltered `DELETE ... WHERE medication_id = ...` in that case, which
+            // destroyed all of a medication's schedules server-side. A medication with genuinely
+            // zero schedules is a rare edge; never mass-deleting is well worth it.
+            guard !currentIds.isEmpty else { return }
+            try await client.from("schedules").delete()
+                .eq("medication_id", value: id.uuidString)
+                .not("id", operator: .in, value: "(\(currentIds.joined(separator: ",")))")
+                .execute()
         } catch { print("pushMedication error: \(error)") }
     }
 

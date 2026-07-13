@@ -96,6 +96,15 @@ final class PersistenceController: ObservableObject {
             }
         }
         try? ctx.save()
+        // Reset the per-user incremental-sync watermarks. These live in UserDefaults (not the
+        // Core Data store this method wipes), so without clearing them the next sign-in only asked
+        // the server for dose logs NEWER than the old bookmark — and never re-downloaded the
+        // history it had just wiped. Clearing them forces a full re-pull on the next sign-in.
+        let defaults = UserDefaults.standard
+        for key in defaults.dictionaryRepresentation().keys
+        where key.hasPrefix("lastDoseLogSyncAt.") || key.hasPrefix("lastDoseLogPushAt.") {
+            defaults.removeObject(forKey: key)
+        }
         // Also drop cached per-patient stores so a former caregiver's patient data doesn't linger.
         patientContainers.removeAll()
     }
