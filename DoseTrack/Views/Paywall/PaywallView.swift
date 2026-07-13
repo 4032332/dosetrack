@@ -28,7 +28,7 @@ struct PaywallView: View {
                             comingSoonNotice
                         } else {
                             pricingCards
-                            trialNote
+                            legalFooter
                         }
 
                         if let purchaseError {
@@ -131,8 +131,8 @@ struct PaywallView: View {
                        title: "Care for someone else",
                        subtitle: "Manage a loved one's medications remotely")
             FeatureRow(icon: "icloud.fill", color: .orange,
-                       title: "iCloud sync",
-                       subtitle: "Your data, backed up and synced across devices")
+                       title: "Cross-device sync",
+                       subtitle: "Your data, backed up and synced across your devices")
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -145,7 +145,7 @@ struct PaywallView: View {
                 PricingCard(
                     product: annual,
                     isSelected: selectedProductId == annual.id,
-                    badge: "Best Value — Save 37%",
+                    badge: "Best Value — Save 48%",
                     subtitle: "Just \(perMonthPrice(annual))/mo, billed yearly"
                 ) {
                     selectedProductId = annual.id
@@ -177,11 +177,20 @@ struct PaywallView: View {
         }
     }
 
-    private var trialNote: some View {
-        Text("Cancel anytime in Settings. Payment charged to your Apple ID at confirmation.")
-            .font(.caption2)
-            .foregroundStyle(.tertiary)
-            .multilineTextAlignment(.center)
+    // Auto-renewable-subscription disclosure required by App Store Review Guideline 3.1.2:
+    // renewal terms in the binding, plus functional Terms of Use (EULA) and Privacy Policy links.
+    private var legalFooter: some View {
+        VStack(spacing: 10) {
+            Text("DoseTrack Plus is an auto-renewable subscription. It renews at the price shown unless cancelled at least 24 hours before the end of the current period. Manage or cancel anytime in Settings. Payment is charged to your Apple ID at confirmation.")
+                .font(.caption2)
+                .foregroundStyle(.tertiary)
+                .multilineTextAlignment(.center)
+            HStack(spacing: 18) {
+                Link("Terms of Use", destination: Constants.ExternalLinks.termsOfUse)
+                Link("Privacy Policy", destination: Constants.ExternalLinks.privacyPolicy)
+            }
+            .font(.caption2.weight(.semibold))
+        }
     }
 
     private var comingSoonNotice: some View {

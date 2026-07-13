@@ -37,6 +37,10 @@ enum Constants {
 
         /// Hosted privacy policy (GitHub Pages) — same URL registered in App Store Connect.
         static let privacyPolicy = URL(string: "https://4032332.github.io/dosetrack/privacy.html")!
+
+        /// Terms of Use (EULA). Apple's standard EULA satisfies the auto-renewable-subscription
+        /// requirement; swap for a hosted custom Terms page (neurotrocity.com/dosetrack/terms) once live.
+        static let termsOfUse = URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")!
     }
 
     enum MedicationColors {
