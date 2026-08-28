@@ -4,7 +4,7 @@ import SwiftUI
 struct DoseRowView: View {
     let entry: DoseEntry
     @AppStorage("timeFormat") private var timeFormat: String = "system"
-    @AppStorage("compactRows") private var compactRows: Bool = false
+    @AppStorage("compactRows") private var compactRows: Bool = true
 
     private var iconSize: CGFloat { 40 }
 
@@ -22,7 +22,7 @@ struct DoseRowView: View {
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel(
-            "\(entry.medication.wrappedName), \(entry.medication.wrappedDosage), " +
+            "\(entry.medication.wrappedName), \(entry.medication.doseSummary), " +
             "due at \(entry.schedule.wrappedRoutineLabel ?? TimeFormatPreference.string(for: entry.scheduledAt, preference: timeFormat)), " +
             "\(entry.isUpcoming ? "upcoming" : entry.status.displayName)"
         )
@@ -45,7 +45,7 @@ struct DoseRowView: View {
             VStack(alignment: .leading, spacing: 3) {
                 Text(entry.medication.wrappedName)
                     .font(.body.weight(.medium))
-                Text(entry.medication.wrappedDosage)
+                Text(entry.medication.doseSummary)
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -80,7 +80,7 @@ struct DoseRowView: View {
             Text(entry.medication.wrappedName)
                 .font(.subheadline.weight(.medium))
                 .lineLimit(1)
-            Text(entry.medication.wrappedDosage)
+            Text(entry.medication.doseSummary)
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .lineLimit(1)

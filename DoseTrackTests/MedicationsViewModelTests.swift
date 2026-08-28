@@ -107,9 +107,32 @@ final class MedicationsViewModelTests: XCTestCase {
         XCTAssertEqual(sut.medications[2].wrappedName, "Med 0")
     }
 
-    func testRequestAddMedication_setsShowingAddForm() {
+    /// Adding is now two steps: `+` asks what kind of thing you're adding, then the form opens
+    /// pre-set to that type.
+    func testRequestAddMedication_showsKindChooserFirst() {
         sut.requestAddMedication()
+        XCTAssertTrue(sut.showingKindChooser)
+        XCTAssertFalse(sut.showingAddForm, "The form should wait until a type is chosen")
+    }
+
+    func testStartAdding_opensFormPreSetToChosenKind() {
+        sut.startAdding(kind: .supplement)
         XCTAssertTrue(sut.showingAddForm)
+        XCTAssertEqual(sut.newItemKind, .supplement)
+    }
+
+    /// The free-tier limit is checked before the chooser appears — picking a type only to be
+    /// paywalled straight afterwards would be a pointless extra step.
+    func testRequestAddMedication_atLimitDoesNotShowKindChooser() throws {
+        for i in 1...5 {
+            Medication.create(in: context, name: "Med \(i)", dosage: "10mg")
+        }
+        try context.save()
+        sut.fetchMedications()
+
+        sut.requestAddMedication()
+
+        XCTAssertFalse(sut.showingKindChooser)
     }
 
     func testRequestAddMedication_showsPaywallAtLimit() throws {

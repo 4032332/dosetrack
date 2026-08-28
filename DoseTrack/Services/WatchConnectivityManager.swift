@@ -46,10 +46,13 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
             guard
                 let medId = (med.value(forKey: "id") as? UUID)?.uuidString,
                 let name = med.value(forKey: "name") as? String,
-                let dosage = med.value(forKey: "dosage") as? String,
                 let colorHex = med.value(forKey: "colorHex") as? String,
-                let schedules = med.value(forKey: "schedules") as? Set<NSManagedObject>
+                let schedules = med.value(forKey: "schedules") as? Set<NSManagedObject>,
+                let medication = med as? Medication
             else { continue }
+            // The full "what to take" summary (e.g. "2 tablets · 1000mg"), not just the raw
+            // per-unit strength — see Medication.doseSummary.
+            let dosage = medication.doseSummary
 
             for schedule in schedules {
                 guard
@@ -99,21 +102,56 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
             ($0["scheduledAt"] as! Double) < ($1["scheduledAt"] as! Double)
         }
 
-        // Build Codable array to send
-        let sendable: [[String: Any]] = watchMedications
-        guard let data = try? JSONSerialization.data(withJSONObject: sendable) else { return }
+        // As-needed items travel in their own list, not as pseudo-scheduled entries. They have no
+        // schedule and no due time, so squeezing them into `watchMedications` would give them a
+        // fabricated `scheduledAt` and make them sortable/completable alongside real doses — which
+        // is exactly the confusion the separate section avoids on iOS.
+        var watchAsNeeded: [[String: Any]] = []
+        for med in medications {
+            guard
+                let medication = med as? Medication,
+                medication.allowsAsNeeded,
+                let medId = medication.id?.uuidString
+            else { continue }
+
+            let logRequest: NSFetchRequest<NSManagedObject> = NSFetchRequest(entityName: "DoseLog")
+            logRequest.predicate = NSPredicate(
+                format: "medication.id == %@ AND isAsNeeded == YES AND loggedAt >= %@ AND loggedAt < %@",
+                medId, startOfDay as CVarArg, endOfDay as CVarArg
+            )
+            let takenToday = (try? context.count(for: logRequest)) ?? 0
+
+            watchAsNeeded.append([
+                "id": medId,
+                "name": medication.wrappedName,
+                "dosage": medication.doseSummary,
+                "colorHex": medication.wrappedColorHex,
+                "unit": medication.wrappedUnit,
+                "dosesTakenToday": takenToday,
+            ])
+        }
+        watchAsNeeded.sort { ($0["name"] as! String) < ($1["name"] as! String) }
+
+        // Build Codable arrays to send
+        guard let data = try? JSONSerialization.data(withJSONObject: watchMedications) else { return }
+        // Sent alongside, never merged: an older watch build simply ignores the extra key.
+        let asNeededData = (try? JSONSerialization.data(withJSONObject: watchAsNeeded)) ?? Data()
 
         if WCSession.default.isReachable {
             WCSession.default.sendMessage(
-                ["type": "medicationSync", "medications": data],
+                ["type": "medicationSync", "medications": data, "asNeeded": asNeededData],
                 replyHandler: nil,
                 errorHandler: { _ in
                     // Fallback to application context for background delivery
-                    try? WCSession.default.updateApplicationContext(["medications": data])
+                    try? WCSession.default.updateApplicationContext(
+                        ["medications": data, "asNeeded": asNeededData]
+                    )
                 }
             )
         } else {
-            try? WCSession.default.updateApplicationContext(["medications": data])
+            try? WCSession.default.updateApplicationContext(
+                ["medications": data, "asNeeded": asNeededData]
+            )
         }
     }
 
@@ -197,11 +235,41 @@ extension WatchConnectivityManager: WCSessionDelegate {
     }
 
     nonisolated func session(_ session: WCSession, didReceiveMessage message: [String: Any]) {
-        guard message["type"] as? String == "doseConfirmation" else { return }
+        let type = message["type"] as? String
+        guard type == "doseConfirmation" || type == "asNeededDose" else { return }
         Task { @MainActor [weak self] in
             guard let self, let ctx = self.viewContext else { return }
-            self.handleDoseConfirmation(message, context: ctx)
+            if type == "asNeededDose" {
+                self.handleAsNeededDose(message, context: ctx)
+            } else {
+                self.handleDoseConfirmation(message, context: ctx)
+            }
         }
+    }
+
+    /// Records an ad-hoc dose logged on the watch.
+    ///
+    /// Routed through `DoseLoggingService.logAsNeeded` rather than writing a DoseLog here, so the
+    /// watch path picks up supply decrement, the Supabase push and the widget reload identically to
+    /// the phone — the exact drift that the shared logging service exists to prevent.
+    private func handleAsNeededDose(_ message: [String: Any], context: NSManagedObjectContext) {
+        guard
+            let medicationIdStr = message["medicationId"] as? String,
+            let medicationId = UUID(uuidString: medicationIdStr)
+        else { return }
+        let doseCount = (message["doseCount"] as? Int) ?? 1
+
+        let request = Medication.fetchRequest()
+        request.predicate = NSPredicate(format: "id == %@", medicationId as CVarArg)
+        guard let med = try? context.fetch(request).first else { return }
+
+        DoseLoggingService.shared.logAsNeeded(
+            medication: med,
+            doseCount: doseCount,
+            notes: nil,   // the watch has no practical note entry; notes are added on the phone
+            context: context,
+            pushUserId: ActiveAccountResolver.shared.activeUserId
+        )
     }
 
     nonisolated func session(
@@ -212,7 +280,14 @@ extension WatchConnectivityManager: WCSessionDelegate {
         Task { @MainActor [weak self] in
             guard let self, let ctx = self.viewContext else { return }
             for msg in pending {
-                self.handleDoseConfirmation(msg, context: ctx)
+                // The queue carries both kinds — route by type, or an as-needed dose queued while
+                // the phone was unreachable would be silently dropped (handleDoseConfirmation
+                // requires a scheduledAt that as-needed messages don't carry).
+                if msg["type"] as? String == "asNeededDose" {
+                    self.handleAsNeededDose(msg, context: ctx)
+                } else {
+                    self.handleDoseConfirmation(msg, context: ctx)
+                }
             }
         }
     }

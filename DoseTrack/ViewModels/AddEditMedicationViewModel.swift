@@ -23,17 +23,25 @@ final class AddEditMedicationViewModel: ObservableObject {
     // MARK: - Form state
 
     @Published var name: String = ""
+    /// Whether this is a medication, vitamin or supplement. Changeable at any time from the picker
+    /// at the top of the form — including on an existing item — so someone can reclassify a
+    /// supplement as a vitamin later without re-entering everything. Because all three share this
+    /// one form, switching carries every populated field across for free.
+    @Published var kind: MedicationKind = .medication
+    /// Whether this item can also be taken ad-hoc. Independent of `schedules`: an item can be
+    /// scheduled, as-needed, or both.
+    @Published var allowsAsNeeded: Bool = false
     /// Numeric part of the dose, e.g. "500"
     @Published var doseAmount: String = ""
     /// Strength unit, e.g. "mg"
     @Published var doseUnit: String = "mg"
-    /// How many units per dose, e.g. 1
-    @Published var quantityAmount: Int = 1
+    /// How many units per dose, e.g. 1 (supports halves, e.g. 0.5 for a half tablet)
+    @Published var quantityAmount: Double = 1
     /// Form factor, e.g. "tablet"
     @Published var quantityUnit: String = "tablet"
     @Published var colorHex: String = "#5B8AF0"
     @Published var notes: String = ""
-    @Published var currentCount: Int = 0
+    @Published var currentCount: Double = 0
     @Published var refillThreshold: Int = 7
     @Published var schedules: [ScheduleDraft] = [ScheduleDraft()]
     @Published var photoData: Data? = nil
@@ -48,9 +56,12 @@ final class AddEditMedicationViewModel: ObservableObject {
     @Published var nameError: String? = nil
     @Published var doseError: String? = nil
 
+    /// Only the name is required. Strength is deliberately optional: it's often genuinely absent
+    /// from the packaging (a scoop of protein powder, a multivitamin listing 19 ingredients and no
+    /// single strength), and forcing a number there would push people into inventing one — worse
+    /// than leaving it blank on a medical record.
     var isValid: Bool {
-        !name.trimmingCharacters(in: .whitespaces).isEmpty &&
-        !doseAmount.trimmingCharacters(in: .whitespaces).isEmpty
+        !name.trimmingCharacters(in: .whitespaces).isEmpty
     }
 
     // MARK: - Metadata
@@ -60,24 +71,33 @@ final class AddEditMedicationViewModel: ObservableObject {
 
     // Dose strength units (what's in each unit)
     static let doseUnitOptions = ["mg", "ml", "IU", "mcg", "g", "µg", "%", "mmol", "mEq"]
-    // Form factor (how it's taken)
-    static let quantityUnitOptions = ["tablet", "capsule", "pill", "oral syringe", "injection", "inhaler", "spray", "patch", "drop", "sachet", "suppository", "lozenge"]
+    // Form factor (how it's taken). One shared list across medications, vitamins and supplements:
+    // the powder/gummy/spoon forms below are typical of supplements but not exclusive to them (a
+    // powdered laxative is a medication measured in scoops), and a single list means converting an
+    // item between kinds can never leave it holding a unit its new picker doesn't offer.
+    static let quantityUnitOptions = ["tablet", "capsule", "pill", "oral syringe", "injection", "inhaler", "spray", "patch", "drop", "sachet", "suppository", "lozenge", "scoop", "gummy", "teaspoon", "tablespoon"]
     // Shared with the Colour Coding preferences screen so a tag assigned there (e.g. "Morning
     // Batch") labels the same swatch here.
     static let colorOptions = Constants.MedicationColors.palette
 
     // MARK: - Init
 
-    init(context: NSManagedObjectContext, medication: Medication? = nil) {
+    /// - Parameter initialKind: what the form opens as when adding something new (set by the type
+    ///   chooser on the Medications tab). Ignored when editing, where the item's own stored kind
+    ///   wins — otherwise opening an existing supplement would silently reset it to a medication.
+    init(context: NSManagedObjectContext, medication: Medication? = nil, initialKind: MedicationKind = .medication) {
         self.context = context
         self.medication = medication
         self.isEditing = medication != nil
+        self.kind = initialKind
 
         if let med = medication {
             name = med.wrappedName
+            kind = med.medicationKind
+            allowsAsNeeded = med.allowsAsNeeded
             colorHex = med.wrappedColorHex
             notes = med.wrappedNotes
-            currentCount = Int(med.currentCount)
+            currentCount = med.currentCount
             refillThreshold = Int(med.refillThreshold)
             photoData = med.photoData
             escriptData = med.escriptData
@@ -103,17 +123,14 @@ final class AddEditMedicationViewModel: ObservableObject {
             }
             if schedules.isEmpty { schedules = [ScheduleDraft()] }
 
-            // Reconstruct per-dose quantity. It isn't stored on its own — only baked into
-            // totalDosesPerDay (= quantityAmount × enabled schedule count) — so the stepper
-            // previously reset to its default of 1 every time an existing medication was
-            // edited. Saving again then wrote totalDosesPerDay = 1 × scheduleCount, silently
-            // dropping e.g. "2 tablets per dose" back to 1 and corrupting the supply/days-left
-            // maths. Derive it back the same way SupplyMath consumes it.
-            let enabledScheduleCount = med.schedulesArray.filter { $0.isEnabled }.count
-            quantityAmount = SupplyMath.quantityPerDose(
-                totalDosesPerDay: Int(med.totalDosesPerDay),
-                enabledScheduleCount: enabledScheduleCount
-            )
+            // Per-dose quantity. Now read through `Medication.quantityPerDose`, which prefers the
+            // stored value and only falls back to the old totalDosesPerDay ÷ scheduleCount
+            // derivation for rows predating that attribute. The derivation alone used to reset this
+            // stepper to 1 on every edit, and saving again then wrote totalDosesPerDay =
+            // 1 × scheduleCount — silently dropping "2 tablets per dose" and corrupting the
+            // supply/days-left maths. It also can't work for as-needed-only items, which have no
+            // schedules to divide by.
+            quantityAmount = med.quantityPerDose
 
             if isContraceptive, let lastLog = med.doseLogsArray.last {
                 lastAdministeredDate = lastLog.loggedAt ?? Date()
@@ -145,8 +162,9 @@ final class AddEditMedicationViewModel: ObservableObject {
 
     func validate() -> Bool {
         nameError = name.trimmingCharacters(in: .whitespaces).isEmpty ? "Name is required" : nil
-        doseError = doseAmount.trimmingCharacters(in: .whitespaces).isEmpty ? "Dose amount is required" : nil
-        return nameError == nil && doseError == nil
+        // No doseError: strength is optional (see `isValid`).
+        doseError = nil
+        return nameError == nil
     }
 
     @discardableResult
@@ -164,19 +182,27 @@ final class AddEditMedicationViewModel: ObservableObject {
         }
 
         med.name = name.trimmingCharacters(in: .whitespaces)
-        // Build dosage string: "500mg"
-        med.dosage = "\(doseAmount.trimmingCharacters(in: .whitespaces))\(doseUnit)"
+        // Build dosage string: "500mg". Strength is optional, and a blank amount must produce a
+        // genuinely empty dosage — concatenating unconditionally would store a bare unit ("mg"),
+        // which then renders as a nonsense strength everywhere the dose summary is shown.
+        let trimmedAmount = doseAmount.trimmingCharacters(in: .whitespaces)
+        med.dosage = trimmedAmount.isEmpty ? "" : "\(trimmedAmount)\(doseUnit)"
+        med.kind = kind.rawValue
+        med.allowsAsNeeded = allowsAsNeeded
         med.unit = isContraceptive ? "contraceptive" : quantityUnit
         med.colorHex = colorHex
         med.notes = notes.trimmingCharacters(in: .whitespaces)
-        med.currentCount = Int32(currentCount)
+        med.currentCount = currentCount
         med.refillThreshold = Int32(refillThreshold)
         med.photoData = photoData
         med.escriptData = escriptData
         // Daily consumption = quantity per dose × how many times a day the schedule fires —
         // schedule count alone undercounts whenever a dose is more than one unit (e.g. "2
         // tablets, twice daily" is 4/day, not 2).
-        med.totalDosesPerDay = Int32(isContraceptive ? 0 : quantityAmount * schedules.filter { $0.isEnabled }.count)
+        med.totalDosesPerDay = isContraceptive ? 0 : quantityAmount * Double(schedules.filter { $0.isEnabled }.count)
+        // Stored independently of totalDosesPerDay so an as-needed-only item (zero schedules, and
+        // therefore a totalDosesPerDay of 0) still knows how much one dose consumes.
+        med.storedQuantityPerDose = isContraceptive ? 1 : max(quantityAmount, 0)
         med.updatedAt = Date()
 
         for old in med.schedulesArray { context.delete(old) }
@@ -245,7 +271,7 @@ final class AddEditMedicationViewModel: ObservableObject {
     // MARK: - Helpers
 
     /// Splits "500mg" → ("500", "mg"). Falls back gracefully.
-    static func parseDosage(_ dosage: String) -> (amount: String, unit: String) {
+    nonisolated static func parseDosage(_ dosage: String) -> (amount: String, unit: String) {
         let str = dosage.trimmingCharacters(in: .whitespaces)
         // Find first non-digit, non-dot character
         var idx = str.startIndex

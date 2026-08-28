@@ -4,6 +4,39 @@
 import Foundation
 import CoreData
 
+enum WidgetDoseSummary {
+    /// Mirrors `Medication.doseSummary`/`parseDosage` in the main app target — duplicated here
+    /// since Medication+Extensions.swift isn't compiled into the widget (see project.yml).
+    static func doseSummary(dosage: String, unit: String, perDose: Double) -> String {
+        guard abs(perDose - 1) > 0.001 else { return dosage }
+        let (amountStr, strengthUnit) = parseDosage(dosage)
+        guard let amount = Double(amountStr) else { return dosage }
+        let total = amount * perDose
+        let unitPlural = unit + (perDose > 1 ? "s" : "")
+        return "\(perDose.trimmedQuantityString) \(unitPlural) · \(total.trimmedQuantityString)\(strengthUnit)"
+    }
+
+    private static func parseDosage(_ dosage: String) -> (amount: String, unit: String) {
+        let str = dosage.trimmingCharacters(in: .whitespaces)
+        var idx = str.startIndex
+        while idx < str.endIndex {
+            let ch = str[idx]
+            if !ch.isNumber && ch != "." { break }
+            idx = str.index(after: idx)
+        }
+        let amount = String(str[str.startIndex..<idx])
+        let unit = String(str[idx...]).trimmingCharacters(in: .whitespaces)
+        if amount.isEmpty { return (str, "mg") }
+        return (amount, unit.isEmpty ? "mg" : unit)
+    }
+}
+
+private extension Double {
+    var trimmedQuantityString: String {
+        truncatingRemainder(dividingBy: 1) == 0 ? String(Int(self)) : String(format: "%.1f", self)
+    }
+}
+
 struct WidgetDoseEntry: Identifiable {
     let medicationName: String
     let dosage: String
@@ -140,9 +173,18 @@ final class WidgetDataProvider {
                 let schedules = med.value(forKey: "schedules") as? Set<NSManagedObject>,
                 let medId = (med.value(forKey: "id") as? UUID)?.uuidString,
                 let name = med.value(forKey: "name") as? String,
-                let dosage = med.value(forKey: "dosage") as? String,
+                let rawDosage = med.value(forKey: "dosage") as? String,
                 let colorHex = med.value(forKey: "colorHex") as? String
             else { continue }
+
+            // What the patient actually takes for one dose (e.g. "2 tablets · 1000mg" for two
+            // 500mg tablets) — mirrors Medication.doseSummary in the main app target, duplicated
+            // here since that extension isn't compiled into the widget (see project.yml).
+            let enabledCount = schedules.filter { ($0.value(forKey: "isEnabled") as? Bool) == true }.count
+            let totalDosesPerDay = (med.value(forKey: "totalDosesPerDay") as? Double) ?? 1
+            let unit = (med.value(forKey: "unit") as? String) ?? "pill"
+            let perDose = SupplyMath.quantityPerDose(totalDosesPerDay: totalDosesPerDay, enabledScheduleCount: enabledCount)
+            let dosage = WidgetDoseSummary.doseSummary(dosage: rawDosage, unit: unit, perDose: perDose)
 
             for schedule in schedules {
                 guard

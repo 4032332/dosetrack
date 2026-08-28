@@ -67,14 +67,14 @@ struct MarkDoseTakenIntent: AppIntent {
             // taken transition (not re-tapping an already-taken dose) and only if there's
             // supply to decrement. Stamping the medication's updatedAt also protects the
             // decrement from being clobbered by the "newer wins" pull merge.
-            let currentCount = Int((med.value(forKey: "currentCount") as? Int32) ?? 0)
+            let currentCount = (med.value(forKey: "currentCount") as? Double) ?? 0
             if !wasAlreadyTaken && currentCount > 0 {
                 let schedules = (med.value(forKey: "schedules") as? Set<NSManagedObject>) ?? []
                 let enabledCount = schedules.filter { ($0.value(forKey: "isEnabled") as? Bool) == true }.count
-                let dpd = Int((med.value(forKey: "totalDosesPerDay") as? Int32) ?? 1)
+                let dpd = (med.value(forKey: "totalDosesPerDay") as? Double) ?? 1
                 let perDose = SupplyMath.quantityPerDose(totalDosesPerDay: dpd, enabledScheduleCount: enabledCount)
                 let newCount = SupplyMath.decrementedCount(current: currentCount, by: perDose)
-                med.setValue(Int32(newCount), forKey: "currentCount")
+                med.setValue(newCount, forKey: "currentCount")
                 med.setValue(now, forKey: "updatedAt")
             }
 

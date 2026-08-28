@@ -36,7 +36,7 @@ struct DoseActionSheet: View {
                 VStack(alignment: .leading) {
                     Text(entry.medication.wrappedName)
                         .font(.headline)
-                    Text("\(entry.medication.wrappedDosage) · \(entry.schedule.wrappedRoutineLabel ?? TimeFormatPreference.string(for: entry.scheduledAt, preference: timeFormat))")
+                    Text("\(entry.medication.doseSummary) · \(entry.schedule.wrappedRoutineLabel ?? TimeFormatPreference.string(for: entry.scheduledAt, preference: timeFormat))")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }

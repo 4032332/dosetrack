@@ -33,6 +33,16 @@ struct DoseEntry: Identifiable {
     var isUpcoming: Bool = false
 }
 
+/// An as-needed (PRN) item on the Today screen. Deliberately not a `DoseEntry`: there is no
+/// `Schedule`, no due time, and no status — nothing was ever expected, so it can't be taken late,
+/// skipped or missed. All it carries is how many doses have already been logged today, so the row
+/// can show "2 taken today" without implying a target.
+struct AsNeededItem: Identifiable {
+    let id: UUID
+    let medication: Medication
+    let dosesTakenToday: Int
+}
+
 @MainActor
 final class TodayViewModel: ObservableObject {
 
@@ -40,6 +50,10 @@ final class TodayViewModel: ObservableObject {
     @Published var takenCount: Int = 0
     @Published var totalCount: Int = 0
     @Published var medicationAlerts: [MedicationAlert] = []
+    /// Items flagged as-needed, shown in their own section below the timed doses. These are never
+    /// "due" and never appear in `doseEntries`, so they can't be missed and never affect the
+    /// day's taken/total counts.
+    @Published var asNeededItems: [AsNeededItem] = []
     /// Pulses true→false when the last dose for today is marked taken.
     @Published var celebrateNow: Bool = false
 
@@ -75,6 +89,49 @@ final class TodayViewModel: ObservableObject {
         // count toward the daily adherence total.
         takenCount = entries.filter { !$0.isUpcoming && $0.status == .taken }.count
         medicationAlerts = buildAlerts()
+        asNeededItems = buildAsNeededItems()
+    }
+
+    /// Every active item flagged as-needed, with today's ad-hoc dose count. Includes items that
+    /// ALSO have a schedule — a painkiller taken nightly can still have extra doses when required,
+    /// so it legitimately appears both in the timed list and here.
+    private func buildAsNeededItems() -> [AsNeededItem] {
+        let request = Medication.fetchRequest()
+        request.predicate = NSPredicate(format: "isActive == YES AND allowsAsNeeded == YES")
+        guard let medications = try? context.fetch(request) else { return [] }
+
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        guard let tomorrow = calendar.date(byAdding: .day, value: 1, to: today) else { return [] }
+
+        let logRequest = DoseLog.fetchRequest()
+        logRequest.predicate = NSPredicate(
+            format: "isAsNeeded == YES AND loggedAt >= %@ AND loggedAt < %@",
+            today as NSDate, tomorrow as NSDate
+        )
+        let todayAsNeededLogs = (try? context.fetch(logRequest)) ?? []
+
+        return medications.map { med in
+            AsNeededItem(
+                id: med.id ?? UUID(),
+                medication: med,
+                dosesTakenToday: todayAsNeededLogs.filter { $0.medication == med }.count
+            )
+        }
+        .sorted { $0.medication.wrappedName < $1.medication.wrappedName }
+    }
+
+    /// Records one or more ad-hoc doses. Never touches `takenCount`/`totalCount` — as-needed doses
+    /// aren't part of the day's scheduled total, so logging one must not move the ring.
+    func logAsNeeded(_ item: AsNeededItem, doseCount: Int, notes: String?) {
+        DoseLoggingService.shared.logAsNeeded(
+            medication: item.medication,
+            doseCount: doseCount,
+            notes: notes,
+            context: context,
+            pushUserId: ActiveAccountResolver.shared.activeUserId
+        )
+        refresh()
     }
 
     func markTaken(_ entry: DoseEntry) {
@@ -248,7 +305,7 @@ final class TodayViewModel: ObservableObject {
                 return $0.currentCount < $1.currentCount
             }
         for med in lowRefillMeds {
-            alerts.append(.lowRefill(med, remaining: Int(med.currentCount)))
+            alerts.append(.lowRefill(med, remaining: Int(med.currentCount.rounded())))
         }
 
         // Contraceptive tracker alert (stored in UserDefaults by ContraceptiveTrackerView)

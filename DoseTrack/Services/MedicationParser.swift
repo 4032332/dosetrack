@@ -129,11 +129,28 @@ enum MedicationParser {
         options: .caseInsensitive
     )
 
+    /// Lines stating a ceiling for a whole day, not a per-unit strength.
+    ///
+    /// Real failure this guards: a dispensed Panadeine Forte label carried no per-unit strength at
+    /// all, only "Maximum 4000mg of Paracetamol containing products in a day". That was committed as
+    /// the strength — a 4000mg single dose written into a medication record. These lines are never a
+    /// per-unit strength, so a blank is the only safe reading.
+    private static let dailyLimitMarkers = [
+        "maximum", "max.", "do not exceed", "not exceed", "no more than",
+        "in a day", "per day", "in 24 hours", "daily limit", "in any 24",
+    ]
+
+    private static func isDailyLimitLine(_ line: String) -> Bool {
+        let lc = line.lowercased()
+        return dailyLimitMarkers.contains { lc.contains($0) }
+    }
+
     private static func extractStrength(from lines: [String]) -> StrengthMatch? {
         // Skip dosing-instruction lines: titration wording like "increase the dose by 0.5mg until
         // reaching 4mg" is full of mg numbers that are NOT the medication's strength. The strength
         // lives on the name/pack line, so a non-instruction line is always the right source.
-        for line in lines where !isInstructionLine(line) {
+        // Daily-limit lines are skipped for the same reason — see isDailyLimitLine.
+        for line in lines where !isInstructionLine(line) && !isDailyLimitLine(line) {
             let ns = line as NSString
             let range = NSRange(location: 0, length: ns.length)
             if let match = strengthPattern.firstMatch(in: line, range: range) {
@@ -300,10 +317,15 @@ enum MedicationParser {
 
     /// The number that immediately precedes a dose-form word ("2 tablets", "one capsule"). This
     /// is the per-dose amount — crucially NOT the frequency number, because the frequency number
-    /// precedes "times"/"daily" ("3 times a day"), never a form word. Handles ranges ("1 to 2
-    /// tablets") by taking the lower number.
+    /// precedes "times"/"daily" ("3 times a day"), never a form word.
+    ///
+    /// Ranges resolve to the LOWER bound, deliberately: "take 1-2 tablets" pre-filling as 2 would
+    /// silently overstate the dose on a medical record, and the user can always raise it. The
+    /// separator allows an unspaced hyphen — a real "Take 1-2 tablets 20 minutes before bed" label
+    /// previously matched only the "2", because the old pattern required whitespace around the
+    /// separator and so skipped past the lower bound entirely.
     private static let perDosePattern = try! NSRegularExpression(
-        pattern: #"\b(\d+|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\b(?:\s+(?:to|-|–|or)\s+(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten))?\s+(?:\#(formWords))\b"#,
+        pattern: #"\b(\d+|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\b(?:(?:\s*[-–—]\s*|\s+(?:to|or)\s+)(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten))?\s+(?:\#(formWords))\b"#,
         options: .caseInsensitive
     )
 
@@ -338,8 +360,42 @@ enum MedicationParser {
         ("cap", "capsule"),   // generic fallback, last so "caplet"/"capsule" win first
     ]
 
+    /// Inhaler devices whose names never contain the literal word "inhaler".
+    ///
+    /// Real failure this fixes: a dispensed "RILAST RAPIHALER 100/3" with the instruction
+    /// "Shake well and inhale TWO doses by mouth TWICE daily" produced **"2 tablets"** — the count
+    /// was right, but nothing in the pipeline recognised the form, so it fell back to the default
+    /// "tablet". Prescribing an inhaler in tablets is exactly the kind of plausible-looking wrong
+    /// value that's worse than a blank.
+    ///
+    /// The `-haler` suffix is matched by pattern rather than by listing brands, so Turbuhaler,
+    /// Accuhaler, Handihaler, Autohaler, Breezhaler, Nexthaler and any future device ending that
+    /// way are all covered without maintenance. The literal list below is only for devices that
+    /// break the pattern.
+    private static let inhalerDeviceWords = [
+        "respimat", "ellipta", "diskus", "genuair", "spiromax", "puffer",
+        "metered dose", "mdi", "hfa", "inhale",
+    ]
+
+    private static let halerSuffixPattern = try! NSRegularExpression(
+        pattern: #"\b\w*haler\b"#,
+        options: .caseInsensitive
+    )
+
     private static func extractForm(from lines: [String]) -> String? {
         let joined = lines.joined(separator: " ").lowercased()
+
+        // Checked BEFORE the general keyword table: an inhaler's packaging routinely also carries
+        // words like "dose", "spray" or even "cap" (the mouthpiece cap), any of which would
+        // otherwise win and mislabel the form.
+        let ns = joined as NSString
+        if halerSuffixPattern.firstMatch(in: joined, range: NSRange(location: 0, length: ns.length)) != nil {
+            return "inhaler"
+        }
+        if inhalerDeviceWords.contains(where: { joined.contains($0) }) {
+            return "inhaler"
+        }
+
         for (keyword, form) in formKeywords where joined.contains(keyword) {
             return form
         }

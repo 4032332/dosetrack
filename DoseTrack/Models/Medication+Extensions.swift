@@ -2,6 +2,47 @@
 import CoreData
 import SwiftUI
 
+/// What sort of thing a tracked item is. Everything in the app is stored as a `Medication` row
+/// regardless — the distinction is presentational (grouping on the Medications tab) plus one
+/// substantive rule: only `.medication` counts toward the headline adherence score. Missing a
+/// multivitamin is not the same kind of event as missing a prescription, and conflating them
+/// would make the adherence number useless to show a doctor.
+enum MedicationKind: String, CaseIterable, Identifiable {
+    case medication
+    case vitamin
+    case supplement
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .medication: return "Medication"
+        case .vitamin:    return "Vitamin"
+        case .supplement: return "Supplement"
+        }
+    }
+
+    /// Plural section header used for the collapsible groups on the Medications tab.
+    var pluralName: String {
+        switch self {
+        case .medication: return "Medications"
+        case .vitamin:    return "Vitamins"
+        case .supplement: return "Supplements"
+        }
+    }
+
+    var iconName: String {
+        switch self {
+        case .medication: return "pill.fill"
+        case .vitamin:    return "sun.max.fill"
+        case .supplement: return "leaf.fill"
+        }
+    }
+
+    /// Whether missing a dose of this counts against the adherence percentage.
+    var affectsAdherence: Bool { self == .medication }
+}
+
 extension Medication {
 
     // MARK: - Factory
@@ -12,7 +53,8 @@ extension Medication {
         name: String,
         dosage: String,
         unit: String = "pill",
-        colorHex: String = "#5B8AF0"
+        colorHex: String = "#5B8AF0",
+        kind: MedicationKind = .medication
     ) -> Medication {
         let med = Medication(context: context)
         med.id = UUID()
@@ -20,6 +62,7 @@ extension Medication {
         med.dosage = dosage
         med.unit = unit
         med.colorHex = colorHex
+        med.kind = kind.rawValue
         med.isActive = true
         med.currentCount = 0
         med.refillThreshold = 7
@@ -34,6 +77,20 @@ extension Medication {
     var color: Color {
         Color(hex: colorHex ?? "#5B8AF0")
     }
+
+    /// Falls back to `.medication` for any row written before `kind` existed, or if the stored
+    /// string is ever unrecognised — the conservative default, since treating an unknown item as a
+    /// medication keeps it in the adherence score rather than silently dropping it out.
+    var medicationKind: MedicationKind {
+        MedicationKind(rawValue: kind ?? MedicationKind.medication.rawValue) ?? .medication
+    }
+
+    /// An item the user only ever takes ad-hoc: flagged as-needed with no enabled schedule. These
+    /// show *only* in Today's "As Needed" section, never in the timed lists.
+    var isAsNeededOnly: Bool {
+        allowsAsNeeded && schedulesArray.allSatisfy { !$0.isEnabled }
+    }
+
 
     /// SF Symbol used to represent this medication's form, in the tinted tile shown on both the
     /// Medications and Restock lists (kept here as the single source of truth so those two
@@ -64,7 +121,7 @@ extension Medication {
     /// running count don't nag.
     var isRefillWarning: Bool {
         guard totalDosesPerDay > 0 else { return false }
-        return currentCount <= refillThreshold || daysOfSupply < 7
+        return currentCount <= Double(refillThreshold) || daysOfSupply < 7
     }
 
     /// True once supply has been sitting at exactly 0 for more than a full day — the trigger for
@@ -89,8 +146,8 @@ extension Medication {
 
     /// Estimated days of supply remaining based on current count and doses per day.
     var daysOfSupply: Int {
-        let dpd = max(Int(totalDosesPerDay), 1)
-        return Int(currentCount) / dpd
+        let dpd = max(totalDosesPerDay, 1)
+        return Int(currentCount / dpd)
     }
 
     /// Restock urgency colour.
@@ -99,6 +156,41 @@ extension Medication {
         if daysOfSupply < 5  { return .orange }
         if daysOfSupply < 7  { return .yellow }
         return .green
+    }
+
+    /// Units taken per dose (e.g. 2 for two tablets at a time, 0.5 for a half).
+    ///
+    /// Prefers the stored `storedQuantityPerDose`, falling back to the legacy derivation
+    /// (totalDosesPerDay ÷ enabled schedule count) for rows saved before that attribute existed.
+    /// The stored value is what makes as-needed items work at all: with no schedules,
+    /// `totalDosesPerDay` is 0 and the derivation collapses to a flat 0.5 for everything.
+    var quantityPerDose: Double {
+        if storedQuantityPerDose > 0 { return storedQuantityPerDose }
+        let enabledCount = schedulesArray.filter { $0.isEnabled }.count
+        return SupplyMath.quantityPerDose(totalDosesPerDay: totalDosesPerDay, enabledScheduleCount: enabledCount)
+    }
+
+    /// What the patient actually takes for one dose — e.g. "2 tablets · 1000mg" for two 500mg
+    /// tablets, or just "500mg" when a single unit is taken (skips "1 tablet ·" clutter for the
+    /// common case). This is what Today, the Medications list, Restock, and the dose-confirmation
+    /// sheet show — `wrappedDosage` alone is only the per-unit strength printed on the bottle
+    /// ("500mg") and understates the real dose whenever more than one unit — or a fractional/half
+    /// tablet — is taken.
+    var doseSummary: String {
+        let perDose = quantityPerDose
+        guard abs(perDose - 1) > 0.001 else { return wrappedDosage }
+        let (amountStr, strengthUnit) = AddEditMedicationViewModel.parseDosage(wrappedDosage)
+        guard let amount = Double(amountStr) else { return wrappedDosage }
+        let total = amount * perDose
+        let unitPlural = wrappedUnit + (perDose > 1 ? "s" : "")
+        return "\(perDose.trimmedQuantityString) \(unitPlural) · \(total.trimmedQuantityString)\(strengthUnit)"
+    }
+
+    /// `doseSummary`, but for list rows that previously read "<dosage> · <form>" (e.g. "20mg ·
+    /// pill") — keeps that familiar form-factor suffix for the common one-unit case, since
+    /// `doseSummary` alone drops it there to stay uncluttered.
+    var doseSummaryWithForm: String {
+        abs(quantityPerDose - 1) > 0.001 ? doseSummary : "\(wrappedDosage) · \(wrappedUnit)"
     }
 
     var schedulesArray: [Schedule] {

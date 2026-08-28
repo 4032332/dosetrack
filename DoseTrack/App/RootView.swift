@@ -16,6 +16,7 @@ struct RootView: View {
     @State private var revocationMessage: String?
     @ObservedObject private var caregiverManager = CaregiverManager.shared
     @ObservedObject private var disclaimer = DisclaimerManager.shared
+    @ObservedObject private var subscriptionManager = SubscriptionManager.shared
 
     private var canProceed: Bool { auth.isSignedIn || guestMode }
 
@@ -138,6 +139,7 @@ struct RootView: View {
         .task(id: disclaimerIdentityKey) {
             if canProceed {
                 await disclaimer.evaluate(userId: disclaimerUserId, isGuest: disclaimerIsGuest)
+                await subscriptionManager.loadPromoStatus(userId: disclaimerUserId, isGuest: disclaimerIsGuest)
             } else {
                 disclaimer.reset()
             }
@@ -244,6 +246,12 @@ private struct ActiveSessionView: View {
             .onAppear {
                 ActiveAccountResolver.shared.set(
                     activeUserId: activeAccount.isViewingOtherAccount ? activeAccount.activeUserId : nil
+                )
+                // Backfill any of yesterday-or-earlier's unlogged doses as "missed" so History's
+                // adherence reflects reality — see MissedDoseSweeper's doc comment.
+                MissedDoseSweeper.sweep(
+                    context: activeContext,
+                    pushUserId: activeAccount.isViewingOtherAccount ? activeAccount.activeUserId : nil
                 )
                 // Without this, WatchConnectivityManager's `viewContext` stayed nil forever —
                 // configure() was defined but never actually called anywhere — so any dose

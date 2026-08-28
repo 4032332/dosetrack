@@ -26,8 +26,8 @@ settings:
     # builds behave like a normal statically-linked binary. Archive/Release builds were never
     # affected by this (the acceleration is Debug-only).
     ENABLE_DEBUG_DYLIB: NO
-    MARKETING_VERSION: "1.0.0"
-    CURRENT_PROJECT_VERSION: "30"
+    MARKETING_VERSION: "1.1.1"
+    CURRENT_PROJECT_VERSION: "43"
     CODE_SIGN_STYLE: Automatic
     # Baked in so Xcode's "Update to recommended settings" banner stops reappearing —
     # applying that dialog directly in Xcode would just get overwritten by the next
@@ -52,6 +52,10 @@ targets:
         # iPhone only — daily medication reminders aren't an iPad use case, and this
         # removes the need for iPad-specific screenshots/icons on submission.
         TARGETED_DEVICE_FAMILY: "1"
+    scheme:
+      testTargets:
+        - DoseTrackTests
+      storeKitConfiguration: ../DoseTrack/Resources/Products.storekit
     entitlements:
       path: DoseTrack/Resources/DoseTrack.entitlements
       properties:
@@ -66,11 +70,26 @@ targets:
     dependencies:
       - target: DoseTrackWidgets
         embed: true
-      # Embeds the watchOS app inside the iOS app so it actually ships. Without this the watch
-      # app built as its own target but was never bundled into the archive, so TestFlight never
-      # delivered it to a paired watch (it never appeared in the Watch app's app list).
-      - target: DoseTrackWatch
-        embed: true
+      # DELIBERATELY NOT EMBEDDED FOR THIS BUILD — this is a submission-sequencing decision, not a
+      # permanent state. Re-enable (uncomment) as soon as Plus Annual is approved.
+      #
+      # Background: a long run of Guideline 2.1(b) rejections was eventually cleared by build 37,
+      # which changed TWO things at once — a brand-new subscription group AND un-embedding the watch
+      # app. It worked, but that means the cause was never isolated. Either the old subscription
+      # group was corrupted (most likely — an embedded watch companion doesn't actually bar IAP;
+      # Strava, Streaks and others ship both), or the embedded watch app was somehow tripping ASC's
+      # bundling tool.
+      #
+      # Submitting a NEW subscription alongside an embedded watch app is precisely the combination
+      # that distinguishes those two, so it's the one submission where guessing is expensive. This
+      # build therefore reproduces the exact configuration known to work, and the watch ships in a
+      # follow-up version that bundles no new subscriptions — a path that never touches the
+      # bundling step that failed.
+      #
+      # If that follow-up sails through, the watch embed was never the problem and this workaround
+      # can be retired for good.
+      # - target: DoseTrackWatch
+      #   embed: true
       - package: Supabase
         product: Supabase
       - package: GoogleSignIn

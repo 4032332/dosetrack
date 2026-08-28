@@ -8,6 +8,15 @@ import UserNotifications
 /// UNUserNotificationCenter itself is not mocked — we test the data/logic layer only.
 final class NotificationSchedulerTests: XCTestCase {
 
+    /// These tests round-trip through the real `UNUserNotificationCenter`, whose responses are
+    /// genuinely slow and load-dependent in the simulator. At 5s this suite failed intermittently
+    /// during a FULL run (while passing every time in isolation) — the notification centre was
+    /// simply still busy from other tests' scheduling churn, not a logic error. A generous ceiling
+    /// removes the false failures without weakening a single assertion: a real regression still
+    /// fails, it just isn't racing the simulator's I/O.
+    private static let unCenterTimeout: TimeInterval = 20
+
+
     var context: NSManagedObjectContext!
     var scheduler: NotificationScheduler!
 
@@ -88,7 +97,7 @@ final class NotificationSchedulerTests: XCTestCase {
         // refreshAll should not crash and should produce no pending notifications for this med
         let refreshDone = XCTestExpectation(description: "refresh done")
         scheduler.refreshAll(context: context) { refreshDone.fulfill() }
-        wait(for: [refreshDone], timeout: 5)
+        wait(for: [refreshDone], timeout: Self.unCenterTimeout)
 
         let expectation = XCTestExpectation(description: "getPendingNotificationRequests")
         UNUserNotificationCenter.current().getPendingNotificationRequests { requests in
@@ -97,7 +106,7 @@ final class NotificationSchedulerTests: XCTestCase {
             XCTAssertEqual(relevant.count, 0, "Disabled schedule should produce no notifications")
             expectation.fulfill()
         }
-        wait(for: [expectation], timeout: 5)
+        wait(for: [expectation], timeout: Self.unCenterTimeout)
     }
 
     // MARK: - notificationId uniqueness
@@ -140,14 +149,14 @@ final class NotificationSchedulerTests: XCTestCase {
 
         let refreshDone = XCTestExpectation(description: "refresh done")
         scheduler.refreshAll(context: context) { refreshDone.fulfill() }
-        wait(for: [refreshDone], timeout: 5)
+        wait(for: [refreshDone], timeout: Self.unCenterTimeout)
 
         let expectation = XCTestExpectation(description: "pending notifications check")
         UNUserNotificationCenter.current().getPendingNotificationRequests { requests in
             XCTAssertGreaterThan(requests.count, 0, "Should have scheduled at least one notification")
             expectation.fulfill()
         }
-        wait(for: [expectation], timeout: 5)
+        wait(for: [expectation], timeout: Self.unCenterTimeout)
     }
 
     func testRefreshAll_skipsInactiveMedications() throws {
@@ -158,14 +167,14 @@ final class NotificationSchedulerTests: XCTestCase {
 
         let refreshDone = XCTestExpectation(description: "refresh done")
         scheduler.refreshAll(context: context) { refreshDone.fulfill() }
-        wait(for: [refreshDone], timeout: 5)
+        wait(for: [refreshDone], timeout: Self.unCenterTimeout)
 
         let expectation = XCTestExpectation(description: "no notifications for inactive med")
         UNUserNotificationCenter.current().getPendingNotificationRequests { requests in
             XCTAssertEqual(requests.count, 0, "Inactive medications should not be scheduled")
             expectation.fulfill()
         }
-        wait(for: [expectation], timeout: 5)
+        wait(for: [expectation], timeout: Self.unCenterTimeout)
     }
 
     func testRefreshAll_updatesLastRefreshTimestamp() throws {
@@ -176,7 +185,7 @@ final class NotificationSchedulerTests: XCTestCase {
 
         let refreshDone = XCTestExpectation(description: "refresh done")
         scheduler.refreshAll(context: context) { refreshDone.fulfill() }
-        wait(for: [refreshDone], timeout: 5)
+        wait(for: [refreshDone], timeout: Self.unCenterTimeout)
 
         let lastRefresh = UserDefaults.standard.object(forKey: Constants.UserDefaultsKeys.lastNotificationRefresh)
         XCTAssertNotNil(lastRefresh, "Should record last refresh timestamp")
@@ -203,7 +212,7 @@ final class NotificationSchedulerTests: XCTestCase {
 
         let refreshDone = XCTestExpectation(description: "refresh done")
         scheduler.refreshAll(context: context) { refreshDone.fulfill() }
-        wait(for: [refreshDone], timeout: 5)
+        wait(for: [refreshDone], timeout: Self.unCenterTimeout)
 
         let expectation = XCTestExpectation(description: "check content")
         UNUserNotificationCenter.current().getPendingNotificationRequests { requests in
@@ -219,7 +228,7 @@ final class NotificationSchedulerTests: XCTestCase {
             }
             expectation.fulfill()
         }
-        wait(for: [expectation], timeout: 5)
+        wait(for: [expectation], timeout: Self.unCenterTimeout)
     }
 
     // MARK: - Preserve snoozes across refresh

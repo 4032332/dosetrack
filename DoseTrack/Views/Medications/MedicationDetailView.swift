@@ -26,7 +26,7 @@ struct MedicationDetailView: View {
                     VStack(alignment: .leading) {
                         Text(medication.wrappedName)
                             .font(.title2.weight(.semibold))
-                        Text("\(medication.wrappedDosage) · \(medication.wrappedUnit)")
+                        Text(medication.doseSummaryWithForm)
                             .foregroundStyle(.secondary)
                     }
                     Spacer()
@@ -62,7 +62,7 @@ struct MedicationDetailView: View {
             if medication.currentCount > 0 {
                 Section("Supply") {
                     HStack {
-                        Label("\(medication.currentCount) remaining", systemImage: "pills.fill")
+                        Label("\(medication.currentCount.trimmedQuantityString) remaining", systemImage: "pills.fill")
                         Spacer()
                         if medication.isRefillWarning {
                             Label("Refill soon", systemImage: "exclamationmark.triangle.fill")

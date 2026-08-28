@@ -21,7 +21,30 @@ final class ExportManagerTests: XCTestCase {
 
     func testGenerateCSV_includesHeader() throws {
         let csv = String(data: sut.generateCSV(from: [], dateRange: fullInterval()), encoding: .utf8) ?? ""
-        XCTAssertTrue(csv.hasPrefix("Date,Time,Medication,Dose,Unit,Status,Notes"))
+        XCTAssertTrue(csv.hasPrefix("Date,Time,Medication,Type,Dose,Unit,Status,As Needed,Backdated,Notes"))
+    }
+
+    /// Type and As Needed are separate columns because the same Status value means three different
+    /// things clinically: a missed prescription, an untaken vitamin, and an extra ad-hoc dose.
+    func testGenerateCSV_distinguishesKindAndAsNeeded() throws {
+        let med = Medication.create(in: context, name: "Oxycodone", dosage: "5mg", kind: .medication)
+        let vitamin = Medication.create(in: context, name: "Vitamin C", dosage: "1000mg", kind: .vitamin)
+        let scheduled = DoseLog.create(in: context, medication: med, scheduledAt: Date(), status: .taken)
+        let prn = DoseLog.create(in: context, medication: med, scheduledAt: Date(),
+                                 status: .taken, isAsNeeded: true)
+        let vitLog = DoseLog.create(in: context, medication: vitamin, scheduledAt: Date(), status: .missed)
+        try context.save()
+
+        let csv = String(
+            data: sut.generateCSV(from: [scheduled, prn, vitLog], dateRange: fullInterval()),
+            encoding: .utf8
+        ) ?? ""
+
+        XCTAssertTrue(csv.contains("Oxycodone,Medication,5mg"), "Medication rows are typed")
+        XCTAssertTrue(csv.contains("Vitamin C,Vitamin,1000mg"), "Vitamin rows are typed")
+        // Exactly one row should be flagged as an as-needed dose.
+        let asNeededRows = csv.split(separator: "\n").filter { $0.contains(",Yes,No,") }
+        XCTAssertEqual(asNeededRows.count, 1, "Only the PRN dose is flagged As Needed")
     }
 
     func testGenerateCSV_oneRowPerLog() throws {

@@ -20,6 +20,24 @@ struct MedicationsView: View {
     /// if the medication is still at 0 supply, so it can't be permanently swept under the rug
     /// without actually resolving it (remove or restock).
     @State private var dismissedOutOfStockIds: Set<UUID> = []
+    /// Which kind groups are collapsed. Persisted as a comma-joined string of raw values so a
+    /// deliberate collapse survives relaunching — all groups start expanded, so nothing is ever
+    /// hidden from someone who hasn't chosen to hide it.
+    @AppStorage("collapsedMedicationKinds") private var collapsedKindsRaw: String = ""
+
+    private var collapsedKinds: Set<String> {
+        Set(collapsedKindsRaw.split(separator: ",").map(String.init))
+    }
+
+    private func toggleCollapsed(_ kind: MedicationKind) {
+        var current = collapsedKinds
+        if current.contains(kind.rawValue) {
+            current.remove(kind.rawValue)
+        } else {
+            current.insert(kind.rawValue)
+        }
+        collapsedKindsRaw = current.sorted().joined(separator: ",")
+    }
 
     init(showingAccountSwitcher: Binding<Bool> = .constant(false)) {
         self._showingAccountSwitcher = showingAccountSwitcher
@@ -93,9 +111,21 @@ struct MedicationsView: View {
             .navigationDestination(for: Medication.self) { med in
                 MedicationDetailView(medication: med, onDelete: { viewModel.fetchMedications() })
             }
+            .confirmationDialog(
+                "What are you adding?",
+                isPresented: $viewModel.showingKindChooser,
+                titleVisibility: .visible
+            ) {
+                ForEach(MedicationKind.allCases) { kind in
+                    Button(kind.displayName) { viewModel.startAdding(kind: kind) }
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("Vitamins and supplements are tracked the same way, but missing one won't count against your adherence score.")
+            }
             .sheet(isPresented: $viewModel.showingAddForm, onDismiss: { viewModel.fetchMedications() }) {
                 AddEditMedicationView(
-                    viewModel: AddEditMedicationViewModel(context: context),
+                    viewModel: AddEditMedicationViewModel(context: context, initialKind: viewModel.newItemKind),
                     onSave: { _ in viewModel.fetchMedications() }
                 )
             }
@@ -141,33 +171,49 @@ struct MedicationsView: View {
                 .listRowBackground(Color.clear)
             }
 
-            ForEach(viewModel.medications) { med in
-                Button {
-                    viewModel.requestEdit(med)
-                } label: {
-                    MedicationRowView(medication: med)
-                }
-                .foregroundStyle(.primary)
-                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                    Button(role: .destructive) {
-                        viewModel.requestDelete(med)
-                    } label: {
-                        Label("Delete", systemImage: "trash")
+            // Grouped by kind, each group collapsible. Grouping only applies here — Today sorts by
+            // time/routine instead, since what matters there is when to take things, not what
+            // category they fall into.
+            ForEach(viewModel.groupedByKind, id: \.kind) { group in
+                Section {
+                    if !collapsedKinds.contains(group.kind.rawValue) {
+                        ForEach(group.medications) { med in
+                            Button {
+                                viewModel.requestEdit(med)
+                            } label: {
+                                MedicationRowView(medication: med)
+                            }
+                            .foregroundStyle(.primary)
+                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                Button(role: .destructive) {
+                                    viewModel.requestDelete(med)
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                                Button {
+                                    viewModel.requestEdit(med)
+                                } label: {
+                                    Label("Edit", systemImage: "pencil")
+                                }
+                                .tint(.blue)
+                            }
+                        }
+                        .onDelete { offsets in
+                            for index in offsets {
+                                viewModel.requestDelete(group.medications[index])
+                            }
+                        }
+                        .onMove { viewModel.moveItems(in: group.kind, from: $0, to: $1) }
                     }
-                    Button {
-                        viewModel.requestEdit(med)
-                    } label: {
-                        Label("Edit", systemImage: "pencil")
-                    }
-                    .tint(.blue)
+                } header: {
+                    KindSectionHeader(
+                        kind: group.kind,
+                        count: group.medications.count,
+                        isCollapsed: collapsedKinds.contains(group.kind.rawValue),
+                        onToggle: { toggleCollapsed(group.kind) }
+                    )
                 }
             }
-            .onDelete { offsets in
-                for index in offsets {
-                    viewModel.requestDelete(viewModel.medications[index])
-                }
-            }
-            .onMove { viewModel.moveItems(from: $0, to: $1) }
 
             if shouldShowContraceptiveHint {
                 Section {
@@ -197,7 +243,10 @@ struct MedicationsView: View {
                     HStack {
                         Image(systemName: "info.circle")
                             .foregroundStyle(.secondary)
-                        Text("\(viewModel.medications.count) of \(Constants.FreeTier.maxMedications) medications (free tier)")
+                        // "items", not "medications": the free-tier allowance covers vitamins and
+                        // supplements too, so naming only medications here would misstate what's
+                        // being counted the moment someone adds a vitamin.
+                        Text("\(viewModel.medications.count) of \(Constants.FreeTier.maxMedications) items (free tier)")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                         Spacer()
@@ -241,7 +290,7 @@ struct MedicationsView: View {
 
 private struct MedicationRowView: View {
     @ObservedObject var medication: Medication
-    @AppStorage("compactRows") private var compactRows: Bool = false
+    @AppStorage("compactRows") private var compactRows: Bool = true
 
     var body: some View {
         Group {
@@ -260,7 +309,7 @@ private struct MedicationRowView: View {
             VStack(alignment: .leading, spacing: 3) {
                 Text(medication.wrappedName)
                     .font(.body.weight(.medium))
-                Text("\(medication.wrappedDosage) · \(medication.wrappedUnit)")
+                Text(medication.doseSummaryWithForm)
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -282,7 +331,7 @@ private struct MedicationRowView: View {
             Text(medication.wrappedName)
                 .font(.subheadline.weight(.medium))
                 .lineLimit(1)
-            Text("\(medication.wrappedDosage) · \(medication.wrappedUnit)")
+            Text(medication.doseSummaryWithForm)
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
@@ -372,6 +421,40 @@ private struct OutOfStockNudgeCard: View {
         .background(Color.orange.opacity(0.1), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         .padding(.horizontal, 16)
         .padding(.vertical, 4)
+    }
+}
+
+// MARK: - Kind Section Header
+
+/// Collapsible group header for the Medications list. Tapping anywhere on the row toggles, and the
+/// count stays visible while collapsed so a collapsed group still tells you what's inside it.
+private struct KindSectionHeader: View {
+    let kind: MedicationKind
+    let count: Int
+    let isCollapsed: Bool
+    let onToggle: () -> Void
+
+    var body: some View {
+        Button(action: onToggle) {
+            HStack(spacing: 8) {
+                Image(systemName: kind.iconName)
+                    .font(.caption)
+                Text(kind.pluralName)
+                Text("(\(count))")
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Image(systemName: "chevron.down")
+                    .font(.caption.weight(.semibold))
+                    .rotationEffect(.degrees(isCollapsed ? -90 : 0))
+                    .foregroundStyle(.secondary)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .animation(.easeInOut(duration: 0.2), value: isCollapsed)
+        .accessibilityAddTraits(.isHeader)
+        .accessibilityLabel("\(kind.pluralName), \(count) items")
+        .accessibilityHint(isCollapsed ? "Double tap to expand" : "Double tap to collapse")
     }
 }
 

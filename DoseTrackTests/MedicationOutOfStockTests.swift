@@ -15,10 +15,10 @@ final class MedicationOutOfStockTests: XCTestCase {
         context = nil
     }
 
-    private func makeMedication(currentCount: Int, updatedAt: Date?, totalDosesPerDay: Int = 1) -> Medication {
+    private func makeMedication(currentCount: Double, updatedAt: Date?, totalDosesPerDay: Double = 1) -> Medication {
         let med = Medication.create(in: context, name: "Test", dosage: "10mg")
-        med.currentCount = Int32(currentCount)
-        med.totalDosesPerDay = Int32(totalDosesPerDay)
+        med.currentCount = currentCount
+        med.totalDosesPerDay = totalDosesPerDay
         med.updatedAt = updatedAt
         return med
     }

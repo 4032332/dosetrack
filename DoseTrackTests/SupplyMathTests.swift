@@ -7,13 +7,17 @@ final class SupplyMathTests: XCTestCase {
         // 2 tablets, 4x/day => totalDosesPerDay 8, 4 schedules => 2 per dose
         XCTAssertEqual(SupplyMath.quantityPerDose(totalDosesPerDay: 8, enabledScheduleCount: 4), 2)
     }
-    func test_quantityPerDose_flooredAtOne_whenScheduleCountZero() {
-        XCTAssertEqual(SupplyMath.quantityPerDose(totalDosesPerDay: 0, enabledScheduleCount: 0), 1)
+    func test_quantityPerDose_flooredAtHalf_whenScheduleCountZero() {
+        XCTAssertEqual(SupplyMath.quantityPerDose(totalDosesPerDay: 0, enabledScheduleCount: 0), 0.5)
     }
-    func test_quantityPerDose_roundsDownButNeverBelowOne() {
-        XCTAssertEqual(SupplyMath.quantityPerDose(totalDosesPerDay: 3, enabledScheduleCount: 2), 1)
+    func test_quantityPerDose_supportsFractionalDoses() {
+        // 3 tablets/day split across 2 schedules => 1.5 per dose (e.g. a half-tablet dose)
+        XCTAssertEqual(SupplyMath.quantityPerDose(totalDosesPerDay: 3, enabledScheduleCount: 2), 1.5)
     }
     func test_decrement_neverBelowZero() {
         XCTAssertEqual(SupplyMath.decrementedCount(current: 1, by: 2), 0)
+    }
+    func test_decrement_supportsHalfTabletDoses() {
+        XCTAssertEqual(SupplyMath.decrementedCount(current: 10, by: 0.5), 9.5)
     }
 }

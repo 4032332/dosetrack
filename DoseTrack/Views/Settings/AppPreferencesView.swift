@@ -8,7 +8,7 @@ struct AppPreferencesView: View {
     @AppStorage("timeFormat")        private var timeFormat: String = "system"
     @AppStorage("hapticsEnabled")    private var hapticsEnabled: Bool = true
     @AppStorage("showDoseBadge")     private var showDoseBadge: Bool = true
-    @AppStorage("compactRows")       private var compactRows: Bool = false
+    @AppStorage("compactRows")       private var compactRows: Bool = true
 
     @AppStorage("appearanceOverride") private var appearanceOverride: String = "light"
 

@@ -34,11 +34,22 @@ struct MedicationAdherence: Identifiable {
     let colorHex: String
     let taken: Int
     let total: Int
+    let kind: MedicationKind
+    /// Count of ad-hoc doses in range, shown alongside the rate rather than folded into it —
+    /// "12 as needed" is useful information for a doctor, but it isn't an adherence figure.
+    let asNeededCount: Int
 
     var percent: Double {
         guard total > 0 else { return 1.0 }
         return Double(taken) / Double(total)
     }
+
+    /// Vitamins and supplements still get a take-rate here, but the UI marks it as excluded from
+    /// the headline score (see `HistoryView`) so the two numbers never look contradictory.
+    var countsTowardOverall: Bool { kind.affectsAdherence }
+
+    /// True when this row has nothing but as-needed doses — there's no rate to show, only a count.
+    var isAsNeededOnly: Bool { total == 0 && asNeededCount > 0 }
 }
 
 /// A single logged dose, for the drill-down detail views (per medication / per day).
@@ -49,6 +60,7 @@ struct DoseHistoryEntry: Identifiable {
     let scheduledAt: Date
     let loggedAt: Date?
     let status: DoseStatus
+    let isBackdated: Bool
 }
 
 @MainActor
@@ -117,7 +129,8 @@ final class HistoryViewModel: ObservableObject {
             .sorted { ($0.scheduledAt ?? .distantPast) > ($1.scheduledAt ?? .distantPast) }
             .map {
                 DoseHistoryEntry(id: $0.objectID, medicationName: med.wrappedName, colorHex: med.wrappedColorHex,
-                                 scheduledAt: $0.scheduledAt ?? Date(), loggedAt: $0.loggedAt, status: $0.doseStatus)
+                                 scheduledAt: $0.scheduledAt ?? Date(), loggedAt: $0.loggedAt, status: $0.doseStatus,
+                                 isBackdated: $0.isBackdated)
             }
     }
 
@@ -131,8 +144,21 @@ final class HistoryViewModel: ObservableObject {
             .map { log in
                 DoseHistoryEntry(id: log.objectID, medicationName: log.medication?.wrappedName ?? "—",
                                  colorHex: log.medication?.wrappedColorHex ?? "#5B8AF0",
-                                 scheduledAt: log.scheduledAt ?? Date(), loggedAt: log.loggedAt, status: log.doseStatus)
+                                 scheduledAt: log.scheduledAt ?? Date(), loggedAt: log.loggedAt, status: log.doseStatus,
+                                 isBackdated: log.isBackdated)
             }
+    }
+
+    // MARK: - Backdated correction
+
+    /// Corrects a past dose's status from the History detail view — see
+    /// `DoseLoggingService.backdateEdit` for why this is tracked distinctly from a same-day log.
+    func backdateEdit(entryId: NSManagedObjectID, newStatus: DoseStatus, pushUserId: UUID?) {
+        guard let log = try? context.existingObject(with: entryId) as? DoseLog else { return }
+        DoseLoggingService.shared.backdateEdit(
+            log: log, newStatus: newStatus, notes: nil, context: context, pushUserId: pushUserId
+        )
+        refresh()
     }
 
     // MARK: - Private: date range
@@ -193,9 +219,13 @@ final class HistoryViewModel: ObservableObject {
         while cursor < end {
             let dayEnd = calendar.date(byAdding: .day, value: 1, to: cursor) ?? cursor
 
+            // Only scheduled medication doses are scored — as-needed doses and vitamins/supplements
+            // are filtered out here (see DoseLog.countsTowardAdherence for why), which is what keeps
+            // the daily bars and the headline percentage consistent with each other.
             let dayLogs = logs.filter { log in
                 guard let scheduled = log.scheduledAt else { return false }
-                return scheduled >= cursor && scheduled < dayEnd
+                guard scheduled >= cursor && scheduled < dayEnd else { return false }
+                return log.countsTowardAdherence
             }
 
             let taken = dayLogs.filter { $0.doseStatus == .taken }.count
@@ -217,18 +247,43 @@ final class HistoryViewModel: ObservableObject {
             let medLogs = logs.filter { $0.medication == med }
             guard !medLogs.isEmpty else { return nil }
 
-            let taken = medLogs.filter { $0.doseStatus == .taken }.count
+            // Split rather than filter: as-needed doses are reported as a separate count so the
+            // rate stays a true scheduled-dose rate, while the PRN activity is still visible.
+            let scheduledLogs = medLogs.filter { !$0.isAsNeeded }
+            let asNeededCount = medLogs.count - scheduledLogs.count
+
+            let taken = scheduledLogs.filter { $0.doseStatus == .taken }.count
             return MedicationAdherence(
                 id: med.objectID,
                 name: med.wrappedName,
                 colorHex: med.wrappedColorHex,
                 taken: taken,
-                total: medLogs.count
+                total: scheduledLogs.count,
+                kind: med.medicationKind,
+                asNeededCount: asNeededCount
             )
         }
-        .sorted { $0.name < $1.name }
+        // Group by kind first so the breakdown reads Medications → Vitamins → Supplements, matching
+        // the Medications tab's grouping, then alphabetically within each group.
+        .sorted { lhs, rhs in
+            if lhs.kind != rhs.kind {
+                return kindOrder(lhs.kind) < kindOrder(rhs.kind)
+            }
+            return lhs.name < rhs.name
+        }
     }
 
+    private func kindOrder(_ kind: MedicationKind) -> Int {
+        switch kind {
+        case .medication: return 0
+        case .vitamin:    return 1
+        case .supplement: return 2
+        }
+    }
+
+    /// Derived from `dayAdherences`, which has already excluded as-needed doses and
+    /// vitamins/supplements — so the headline number and the daily bars can never disagree about
+    /// what they're measuring.
     private func calculateOverallPercent() -> Double {
         let total = dayAdherences.reduce(0) { $0 + $1.total }
         let taken = dayAdherences.reduce(0) { $0 + $1.taken }

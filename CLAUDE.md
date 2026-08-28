@@ -83,8 +83,11 @@ Medisafe (the dominant free medication tracker) moved to a mandatory paid subscr
 |---|---|---|
 | `id` | UUID | Primary key |
 | `name` | String | e.g. "Metformin" |
-| `dosage` | String | Per-unit strength, e.g. "500mg" (NOT the total per-dose amount — see `totalDosesPerDay`) |
-| `unit` | String | Form factor: "tablet", "capsule", "pill", "ml", "injection", "inhaler", "spray", "patch", "drop", "sachet", "suppository", "lozenge", "supplement", "contraceptive" |
+| `dosage` | String | Per-unit strength, e.g. "500mg" (NOT the total per-dose amount — see `totalDosesPerDay`). **Optional** — genuinely absent on many products (a scoop of powder, a 19-ingredient multivitamin); stored as `""`, never as a bare unit |
+| `unit` | String | Form factor: "tablet", "capsule", "pill", "ml", "injection", "inhaler", "spray", "patch", "drop", "sachet", "suppository", "lozenge", "scoop", "gummy", "teaspoon", "tablespoon", "supplement", "contraceptive" |
+| `kind` | String | `"medication"` \| `"vitamin"` \| `"supplement"` (see `MedicationKind`). Drives grouping on the Medications tab and, critically, adherence scoring — **only `medication` counts toward the headline adherence %**. Defaults to `"medication"` |
+| `allowsAsNeeded` | Boolean | Item can be taken ad-hoc (PRN). **Independent of `schedules`** — an item can be scheduled, as-needed, or both |
+| `storedQuantityPerDose` | Double | Units per single dose. Read via `Medication.quantityPerDose`, never directly. `0` = unset → falls back to the legacy `totalDosesPerDay ÷ scheduleCount` derivation (which is meaningless for an as-needed-only item, having no schedules to divide by) |
 | `colorHex` | String | Hex string for UI colour coding (24-colour palette, see §13) |
 | `photoData` | Binary Data | Optional bottle photo, external storage |
 | `escriptData` | Binary Data | Optional Australian E-Script QR code image, external storage |
@@ -121,9 +124,47 @@ Medisafe (the dominant free medication tracker) moved to a mandatory paid subscr
 | `scheduledAt` | Date | When the dose was due |
 | `loggedAt` | Date | When user confirmed/skipped |
 | `status` | String | "taken", "skipped", "missed" |
+| `isAsNeeded` | Boolean | True for an ad-hoc dose the user logged themselves. **Excluded from adherence on both sides of the ratio** — a PRN dose can never be missed, so counting it as taken would only ever inflate the score |
 | `notes` | String | Optional user note |
 
 **Relationships:** `medication` → Medication (many-to-one)
+
+---
+
+## 4b. Adherence Scoring Rules
+
+> **Read this before touching anything that computes a percentage.** The adherence number is the
+> figure a patient shows a doctor. Two exclusions are load-bearing, and both are easy to
+> accidentally undo by "simplifying" a filter.
+
+The headline percentage counts **scheduled medication doses only**:
+
+```
+adherence = taken ÷ total,  over logs where  !isAsNeeded && kind == .medication
+```
+
+Single source of truth: `DoseLog.countsTowardAdherence`. `HistoryViewModel.buildDayAdherences`
+filters on it, and `calculateOverallPercent` derives from those already-filtered days — so the
+headline number and the daily bars can never disagree about what they measure.
+
+**Why as-needed doses are excluded from *both* sides of the ratio.** A PRN dose is never due, so it
+can never be missed. Counting it as "taken" could therefore only ever push the score up — someone
+leaning heavily on a PRN painkiller could read 95% adherent while missing half their scheduled
+doses. They are reported separately instead (a count, not a rate).
+
+**Why vitamins/supplements are excluded.** A forgotten multivitamin is not clinically comparable to
+a missed prescription. They still appear in History, the calendar, the per-item breakdown (with
+their own visible take-rate, explicitly labelled "not counted in score"), the CSV and the PDF — they
+are simply kept out of the headline figure.
+
+**Deliberate inconsistency:** Today's dose ring *does* count vitamins and supplements. It is a
+"did you do today's routine" tracker, not an adherence score, and it should match what's visibly
+listed on the screen. The strict meds-only percentage lives in History. Don't "fix" this by making
+them agree.
+
+Covered by `DoseTrackTests/AdherenceCalculatorTests.swift` — including that 3 taken PRN doses do
+not rescue 1 missed scheduled dose, and that 4 missed vitamins leave a perfect medication score at
+100%.
 
 ---
 
@@ -133,8 +174,17 @@ Medisafe (the dominant free medication tracker) moved to a mandatory paid subscr
 
 | Product ID | Type | Price |
 |---|---|---|
-| `com.robbrown.dosetrack.pro.monthly` | Auto-renewable subscription | $3.99/mo (7-day free trial) |
-| `com.robbrown.dosetrack.pro.annual` | Auto-renewable subscription | $29.99/yr ("Best Value — Save 37%") |
+| `com.robbrown.dosetrack.pro.monthly3` | Auto-renewable subscription | A$5.99/mo (7-day free trial) |
+| `com.robbrown.dosetrack.pro.annual2` | Auto-renewable subscription | A$39.99/yr (~44% vs monthly) |
+
+Both live in the **"DoseTrack Plus 2"** subscription group. The `3`/`2` suffixes are not a
+versioning scheme — Apple permanently reserves Product IDs *and* subscription reference names, even
+after deletion, so each recreation during the Guideline 2.1(b) saga burned the previous name. The
+original group ("DoseTrack Plus") is considered corrupted; **never put a new product in it.**
+
+The savings badge is **computed at runtime** from the live StoreKit prices
+(`PaywallView.annualSavingsBadge`), never hard-coded — a fixed percentage is only correct in one
+currency, and the App Store prices each storefront independently.
 
 Local dev config: `DoseTrack/Resources/Products.storekit`.
 
@@ -158,7 +208,7 @@ Local dev config: `DoseTrack/Resources/Products.storekit`.
 3. User taps "Adherence Report (PDF)" in History
 4. User taps "App Icon" in Settings (Preferences)
 
-**Paywall design:** Native SwiftUI sheet (`Views/Paywall/PaywallView.swift`). Gradient hero with the Milli mascot, feature list, both monthly/annual pricing cards, "Best Value — Save 37%" badge on annual, restore purchases button, honest "coming soon" fallback state if StoreKit products aren't configured yet.
+**Paywall design:** Native SwiftUI sheet (`Views/Paywall/PaywallView.swift`). Gradient hero with the Milli mascot, feature list, both monthly/annual pricing cards, a runtime-computed "Best Value — Save N%" badge on annual, restore purchases button, honest "coming soon" fallback state if StoreKit products aren't configured yet.
 
 ---
 
@@ -372,6 +422,9 @@ Haptics, Dynamic Type, Dark Mode, accessibility labels, `PrivacyInfo.xcprivacy`,
 
 Kept brief — this is a log of *what* shipped and *why it mattered*, not a changelog of every commit. See git log for full detail.
 
+- **As-needed (PRN) doses + medication/vitamin/supplement types** (1.1.0, build 41) — see §4 for the four new attributes and §4b for the adherence rules they drive. Today gained an "As Needed" section (mirrored on watchOS); the Medications tab groups by type with collapsible sections; strength became optional everywhere. Also fixed a latent bug found while building it: `quantityPerDose` was *derived* from `totalDosesPerDay ÷ enabledScheduleCount`, which collapses for an as-needed-only item (no schedules) — it's now stored, with a `0` sentinel so existing rows keep their old derivation and no live user's supply maths changes.
+- **Scanner: two real parser fixes, verified against 15 annotated real-world scans** — a max-daily-dose warning (`"Maximum 4000mg ... in a day"`) was being committed as a per-unit *strength*, and `"Take 1-2 tablets"` resolved to the upper bound. Notably, testing the parser against the exact label text first showed 14 of 16 cases *already passed* — the remaining screenshot failures were incomplete scan accumulation or OCR-level misreads (Vision reading `µg` as `mg`), not parser bugs. Regression suite: `DoseTrackTests/MedicationParserRealLabelTests.swift`.
+
 - **Medical disclaimer/terms acceptance** (one-time, per-account, Supabase-recorded) — legal requirement before the app could responsibly ship. See §11a.
 - **Notification-permission guarantee before medications can be added**, on every sign-up path — closed a gap where Apple/Google sign-in skipped the onboarding page that requested it.
 - **Medication scanner rewrite** — orientation-aware OCR, VisionKit document scanner, height-based name detection. The scanner previously failed on almost all real (portrait) photos; root cause was a missing image-orientation parameter to Vision.
@@ -460,6 +513,8 @@ Warm, encouraging, lightly playful — never clinical or alarming (this is a del
 9. **Never show dose amount, strength, or pill count in a notification body.** Medication name only — see §6.
 10. **Never hide a Pro feature from a free user; ghost it instead** (dimmed + lock badge, still tappable → paywall). See §5.
 11. **Ask before assuming a watch-app change is (or isn't) wanted** when making an iOS visual or Today-tab change. See §2/§8.
+12. **Never let an as-needed dose, a vitamin, or a supplement affect the headline adherence percentage.** See §4b for why each exclusion exists. A missed vitamin must never read as a missed prescription, and a PRN dose — which can't be missed — must never inflate the score.
+13. **Prefer a blank scanner field over an uncertain one.** Verified against real labels: the parser must never lift a strength from a maximum-daily-dose warning, nor a supply count from a dosing frequency. A wrong-but-plausible dose written into a medical record is far worse than an empty field the user fills in themselves.
 
 ---
 
@@ -564,4 +619,4 @@ dosetrack-ios/
 
 ---
 
-*Last updated: 2026-07-11 (build 21). Built by Rob Brown using Claude Code.*
+*Last updated: 2026-07-30 (1.1.0, build 41). Built by Rob Brown using Claude Code.*

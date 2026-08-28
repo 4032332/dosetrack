@@ -1,5 +1,6 @@
 // DoseTrack/Views/History/HistoryView.swift
 import SwiftUI
+import CoreData
 
 struct HistoryView: View {
     @Environment(\.managedObjectContext) private var context
@@ -102,14 +103,20 @@ struct HistoryView: View {
                     // Per-medication breakdown — tap through to each medication's logged doses
                     if !viewModel.medicationAdherences.isEmpty {
                         VStack(alignment: .leading, spacing: 8) {
-                            HistorySectionHeader("By Medication")
+                            HistorySectionHeader("By Item")
                             HistoryCard(spacing: 14) {
                                 ForEach(Array(viewModel.medicationAdherences.enumerated()), id: \.element.id) { index, item in
                                     NavigationLink {
                                         HistoryEntriesView(
                                             title: item.name,
                                             showMedicationName: false,
-                                            entries: viewModel.entries(forMedication: item.id)
+                                            entries: viewModel.entries(forMedication: item.id),
+                                            onEdit: { entryId, newStatus in
+                                                viewModel.backdateEdit(
+                                                    entryId: entryId, newStatus: newStatus,
+                                                    pushUserId: ActiveAccountResolver.shared.activeUserId
+                                                )
+                                            }
                                         )
                                     } label: {
                                         MedicationAdherenceRow(item: item)
@@ -195,7 +202,13 @@ struct HistoryView: View {
                     HistoryEntriesView(
                         title: sel.day.formatted(date: .complete, time: .omitted),
                         showMedicationName: true,
-                        entries: viewModel.entries(forDay: sel.day)
+                        entries: viewModel.entries(forDay: sel.day),
+                        onEdit: { entryId, newStatus in
+                            viewModel.backdateEdit(
+                                entryId: entryId, newStatus: newStatus,
+                                pushUserId: ActiveAccountResolver.shared.activeUserId
+                            )
+                        }
                     )
                 }
             }
@@ -275,13 +288,31 @@ struct DaySelection: Identifiable {
 // MARK: - History detail (per medication / per day)
 
 /// Lists individual logged doses with the time each was actually taken/skipped/missed.
-/// Reused for both the per-medication drill-down and the calendar day tap.
+/// Reused for both the per-medication drill-down and the calendar day tap. Tapping a row lets
+/// the user correct a past dose's status (e.g. one `MissedDoseSweeper` auto-marked "missed" that
+/// was actually taken) — see `DoseLoggingService.backdateEdit`.
 struct HistoryEntriesView: View {
     let title: String
     let showMedicationName: Bool
-    let entries: [DoseHistoryEntry]
+    let initialEntries: [DoseHistoryEntry]
+    let onEdit: (NSManagedObjectID, DoseStatus) -> Void
 
+    @State private var entries: [DoseHistoryEntry]
+    @State private var editingEntry: DoseHistoryEntry?
     @AppStorage("timeFormat") private var timeFormat: String = "system"
+
+    init(
+        title: String,
+        showMedicationName: Bool,
+        entries: [DoseHistoryEntry],
+        onEdit: @escaping (NSManagedObjectID, DoseStatus) -> Void
+    ) {
+        self.title = title
+        self.showMedicationName = showMedicationName
+        self.initialEntries = entries
+        self.onEdit = onEdit
+        self._entries = State(initialValue: entries)
+    }
 
     var body: some View {
         Group {
@@ -294,11 +325,34 @@ struct HistoryEntriesView: View {
             } else {
                 List(entries) { entry in
                     HistoryEntryRow(entry: entry, showMedicationName: showMedicationName, timeFormat: timeFormat)
+                        .contentShape(Rectangle())
+                        .onTapGesture { editingEntry = entry }
                 }
             }
         }
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.inline)
+        .confirmationDialog(
+            "Correct this dose",
+            isPresented: Binding(get: { editingEntry != nil }, set: { if !$0 { editingEntry = nil } }),
+            presenting: editingEntry
+        ) { entry in
+            ForEach(DoseStatus.allCases.filter { $0 != entry.status }, id: \.self) { newStatus in
+                Button("Mark as \(newStatus.displayName)") { apply(newStatus, to: entry) }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: { entry in
+            Text("This backdates \(entry.medicationName)'s \(entry.scheduledAt.formatted(date: .abbreviated, time: .omitted)) dose. The report will show it was corrected afterward, not logged on the day.")
+        }
+    }
+
+    private func apply(_ newStatus: DoseStatus, to entry: DoseHistoryEntry) {
+        onEdit(entry.id, newStatus)
+        guard let index = entries.firstIndex(where: { $0.id == entry.id }) else { return }
+        entries[index] = DoseHistoryEntry(
+            id: entry.id, medicationName: entry.medicationName, colorHex: entry.colorHex,
+            scheduledAt: entry.scheduledAt, loggedAt: Date(), status: newStatus, isBackdated: true
+        )
     }
 }
 
@@ -320,10 +374,15 @@ private struct HistoryEntryRow: View {
                 Text("Due \(TimeFormatPreference.string(for: entry.scheduledAt, preference: timeFormat))")
                     .font(showMedicationName ? .caption : .subheadline)
                     .foregroundStyle(.secondary)
-                if let loggedAt = entry.loggedAt, entry.status == .taken {
+                if let loggedAt = entry.loggedAt, entry.status == .taken, !entry.isBackdated {
                     Text("Taken at \(TimeFormatPreference.string(for: loggedAt, preference: timeFormat))")
                         .font(.caption)
                         .foregroundStyle(.green)
+                }
+                if entry.isBackdated {
+                    Label("Corrected afterward", systemImage: "clock.arrow.circlepath")
+                        .font(.caption)
+                        .foregroundStyle(.orange)
                 }
             }
             Spacer()
@@ -398,12 +457,17 @@ private struct AdherenceSummaryRow: View {
                 Text("\(Int(percent * 100))%")
                     .font(.caption.weight(.bold))
             }
-            VStack(alignment: .leading) {
+            VStack(alignment: .leading, spacing: 2) {
                 Text("Overall Adherence")
                     .font(.subheadline.weight(.semibold))
                 Text(adherenceLabel)
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                // States the scope up front, so the number is never mistaken for covering
+                // everything listed below it.
+                Text("Scheduled medications only")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
             }
         }
         .padding(.vertical, 4)
@@ -426,16 +490,41 @@ private struct MedicationAdherenceRow: View {
             Circle()
                 .fill(Color(hex: item.colorHex))
                 .frame(width: 10, height: 10)
-            Text(item.name)
-                .font(.subheadline)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(item.name)
+                    .font(.subheadline)
+                // Vitamins and supplements keep a visible take-rate, but must be labelled as
+                // excluded from the headline percentage — otherwise a 50% vitamin sitting next to a
+                // 100% overall score reads as a contradiction.
+                if !item.countsTowardOverall {
+                    Text("\(item.kind.displayName) · not counted in score")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                } else if item.asNeededCount > 0 {
+                    Text("\(item.asNeededCount) as needed")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+            }
             Spacer()
             VStack(alignment: .trailing, spacing: 2) {
-                Text("\(Int(item.percent * 100))%")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(item.percent >= 0.9 ? .green : item.percent >= 0.5 ? .orange : .red)
-                Text("\(item.taken)/\(item.total)")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
+                if item.isAsNeededOnly {
+                    // Nothing was ever scheduled, so a percentage would be meaningless — report
+                    // the count of ad-hoc doses instead.
+                    Text("\(item.asNeededCount)")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    Text("as needed")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                } else {
+                    Text("\(Int(item.percent * 100))%")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(item.percent >= 0.9 ? .green : item.percent >= 0.5 ? .orange : .red)
+                    Text("\(item.taken)/\(item.total)")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
             }
         }
     }

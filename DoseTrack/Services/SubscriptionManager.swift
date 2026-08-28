@@ -11,13 +11,20 @@ final class SubscriptionManager: ObservableObject {
 
     // MARK: - Published
 
+    /// True if this account has Plus-equivalent access — either a real StoreKit subscription or
+    /// an active promo-code grant. Every existing call site in the app treats this as "does the
+    /// user get Plus features", not literally "are they a paying subscriber", so folding promo
+    /// access in here (rather than threading a second check through every gate) keeps all
+    /// existing gating correct for free.
     @Published private(set) var isProSubscriber: Bool = false
     @Published private(set) var availableProducts: [Product] = []
     @Published private(set) var purchaseInProgress: Bool = false
+    @Published private(set) var promoAccessExpiresAt: Date?
 
     // MARK: - Private
 
     private var updatesTask: Task<Void, Never>?
+    private var storeKitEntitled = false
 
     // MARK: - Init
 
@@ -64,6 +71,88 @@ final class SubscriptionManager: ObservableObject {
         await refreshEntitlement()
     }
 
+    // MARK: - Promo code
+
+    enum PromoRedeemOutcome {
+        case success
+        case invalidCode
+        case alreadyRedeemed
+        case requiresAccount   // guest — no stable identity to enforce "once per account"
+        case networkError
+    }
+
+    /// Redeems the shared promo code for the given account. Requires a real (non-guest) signed-in
+    /// account — see PromoRedeemOutcome.requiresAccount — since "once per account, ever" has
+    /// nothing to key off for a guest.
+    func redeemPromoCode(_ code: String, userId: UUID?, isGuest: Bool) async -> PromoRedeemOutcome {
+        guard let userId, !isGuest else { return .requiresAccount }
+        let trimmed = code.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        guard trimmed == Constants.PromoCode.sharedCode else { return .invalidCode }
+        switch await SupabaseSyncManager.shared.redeemPromoCode(
+            userId: userId, code: trimmed, durationDays: Constants.PromoCode.durationDays
+        ) {
+        case .success(let expiresAt):
+            applyPromoExpiry(expiresAt, identity: userId.uuidString)
+            return .success
+        case .alreadyRedeemed:
+            return .alreadyRedeemed
+        case .networkError:
+            return .networkError
+        }
+    }
+
+    /// Loads any active promo grant for this identity — local cache first (instant, offline-safe),
+    /// then a server check for a real account with no local record (fresh login / reinstall).
+    /// Mirrors DisclaimerManager's identity/cache split.
+    func loadPromoStatus(userId: UUID?, isGuest: Bool) async {
+        guard let userId, !isGuest else { return }
+        let identity = userId.uuidString
+        if let cached = cachedPromoExpiry(identity: identity) {
+            promoAccessExpiresAt = cached
+            recomputeEffectiveAccess()
+            // Still worth a background refresh in case the cached value is stale (e.g. a promo
+            // redeemed on another device), but don't block on it.
+        }
+        if let serverExpiry = await SupabaseSyncManager.shared.fetchActivePromoExpiry(userId: userId) {
+            applyPromoExpiry(serverExpiry, identity: identity)
+        }
+    }
+
+    /// If a reminder for the current days-remaining count hasn't been shown yet today, returns
+    /// that count (1–5) and marks it shown. Returns nil otherwise — either promo access isn't
+    /// active, it's outside the reminder window, or today's reminder already fired.
+    func promoExpiryReminderDaysRemaining() -> Int? {
+        guard let expiresAt = promoAccessExpiresAt, expiresAt > Date() else { return nil }
+        let daysRemaining = Calendar.current.dateComponents([.day], from: Date(), to: expiresAt).day.map { $0 + 1 } ?? 0
+        guard Constants.PromoCode.reminderThresholds.contains(daysRemaining) else { return nil }
+        let key = Self.reminderShownKey(daysRemaining: daysRemaining)
+        let today = Self.dayStamp(for: Date())
+        if UserDefaults.standard.string(forKey: key) == today { return nil }
+        UserDefaults.standard.set(today, forKey: key)
+        return daysRemaining
+    }
+
+    private static func reminderShownKey(daysRemaining: Int) -> String { "promoReminderShown.\(daysRemaining)" }
+    private static func dayStamp(for date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter.string(from: date)
+    }
+
+    private static func cachedPromoExpiryKey(identity: String) -> String { "promoAccessExpiresAt.\(identity)" }
+
+    private func cachedPromoExpiry(identity: String) -> Date? {
+        let timestamp = UserDefaults.standard.double(forKey: Self.cachedPromoExpiryKey(identity: identity))
+        guard timestamp > 0 else { return nil }
+        return Date(timeIntervalSince1970: timestamp)
+    }
+
+    private func applyPromoExpiry(_ date: Date, identity: String) {
+        UserDefaults.standard.set(date.timeIntervalSince1970, forKey: Self.cachedPromoExpiryKey(identity: identity))
+        promoAccessExpiresAt = date
+        recomputeEffectiveAccess()
+    }
+
     // MARK: - Private
 
     private func loadProducts() async {
@@ -93,9 +182,18 @@ final class SubscriptionManager: ObservableObject {
                 break
             }
         }
-        isProSubscriber = hasPro
-        UserDefaults.standard.set(hasPro, forKey: Constants.UserDefaultsKeys.isProSubscriber)
-        return hasPro
+        storeKitEntitled = hasPro
+        recomputeEffectiveAccess()
+        return isProSubscriber
+    }
+
+    /// Combines the real StoreKit entitlement with any still-active promo grant into the single
+    /// `isProSubscriber` flag every gate in the app reads, and keeps the legacy UserDefaults key
+    /// (read directly by MedicationsViewModel's default closure) in sync with it.
+    private func recomputeEffectiveAccess() {
+        let promoActive = promoAccessExpiresAt.map { $0 > Date() } ?? false
+        isProSubscriber = storeKitEntitled || promoActive
+        UserDefaults.standard.set(isProSubscriber, forKey: Constants.UserDefaultsKeys.isProSubscriber)
     }
 
     private func startListeningForTransactionUpdates() {

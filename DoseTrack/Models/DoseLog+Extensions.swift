@@ -24,7 +24,8 @@ extension DoseLog {
         in context: NSManagedObjectContext,
         medication: Medication,
         scheduledAt: Date,
-        status: DoseStatus
+        status: DoseStatus,
+        isAsNeeded: Bool = false
     ) -> DoseLog {
         let log = DoseLog(context: context)
         log.id = UUID()
@@ -32,6 +33,7 @@ extension DoseLog {
         log.loggedAt = Date()
         log.status = status.rawValue
         log.medication = medication
+        log.isAsNeeded = isAsNeeded
         return log
     }
 
@@ -42,4 +44,17 @@ extension DoseLog {
     }
 
     var wrappedNotes: String { notes ?? "" }
+
+    /// Whether this log should be scored in the headline adherence percentage.
+    ///
+    /// Two exclusions, both deliberate:
+    ///  - **As-needed doses**: never scheduled, so they can't be missed. Counting them as "taken"
+    ///    would only ever push the score up, making adherence a measure of how much PRN medication
+    ///    someone takes rather than whether they kept to their prescription.
+    ///  - **Vitamins and supplements**: a forgotten multivitamin shouldn't read as a missed
+    ///    prescription. They still appear in History and get their own take-rate — see
+    ///    HistoryViewModel's per-item breakdown — they're just kept out of the headline number.
+    var countsTowardAdherence: Bool {
+        !isAsNeeded && (medication?.medicationKind ?? .medication) == .medication
+    }
 }

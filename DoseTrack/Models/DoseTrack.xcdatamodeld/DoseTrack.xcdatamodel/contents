@@ -1,19 +1,39 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="23788" systemVersion="24A348" minimumToolsVersion="Automatic" sourceLanguage="Swift" userDefinedModelVersionIdentifier="">
     <entity name="Medication" representedClassName="Medication" syncable="YES" codeGenerationType="category">
+        <!-- True if this item can be taken ad-hoc ("as needed"/PRN). Deliberately independent of
+             `schedules`: an item can be scheduled only, as-needed only, or BOTH (e.g. a painkiller
+             taken nightly plus extra doses when required). Defaults NO so every existing
+             medication keeps behaving exactly as before this attribute existed. -->
+        <attribute name="allowsAsNeeded" optional="NO" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
         <attribute name="colorHex" optional="YES" attributeType="String" defaultValueString="#5B8AF0"/>
         <attribute name="createdAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
-        <attribute name="currentCount" optional="NO" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="currentCount" optional="NO" attributeType="Double" defaultValueString="0" usesScalarValueType="YES"/>
         <attribute name="dosage" optional="NO" attributeType="String" defaultValueString=""/>
         <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
         <attribute name="isActive" optional="NO" attributeType="Boolean" defaultValueString="YES" usesScalarValueType="YES"/>
+        <!-- "medication" | "vitamin" | "supplement" (see MedicationKind). Drives grouping on the
+             Medications tab and, critically, adherence scoring: only `medication` counts toward the
+             headline adherence % — a missed vitamin must never make someone look non-adherent to a
+             prescription. Defaults to "medication" so existing rows are unaffected. -->
+        <attribute name="kind" optional="NO" attributeType="String" defaultValueString="medication"/>
         <attribute name="name" optional="NO" attributeType="String" defaultValueString=""/>
         <attribute name="notes" optional="YES" attributeType="String"/>
+        <!-- Units consumed per single dose (e.g. 2 for "two tablets at a time", 0.5 for a half).
+             Read via `Medication.quantityPerDose`, never directly.
+             Stored rather than derived because the old derivation (totalDosesPerDay ÷
+             enabledScheduleCount) is meaningless for an as-needed-only item, which has no
+             schedules and therefore a totalDosesPerDay of 0 — it would report a 0.5-unit dose for
+             everything. `totalDosesPerDay` remains the separate *daily rate* used for
+             days-of-supply forecasting.
+             Defaults to 0 as an "unset" sentinel: rows written before this attribute existed read
+             0 and fall back to the legacy derivation, so no existing supply maths changes. -->
+        <attribute name="storedQuantityPerDose" optional="NO" attributeType="Double" defaultValueString="0" usesScalarValueType="YES"/>
         <attribute name="escriptData" optional="YES" attributeType="Binary" allowsExternalBinaryDataStorage="YES"/>
         <attribute name="photoData" optional="YES" attributeType="Binary" allowsExternalBinaryDataStorage="YES"/>
         <attribute name="refillThreshold" optional="NO" attributeType="Integer 32" defaultValueString="7" usesScalarValueType="YES"/>
         <attribute name="sortOrder" optional="NO" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
-        <attribute name="totalDosesPerDay" optional="NO" attributeType="Integer 32" defaultValueString="1" usesScalarValueType="YES"/>
+        <attribute name="totalDosesPerDay" optional="NO" attributeType="Double" defaultValueString="1" usesScalarValueType="YES"/>
         <attribute name="unit" optional="NO" attributeType="String" defaultValueString="pill"/>
         <attribute name="updatedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
         <relationship name="doseLogs" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="DoseLog" inverseName="medication" inverseEntity="DoseLog"/>
@@ -34,6 +54,12 @@
     </entity>
     <entity name="DoseLog" representedClassName="DoseLog" syncable="YES" codeGenerationType="category">
         <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <!-- True for an ad-hoc "as needed" dose the user logged themselves, rather than a dose that
+             was ever scheduled. These are excluded from adherence on BOTH sides of the ratio: an
+             as-needed dose can never be missed, so counting it as "taken" would silently inflate
+             the score (a heavy PRN user could read 95% while missing half their real doses). -->
+        <attribute name="isAsNeeded" optional="NO" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+        <attribute name="isBackdated" optional="NO" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
         <attribute name="loggedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="notes" optional="YES" attributeType="String"/>
         <attribute name="scheduledAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>

@@ -33,7 +33,11 @@ final class ExportManager {
 
     func generateCSV(from logs: [DoseLog], dateRange: DateInterval) -> Data {
         var rows: [String] = [
-            "Date,Time,Medication,Dose,Unit,Status,Notes"
+            // Type and As Needed are their own columns rather than being folded into Status: a
+            // clinician reading this needs to distinguish "missed a prescribed dose" from "didn't
+            // take a vitamin" and from "took an extra PRN dose", and those are three different
+            // facts about the same Status value.
+            "Date,Time,Medication,Type,Dose,Unit,Status,As Needed,Backdated,Notes"
         ]
 
         let sortedLogs = logs
@@ -58,9 +62,12 @@ final class ExportManager {
             let dose = csvEscape(med?.wrappedDosage ?? "")
             let unit = csvEscape(med?.wrappedUnit ?? "")
             let status = log.doseStatus.displayName
+            let kind = (med?.medicationKind ?? .medication).displayName
+            let asNeeded = log.isAsNeeded ? "Yes" : "No"
+            let backdated = log.isBackdated ? "Yes" : "No"
             let notes = csvEscape(log.wrappedNotes)
 
-            let row = "\(dateFormatter.string(from: scheduled)),\(timeFormatter.string(from: scheduled)),\(name),\(dose),\(unit),\(status),\(notes)"
+            let row = "\(dateFormatter.string(from: scheduled)),\(timeFormatter.string(from: scheduled)),\(name),\(kind),\(dose),\(unit),\(status),\(asNeeded),\(backdated),\(notes)"
             rows.append(row)
         }
 

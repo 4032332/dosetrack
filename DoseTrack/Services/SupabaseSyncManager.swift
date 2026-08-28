@@ -227,6 +227,51 @@ final class SupabaseSyncManager: ObservableObject {
         }
     }
 
+    // MARK: - Promo code redemption
+
+    enum PromoRedeemResult {
+        case success(expiresAt: Date)
+        case alreadyRedeemed
+        case networkError
+    }
+
+    /// Attempts to redeem a shared promo code for this account. The insert's uniqueness
+    /// constraint on (user_id, code) is what actually enforces "once per account" — this method
+    /// just interprets the result, it doesn't pre-check, since a pre-check-then-insert has a
+    /// race window a single atomic insert doesn't.
+    func redeemPromoCode(userId: UUID, code: String, durationDays: Int) async -> PromoRedeemResult {
+        let redeemedAt = Date()
+        let expiresAt = Calendar.current.date(byAdding: .day, value: durationDays, to: redeemedAt) ?? redeemedAt
+        let row = PromoRedemptionRow(userId: userId.uuidString, code: code, redeemedAt: redeemedAt, expiresAt: expiresAt)
+        do {
+            try await client.from("promo_redemptions").insert(row).execute()
+            return .success(expiresAt: expiresAt)
+        } catch {
+            if let postgrestError = error as? PostgrestError, postgrestError.code == "23505" {
+                return .alreadyRedeemed
+            }
+            print("redeemPromoCode error: \(error)")
+            return .networkError
+        }
+    }
+
+    /// The furthest-in-the-future, still-unexpired promo redemption on this account, if any.
+    /// A user could in principle redeem more than one distinct code over time; this always
+    /// surfaces whichever grants access the longest.
+    func fetchActivePromoExpiry(userId: UUID) async -> Date? {
+        do {
+            let rows: [PromoRedemptionRow] = try await client
+                .from("promo_redemptions")
+                .select("user_id, code, redeemed_at, expires_at")
+                .eq("user_id", value: userId.uuidString)
+                .execute().value
+            return rows.map(\.expiresAt).filter { $0 > Date() }.max()
+        } catch {
+            print("fetchActivePromoExpiry error: \(error)")
+            return nil
+        }
+    }
+
     func deleteMedication(id: UUID) async {
         guard AuthManager.shared.isSignedIn, !AuthManager.shared.isGuest else { return }
         do {
@@ -328,9 +373,15 @@ final class SupabaseSyncManager: ObservableObject {
             med.colorHex     = row.colorHex
             med.notes        = row.notes
             med.isActive     = row.isActive
-            med.currentCount = Int32(row.currentCount)
+            med.currentCount = row.currentCount
             med.refillThreshold = Int32(row.refillThreshold)
             med.sortOrder    = Int32(row.sortOrder)
+            // nil (a pre-migration row, or a project without the migration applied) falls back to
+            // "medication" — the conservative default, since an unrecognised kind staying in the
+            // adherence score is safer than silently dropping out of it.
+            med.kind         = row.kind ?? MedicationKind.medication.rawValue
+            med.allowsAsNeeded = row.allowsAsNeeded ?? false
+            med.storedQuantityPerDose = row.quantityPerDose ?? 0
             med.updatedAt    = row.updatedAt
             // Download photos lazily — store path in a transient or re-download on demand
             if let path = row.photoPath {
@@ -409,6 +460,11 @@ final class SupabaseSyncManager: ObservableObject {
             log.loggedAt    = row.loggedAt
             log.status      = row.status
             log.notes       = row.notes
+            log.isBackdated = row.isBackdated
+            // nil merges to false: assuming a pre-migration log was a scheduled dose keeps it in
+            // the adherence ratio, which is how it was already being counted before this field
+            // existed — so historic percentages don't shift under the user.
+            log.isAsNeeded  = row.isAsNeeded ?? false
             log.medication  = med
             log.updatedAt   = row.updatedAt
         }
@@ -486,6 +542,20 @@ struct DisclaimerAcceptanceRow: Codable {
     }
 }
 
+struct PromoRedemptionRow: Codable {
+    var userId: String
+    var code: String
+    var redeemedAt: Date
+    var expiresAt: Date
+
+    enum CodingKeys: String, CodingKey {
+        case userId = "user_id"
+        case code
+        case redeemedAt = "redeemed_at"
+        case expiresAt = "expires_at"
+    }
+}
+
 struct MedicationRow: Codable {
     var id: String
     var userId: String
@@ -495,15 +565,21 @@ struct MedicationRow: Codable {
     var colorHex: String
     var notes: String
     var isActive: Bool
-    var currentCount: Int
+    var currentCount: Double
     var refillThreshold: Int
     var sortOrder: Int
     var photoPath: String?
     var escriptPath: String?
+    /// "medication" | "vitamin" | "supplement". Optional on decode so a client reading a row
+    /// written before the migration (or from a project where it hasn't been applied) still parses —
+    /// the merge then falls back to "medication", the conservative default.
+    var kind: String?
+    var allowsAsNeeded: Bool?
+    var quantityPerDose: Double?
     var updatedAt: Date
 
     enum CodingKeys: String, CodingKey {
-        case id, name, dosage, unit, notes
+        case id, name, dosage, unit, notes, kind
         case userId = "user_id"
         case colorHex = "color_hex"
         case isActive = "is_active"
@@ -512,6 +588,8 @@ struct MedicationRow: Codable {
         case sortOrder = "sort_order"
         case photoPath = "photo_path"
         case escriptPath = "escript_path"
+        case allowsAsNeeded = "allows_as_needed"
+        case quantityPerDose = "quantity_per_dose"
         case updatedAt = "updated_at"
     }
 
@@ -524,11 +602,14 @@ struct MedicationRow: Codable {
         colorHex       = medication.wrappedColorHex
         notes          = medication.wrappedNotes
         isActive       = medication.isActive
-        currentCount   = Int(medication.currentCount)
+        currentCount   = medication.currentCount
         refillThreshold = Int(medication.refillThreshold)
         sortOrder      = Int(medication.sortOrder)
         photoPath      = nil   // set separately after upload
         escriptPath    = nil
+        kind           = medication.medicationKind.rawValue
+        allowsAsNeeded = medication.allowsAsNeeded
+        quantityPerDose = medication.storedQuantityPerDose
         updatedAt      = medication.updatedAt ?? Date()
     }
 
@@ -545,7 +626,7 @@ struct MedicationRow: Codable {
 
     private init(
         id: String, userId: String, name: String, dosage: String, unit: String,
-        colorHex: String, notes: String, isActive: Bool, currentCount: Int,
+        colorHex: String, notes: String, isActive: Bool, currentCount: Double,
         refillThreshold: Int, sortOrder: Int, updatedAt: Date
     ) {
         self.id = id; self.userId = userId; self.name = name; self.dosage = dosage
@@ -604,6 +685,10 @@ struct DoseLogRow: Codable {
     var loggedAt: Date
     var status: String
     var notes: String
+    var isBackdated: Bool
+    /// Optional on decode for the same reason as MedicationRow.kind — a pre-migration row simply
+    /// reads as nil and merges to false (a scheduled dose), which is the safe assumption.
+    var isAsNeeded: Bool?
     var updatedAt: Date
 
     enum CodingKeys: String, CodingKey {
@@ -612,6 +697,8 @@ struct DoseLogRow: Codable {
         case medicationId = "medication_id"
         case scheduledAt = "scheduled_at"
         case loggedAt = "logged_at"
+        case isBackdated = "is_backdated"
+        case isAsNeeded = "is_as_needed"
         case updatedAt = "updated_at"
     }
 
@@ -623,6 +710,8 @@ struct DoseLogRow: Codable {
         loggedAt     = log.loggedAt ?? Date()
         status       = log.status ?? "taken"
         notes        = log.notes ?? ""
+        isBackdated  = log.isBackdated
+        isAsNeeded   = log.isAsNeeded
         updatedAt    = log.updatedAt ?? Date()
     }
 }
@@ -715,7 +804,12 @@ struct UserSettingsRow: Codable {
         snoozeDuration   = d.integer(forKey: "defaultSnoozeDuration").nonZeroOr(30)
         hapticsEnabled   = d.bool(forKey: "hapticsEnabled")
         showDoseBadge    = d.bool(forKey: "showDoseBadge")
-        compactRows      = d.bool(forKey: "compactRows")
+        // Unlike hapticsEnabled/showDoseBadge above, compactRows' default is now `true` (see
+        // DoseRowView/MedicationsView/RestockView/AppPreferencesView) — d.bool(forKey:) returns
+        // false for a key that was never explicitly set, which would silently push `false` to a
+        // fresh account's first sync and permanently override the intended true default on
+        // every other device that later pulls it. Fall back to true only when the key is unset.
+        compactRows      = d.object(forKey: "compactRows") != nil ? d.bool(forKey: "compactRows") : true
         selectedAvatar   = d.string(forKey: "selectedAvatar") ?? "milli"
         patientName      = d.string(forKey: "patientName") ?? ""
         patientGender    = d.string(forKey: "patientGender") ?? ""

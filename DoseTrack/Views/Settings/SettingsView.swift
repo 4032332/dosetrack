@@ -3,11 +3,9 @@ import SwiftUI
 import CoreData
 import UserNotifications
 import WidgetKit
-import StoreKit
 
 struct SettingsView: View {
     @Environment(\.managedObjectContext) private var context
-    @Environment(\.requestReview) private var requestReview
     @EnvironmentObject private var subscriptionManager: SubscriptionManager
     @EnvironmentObject private var auth: AuthManager
     @EnvironmentObject private var caregiverManager: CaregiverManager
@@ -23,6 +21,7 @@ struct SettingsView: View {
     @State private var showingDeleteConfirm = false
     @State private var showingSignUp = false
     @State private var showingEnterInviteCode = false
+    @State private var showingRedeemPromoCode = false
     @Binding var showingAccountSwitcher: Bool
 
     // Hidden Developer Options unlock: tap the version row 7x, then enter the passcode.
@@ -213,14 +212,20 @@ struct SettingsView: View {
                         SettingsLabel(title: "Privacy Policy", systemImage: "doc.text.fill", tint: .blue)
                     }
 
-                    Button {
-                        // Native in-app rating prompt (previously this opened apps.apple.com's
-                        // home page, which did nothing useful). Apple rate-limits how often the
-                        // prompt actually appears; the write-review deep link is used post-launch
-                        // once the App Store ID is known.
-                        requestReview()
-                    } label: {
+                    // Stays a direct App Store link rather than the throttled system API: this is an
+                    // explicit user action, and a button that silently does nothing (as
+                    // requestReview often does) reads as broken. Tapping it also stops the
+                    // automatic prompts — they've gone to the store deliberately, so continuing to
+                    // interrupt them later is just noise.
+                    Link(destination: Constants.ExternalLinks.appStoreWriteReview) {
                         SettingsLabel(title: "Rate DoseTrack", systemImage: "star.bubble.fill", tint: .yellow)
+                    }
+                    .simultaneousGesture(TapGesture().onEnded {
+                        ReviewPromptManager.shared.optOutOfAutomaticPrompts()
+                    })
+
+                    Button { showingRedeemPromoCode = true } label: {
+                        SettingsLabel(title: "Redeem Promo Code", systemImage: "gift.fill", tint: .pink)
                     }
 
                     Button {
@@ -260,6 +265,9 @@ struct SettingsView: View {
             .sheet(isPresented: $showingSignUp) { AuthView().environmentObject(auth) }
             .sheet(isPresented: $showingEnterInviteCode) {
                 EnterInviteCodeView().environmentObject(caregiverManager)
+            }
+            .sheet(isPresented: $showingRedeemPromoCode) {
+                RedeemPromoCodeView().environmentObject(subscriptionManager).environmentObject(auth)
             }
             .navigationDestination(isPresented: $showingDeveloperOptions) {
                 DeveloperOptionsView()
@@ -513,7 +521,7 @@ private struct WatchSyncView: View {
 /// A settings row label with the icon rendered in a uniform tinted squircle — the same
 /// treatment Apple's own Settings uses. Replaces the previous mix of plain black glyphs, blue
 /// outlines, filled circles, and a bare yellow star that made the list look patched-together.
-private struct SettingsLabel: View {
+struct SettingsLabel: View {
     let title: String
     let systemImage: String
     let tint: Color

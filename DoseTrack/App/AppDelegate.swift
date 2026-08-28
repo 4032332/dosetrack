@@ -16,6 +16,9 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         ScreenshotSeeder.seedIfRequested()
         ScreenshotSeeder.selectTabIfRequested()
         #endif
+        // Stamps first launch so the review prompt can require a minimum tenure — without this,
+        // a burst of first-day logging could satisfy the dose threshold immediately.
+        ReviewPromptManager.shared.recordLaunchIfNeeded()
         NotificationManager.shared.registerCategories()
         UNUserNotificationCenter.current().delegate = self
         registerBackgroundTasks()

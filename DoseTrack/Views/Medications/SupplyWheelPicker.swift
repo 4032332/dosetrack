@@ -5,11 +5,12 @@ import SwiftUI
 /// persistent visual bug (the highlighted number never lined up with the selection
 /// box), so this is a plain stepper with a large tappable number that opens a numpad
 /// for direct entry — simpler and more reliable than a custom scroll-snapping picker.
+/// Supports half-unit supply (e.g. half tablets) via decimal manual entry.
 struct SupplyWheelPicker: View {
-    @Binding var value: Int
+    @Binding var value: Double
     let unit: String
 
-    private let maxValue = 999
+    private let maxValue: Double = 999
     @State private var showingManualEntry = false
     @State private var manualText = ""
 
@@ -19,7 +20,7 @@ struct SupplyWheelPicker: View {
                 Label("Current supply", systemImage: "cross.case.fill")
                     .font(.subheadline)
                 Spacer()
-                Text("\(value) \(unit)\(value == 1 ? "" : "s")")
+                Text("\(value.trimmedQuantityString) \(unit)\(value == 1 ? "" : "s")")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(Color.accentColor)
             }
@@ -42,7 +43,7 @@ struct SupplyWheelPicker: View {
                     manualText = ""
                     showingManualEntry = true
                 } label: {
-                    Text("\(value)")
+                    Text(value.trimmedQuantityString)
                         .font(.system(size: 34, weight: .bold, design: .rounded))
                         .foregroundStyle(Color.accentColor)
                         .frame(minWidth: 90)
@@ -69,15 +70,15 @@ struct SupplyWheelPicker: View {
         }
         .alert("Enter quantity", isPresented: $showingManualEntry) {
             TextField("e.g. 100", text: $manualText)
-                .keyboardType(.numberPad)
+                .keyboardType(.decimalPad)
             Button("Set") {
-                if let n = Int(manualText), n >= 0, n <= maxValue {
+                if let n = Double(manualText), n >= 0, n <= maxValue {
                     value = n
                 }
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("How many \(unit)s do you have?")
+            Text("How many \(unit)s do you have? For a half tablet, use 0.5")
         }
     }
 }

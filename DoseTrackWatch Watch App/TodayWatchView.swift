@@ -96,11 +96,15 @@ struct TodayWatchView: View {
 
     @ViewBuilder
     private var doseList: some View {
-        if connectivity.medications.isEmpty {
+        // The empty state only applies when there's nothing at all — a user whose only items are
+        // as-needed would otherwise see "No doses today" with no way to log one.
+        if connectivity.medications.isEmpty && connectivity.asNeededItems.isEmpty {
             emptyState
         } else {
             VStack(spacing: 6) {
-                if outstanding.isEmpty && !takenMeds.isEmpty {
+                if connectivity.medications.isEmpty {
+                    // As-needed only: nothing scheduled, so skip straight to that section.
+                } else if outstanding.isEmpty && !takenMeds.isEmpty {
                     // Everything's done — no separate "outstanding" heading needed, the header
                     // card already says "All done! 🎉". Show the taken list directly (it's the
                     // only content there is), still collapsed by default.
@@ -109,6 +113,31 @@ struct TodayWatchView: View {
                     ForEach(outstanding) { med in doseRow(for: med) }
                     if !takenMeds.isEmpty {
                         takenSection
+                    }
+                }
+
+                asNeededSection
+            }
+        }
+    }
+
+    /// Mirrors iOS Today's "As Needed" section. Always last, and never contributes to the header's
+    /// taken/total counts — these doses were never due, so they can't be outstanding.
+    @ViewBuilder
+    private var asNeededSection: some View {
+        if !connectivity.asNeededItems.isEmpty {
+            VStack(spacing: 6) {
+                HStack {
+                    Text("AS NEEDED")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                }
+                .padding(.top, 4)
+
+                ForEach(connectivity.asNeededItems) { item in
+                    WatchAsNeededRow(item: item) { doseCount in
+                        connectivity.logAsNeeded(medicationId: item.id, doseCount: doseCount)
                     }
                 }
             }
@@ -319,6 +348,104 @@ private struct WatchDoseActionSheet: View {
             }
         }
         .padding()
+    }
+}
+
+// MARK: - As Needed Row
+
+/// One as-needed item on the watch. Tapping expands an inline dose picker rather than opening a
+/// sheet: a sheet on a 40mm screen for a two-tap action is more friction than the action itself.
+/// There's no note field — text entry on a watch isn't practical, and the phone's sheet covers it.
+private struct WatchAsNeededRow: View {
+    let item: WatchAsNeededItem
+    let onLog: (Int) -> Void
+
+    @State private var isExpanded = false
+    @State private var doseCount = 1
+
+    private var itemColor: Color { Color(hex: item.colorHex) }
+
+    private var unitLabel: String {
+        doseCount == 1 ? item.unit : item.unit + "s"
+    }
+
+    var body: some View {
+        VStack(spacing: 6) {
+            Button {
+                withAnimation(.easeInOut(duration: 0.15)) { isExpanded.toggle() }
+            } label: {
+                HStack(spacing: 8) {
+                    Circle()
+                        .fill(itemColor)
+                        .frame(width: 8, height: 8)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(item.name)
+                            .font(.system(size: 13, weight: .medium))
+                            .lineLimit(1)
+                        if item.dosesTakenToday > 0 {
+                            Text("\(item.dosesTakenToday) today")
+                                .font(.system(size: 10))
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    Spacer()
+                    Image(systemName: isExpanded ? "chevron.up" : "plus.circle.fill")
+                        .font(.system(size: 14))
+                        .foregroundStyle(isExpanded ? .secondary : itemColor)
+                }
+                .padding(.vertical, 6)
+                .padding(.horizontal, 10)
+                .background(Color.gray.opacity(0.15), in: RoundedRectangle(cornerRadius: 10))
+            }
+            .buttonStyle(.plain)
+
+            if isExpanded {
+                HStack(spacing: 8) {
+                    Button {
+                        if doseCount > 1 { doseCount -= 1 }
+                    } label: {
+                        Image(systemName: "minus")
+                            .font(.system(size: 12, weight: .bold))
+                            .frame(width: 28, height: 28)
+                            .background(Color.gray.opacity(0.25), in: Circle())
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(doseCount <= 1)
+
+                    Text("\(doseCount) \(unitLabel)")
+                        .font(.system(size: 12, weight: .semibold))
+                        .frame(maxWidth: .infinity)
+                        .monospacedDigit()
+
+                    Button {
+                        if doseCount < 10 { doseCount += 1 }
+                    } label: {
+                        Image(systemName: "plus")
+                            .font(.system(size: 12, weight: .bold))
+                            .frame(width: 28, height: 28)
+                            .background(Color.gray.opacity(0.25), in: Circle())
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(doseCount >= 10)
+                }
+
+                Button {
+                    onLog(doseCount)
+                    withAnimation(.easeInOut(duration: 0.15)) {
+                        isExpanded = false
+                        doseCount = 1
+                    }
+                } label: {
+                    Text("Log")
+                        .font(.system(size: 13, weight: .semibold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 6)
+                        .background(itemColor, in: RoundedRectangle(cornerRadius: 8))
+                        .foregroundStyle(.white)
+                }
+                .buttonStyle(.plain)
+            }
+        }
     }
 }
 

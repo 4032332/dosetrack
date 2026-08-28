@@ -56,6 +56,9 @@ final class MedicationsViewModel: ObservableObject {
     @Published var medications: [Medication] = []
     @Published var showingPaywall: Bool = false
     @Published var showingAddForm: Bool = false
+    @Published var showingKindChooser: Bool = false
+    /// Which type the add form opens as, set by the chooser. Still changeable inside the form.
+    @Published var newItemKind: MedicationKind = .medication
     @Published var medicationToEdit: Medication?
     /// Persisted list ordering. Reordering by hand is only meaningful under `.manual`.
     @Published var sortMode: MedicationSort {
@@ -136,8 +139,17 @@ final class MedicationsViewModel: ObservableObject {
         return true
     }
 
+    /// Opens the type chooser. The free-tier limit is checked here, before asking what kind of thing
+    /// they're adding — no point picking "Supplement" only to be shown a paywall afterwards.
     func requestAddMedication() {
         guard canAddMedication() else { return }
+        showingKindChooser = true
+    }
+
+    /// Opens the add form pre-set to the chosen type. The limit was already checked in
+    /// `requestAddMedication`, so this doesn't re-check.
+    func startAdding(kind: MedicationKind) {
+        newItemKind = kind
         showingAddForm = true
     }
 
@@ -183,6 +195,59 @@ final class MedicationsViewModel: ObservableObject {
         // (remote rows still carry the old sortOrder). Stamp updatedAt + push each row.
         let pushUserId = ActiveAccountResolver.shared.activeUserId
         let toPush = reordered
+        Task {
+            for med in toPush {
+                await SupabaseSyncManager.shared.pushMedication(med, forUserId: pushUserId)
+            }
+        }
+    }
+
+    // MARK: - Grouping by kind
+
+    /// `medications` split into medication / vitamin / supplement, preserving the active sort within
+    /// each group. Empty groups are omitted so someone who tracks no supplements never sees an empty
+    /// "Supplements" header.
+    var groupedByKind: [(kind: MedicationKind, medications: [Medication])] {
+        MedicationKind.allCases.compactMap { kind in
+            let items = medications.filter { $0.medicationKind == kind }
+            return items.isEmpty ? nil : (kind: kind, medications: items)
+        }
+    }
+
+    /// Reorders within one kind's group.
+    ///
+    /// The IndexSet a grouped `ForEach` hands back is *section-relative*, but `sortOrder` is a
+    /// single global sequence — applying section indices to the global array directly would shuffle
+    /// unrelated items. So: reorder the group, then splice it back over the positions the group
+    /// already occupied, leaving every other item exactly where it was.
+    func moveItems(in kind: MedicationKind, from source: IndexSet, to destination: Int) {
+        let groupItems = medications.filter { $0.medicationKind == kind }
+        guard !groupItems.isEmpty else { return }
+
+        var reorderedGroup = groupItems
+        reorderedGroup.move(fromOffsets: source, toOffset: destination)
+
+        // Global slots this group currently occupies, in order.
+        let groupSlots = medications.enumerated()
+            .filter { $0.element.medicationKind == kind }
+            .map(\.offset)
+
+        var rebuilt = medications
+        for (slot, med) in zip(groupSlots, reorderedGroup) {
+            rebuilt[slot] = med
+        }
+
+        let now = Date()
+        for (index, med) in rebuilt.enumerated() {
+            med.sortOrder = Int32(index)
+            med.updatedAt = now
+        }
+        context.saveOrReport()
+        if sortMode != .manual { sortMode = .manual }
+        medications = rebuilt
+
+        let pushUserId = ActiveAccountResolver.shared.activeUserId
+        let toPush = rebuilt
         Task {
             for med in toPush {
                 await SupabaseSyncManager.shared.pushMedication(med, forUserId: pushUserId)

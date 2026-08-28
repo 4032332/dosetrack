@@ -25,9 +25,19 @@ struct AddEditMedicationView: View {
     /// free-tier allowance only if the medication is actually saved.
     @State private var cameFromScan = false
     @ObservedObject private var scanUsage = ScanUsageManager.shared
+    @State private var showingQuantityEntry = false
+    @State private var quantityEntryText = ""
 
     /// Entry-point subtitle: entitled users just see the feature blurb; free users see how many of
     /// their 3 lifetime scans remain, or a Plus prompt once they're spent.
+    private var namePlaceholder: String {
+        switch viewModel.kind {
+        case .medication: return "Name (e.g. Metformin)"
+        case .vitamin:    return "Name (e.g. Vitamin D)"
+        case .supplement: return "Name (e.g. Magnesium Glycinate)"
+        }
+    }
+
     private var scanShortcutSubtitle: String {
         if SubscriptionManager.shared.isProSubscriber
             || CaregiverManager.shared.ownPatientRelationship?.isActive == true {
@@ -76,12 +86,27 @@ struct AddEditMedicationView: View {
                     }
                 }
 
-                // MARK: Medication name
-                Section("Medication") {
-                    TextField("Name (e.g. Metformin)", text: $viewModel.name)
+                // MARK: Type + name
+                Section {
+                    // Changeable at any time, including on an existing item — reclassifying a
+                    // supplement as a vitamin (or promoting something to a medication) keeps every
+                    // field already filled in, because all three kinds share this one form.
+                    Picker("Type", selection: $viewModel.kind) {
+                        ForEach(MedicationKind.allCases) { kind in
+                            Text(kind.displayName).tag(kind)
+                        }
+                    }
+
+                    TextField(namePlaceholder, text: $viewModel.name)
                         .autocorrectionDisabled()
                     if let err = viewModel.nameError {
                         Text(err).font(.caption).foregroundStyle(.red)
+                    }
+                } header: {
+                    Text(viewModel.kind.displayName)
+                } footer: {
+                    if !viewModel.kind.affectsAdherence {
+                        Text("Vitamins and supplements appear in your history and reports, but missing one won't count against your adherence score.")
                     }
                 }
 
@@ -114,8 +139,18 @@ struct AddEditMedicationView: View {
                         Text("Each dose")
                             .foregroundStyle(.primary)
                         Spacer()
-                        Stepper("\(viewModel.quantityAmount)", value: $viewModel.quantityAmount, in: 1...99)
-                            .fixedSize()
+                        Button {
+                            quantityEntryText = ""
+                            showingQuantityEntry = true
+                        } label: {
+                            Text(viewModel.quantityAmount.trimmedQuantityString)
+                                .font(.body.weight(.semibold))
+                                .foregroundStyle(Color.accentColor)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 4)
+                                .background(Color.accentColor.opacity(0.12), in: RoundedRectangle(cornerRadius: 8))
+                        }
+                        .buttonStyle(.plain)
                         Picker("", selection: $viewModel.quantityUnit) {
                             ForEach(AddEditMedicationViewModel.quantityUnitOptions, id: \.self) {
                                 Text($0).tag($0)
@@ -123,11 +158,23 @@ struct AddEditMedicationView: View {
                         }
                         .pickerStyle(.menu)
                     }
+                    .alert("Each dose", isPresented: $showingQuantityEntry) {
+                        TextField("e.g. 1.5", text: $quantityEntryText)
+                            .keyboardType(.decimalPad)
+                        Button("Set") {
+                            if let v = Double(quantityEntryText), v > 0, v <= 99 {
+                                viewModel.quantityAmount = v
+                            }
+                        }
+                        Button("Cancel", role: .cancel) {}
+                    } message: {
+                        Text("For half tablets, use 0.5")
+                    }
                 } header: {
                     Text("Dose")
                 } footer: {
                     if !viewModel.doseAmount.isEmpty {
-                        Text("Each dose: \(viewModel.quantityAmount) \(viewModel.quantityUnit)\(viewModel.quantityAmount > 1 ? "s" : "") × \(viewModel.doseAmount)\(viewModel.doseUnit)")
+                        Text("Each dose: \(viewModel.quantityAmount.trimmedQuantityString) \(viewModel.quantityUnit)\(viewModel.quantityAmount > 1 ? "s" : "") × \(viewModel.doseAmount)\(viewModel.doseUnit)")
                             .font(.caption)
                     }
                 }
@@ -144,10 +191,22 @@ struct AddEditMedicationView: View {
                 Section("Schedule") {
                     GuidedScheduleView(
                         schedules: $viewModel.schedules,
-                        medicationName: viewModel.name.isEmpty ? "this medication" : viewModel.name,
+                        medicationName: viewModel.name.isEmpty ? "this \(viewModel.kind.displayName.lowercased())" : viewModel.name,
                         doseDescription: viewModel.doseAmount.isEmpty ? "a dose" : "\(viewModel.doseAmount)\(viewModel.doseUnit)",
                         isEditingExistingMedication: viewModel.isEditing
                     )
+                }
+
+                // MARK: As needed (PRN)
+                Section {
+                    Toggle("Taken as needed", isOn: $viewModel.allowsAsNeeded)
+                } footer: {
+                    // Both/either is intentional: a painkiller can be scheduled nightly AND taken
+                    // extra when required, so this sits alongside the schedule rather than
+                    // replacing it.
+                    Text(viewModel.allowsAsNeeded
+                         ? "Shows in an \"As Needed\" section on Today so you can log a dose any time. As-needed doses can't be missed, so they never affect your adherence score. You can also keep a schedule above if you take this regularly as well."
+                         : "Turn this on for something you take only when you need it — it'll appear in an \"As Needed\" section on Today instead of (or as well as) at a set time.")
                 }
 
                 // MARK: Refill tracking
@@ -160,7 +219,7 @@ struct AddEditMedicationView: View {
                     // fires — not just `quantityAmount` on its own, which is only the per-dose
                     // amount (e.g. "1 tablet") and ignores a 4-times-daily schedule entirely.
                     let dosesPerDay = max(viewModel.schedules.filter { $0.isEnabled }.count, 1)
-                    let dpd = max(viewModel.quantityAmount * dosesPerDay, 1)
+                    let dpd = max(viewModel.quantityAmount * Double(dosesPerDay), 1)
                     let daysLeft = viewModel.currentCount / dpd
                     HStack {
                         Image(systemName: supplyIcon(days: daysLeft))
@@ -315,7 +374,9 @@ struct AddEditMedicationView: View {
             }
             .scrollIndicators(.visible)
             .contentMargins(.bottom, 32, for: .scrollContent)
-            .navigationTitle(viewModel.isEditing ? "Edit Medication" : "New Medication")
+            // Title tracks the type picker, so switching to Supplement mid-entry doesn't leave the
+            // screen still claiming to be a medication.
+            .navigationTitle(viewModel.isEditing ? "Edit \(viewModel.kind.displayName)" : "New \(viewModel.kind.displayName)")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -376,7 +437,7 @@ struct AddEditMedicationView: View {
                             viewModel.doseUnit   = result.strengthUnit
                         }
                         if result.count > 0 {
-                            viewModel.currentCount = result.count
+                            viewModel.currentCount = Double(result.count)
                         }
                         if !result.form.isEmpty {
                             viewModel.quantityUnit = result.form
@@ -385,7 +446,7 @@ struct AddEditMedicationView: View {
                         // ("take 2 tablets" → 2). Only overwrite the form's default when the
                         // scanner actually found it.
                         if result.perDose > 0 {
-                            viewModel.quantityAmount = result.perDose
+                            viewModel.quantityAmount = Double(result.perDose)
                         }
                         cameFromScan = true
                         showingScanner = false
@@ -445,24 +506,25 @@ struct AddEditMedicationView: View {
         }
     }
 
-    private func supplyIcon(days: Int) -> String {
+    private func supplyIcon(days: Double) -> String {
         if days == 0    { return "exclamationmark.triangle.fill" }
         if days < 5     { return "exclamationmark.circle.fill" }
         if days < 7     { return "clock.fill" }
         return "checkmark.circle.fill"
     }
 
-    private func supplyColor(days: Int) -> Color {
+    private func supplyColor(days: Double) -> Color {
         if days < 3 { return .red }
         if days < 5 { return .orange }
         if days < 7 { return .yellow }
         return .green
     }
 
-    private func supplyLabel(days: Int, dpd: Int, unit: String) -> String {
+    private func supplyLabel(days: Double, dpd: Double, unit: String) -> String {
         if days == 0 { return "No supply remaining" }
         let unitPlural = unit + (dpd > 1 ? "s" : "")
-        return "\(days) day\(days == 1 ? "" : "s") remaining (\(dpd) \(unitPlural)/day)"
+        let wholeDays = Int(days)
+        return "\(wholeDays) day\(wholeDays == 1 ? "" : "s") remaining (\(dpd.trimmedQuantityString) \(unitPlural)/day)"
     }
 
     private var medication: Medication? {

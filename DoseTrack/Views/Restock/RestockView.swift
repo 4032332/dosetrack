@@ -58,6 +58,16 @@ struct RestockView: View {
                                 }
                             }
                         }
+
+                        // Physical organiser storefront — a natural fit here since this tab is
+                        // already about managing physical medication supply.
+                        Section {
+                            Link(destination: Constants.ExternalLinks.store) {
+                                SettingsLabel(title: "Get the DoseTrack Organiser", systemImage: "cart.fill", tint: .purple)
+                            }
+                        } footer: {
+                            Text("A weekly pill organiser, delivered — comes with a free month of DoseTrack Plus.")
+                        }
                     }
                     .scrollIndicators(.visible)
                     .contentMargins(.bottom, 32, for: .scrollContent)
@@ -173,6 +183,10 @@ struct RestockView: View {
             Text("Add medications to track your supply levels here.")
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
+            Link(destination: Constants.ExternalLinks.store) {
+                Label("Get the DoseTrack Organiser", systemImage: "cart.fill")
+            }
+            .padding(.top, 4)
         }
         .padding()
     }
@@ -195,7 +209,7 @@ struct RestockView: View {
 private struct RestockRow: View {
     @ObservedObject var med: Medication
     let onTap: () -> Void
-    @AppStorage("compactRows") private var compactRows: Bool = false
+    @AppStorage("compactRows") private var compactRows: Bool = true
 
     var body: some View {
         Button(action: onTap) {
@@ -222,7 +236,7 @@ private struct RestockRow: View {
                 Text(med.wrappedName)
                     .font(.body.weight(.medium))
                     .foregroundStyle(.primary)
-                Text("\(med.wrappedDosage) · \(med.wrappedUnit)")
+                Text(med.doseSummaryWithForm)
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -269,13 +283,13 @@ private struct RestockRow: View {
     // Single-line supply summary for compact mode (the full row stacks days + doses on two lines).
     @ViewBuilder
     private var supplyLabelCompact: some View {
-        let count = Int(med.currentCount)
+        let count = med.currentCount
         if count == 0 {
             Text("No supply")
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.red)
         } else if count < 3 {
-            Text("\(count) left")
+            Text("\(count.trimmedQuantityString) left")
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.red)
         } else {
@@ -288,13 +302,13 @@ private struct RestockRow: View {
 
     @ViewBuilder
     private var supplyLabel: some View {
-        let count = Int(med.currentCount)
+        let count = med.currentCount
         if count == 0 {
             Text("No supply")
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.red)
         } else if count < 3 {
-            Text("\(count) dose\(count == 1 ? "" : "s") left")
+            Text("\(count.trimmedQuantityString) dose\(count == 1 ? "" : "s") left")
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.red)
         } else {

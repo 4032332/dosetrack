@@ -58,15 +58,32 @@ final class AddEditMedicationViewModelTests: XCTestCase {
         XCTAssertNotNil(vm.nameError)
     }
 
-    func testSave_failsWithEmptyDosage() {
+    /// Strength used to be mandatory. It no longer is: plenty of real products don't print a single
+    /// strength (a scoop of powder, a 19-ingredient multivitamin), and requiring a number there
+    /// pushed people into inventing one — worse than a blank on a medical record.
+    func testSave_succeedsWithEmptyDosage() throws {
         let vm = AddEditMedicationViewModel(context: context)
-        vm.name = "Aspirin"
+        vm.name = "Magnesium Powder"
         vm.doseAmount = ""
+        vm.quantityUnit = "scoop"
 
         let result = vm.save()
 
-        XCTAssertNil(result)
-        XCTAssertNotNil(vm.doseError)
+        XCTAssertNotNil(result, "A missing strength must not block saving")
+        XCTAssertNil(vm.doseError)
+    }
+
+    /// A blank strength must store a genuinely empty dosage — not a bare unit like "mg", which
+    /// would render as a nonsense strength everywhere the dose summary is shown.
+    func testSave_emptyDosageStoresEmptyStringNotBareUnit() throws {
+        let vm = AddEditMedicationViewModel(context: context)
+        vm.name = "Protein"
+        vm.doseAmount = ""
+        vm.doseUnit = "mg"
+
+        let med = try XCTUnwrap(vm.save())
+
+        XCTAssertEqual(med.wrappedDosage, "", "Expected empty dosage, got a bare unit")
     }
 
     func testSave_trimsWhitespace() throws {

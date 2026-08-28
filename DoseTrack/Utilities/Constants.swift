@@ -7,8 +7,16 @@ enum Constants {
     }
 
     enum StoreKit {
-        static let proMonthly = "com.robbrown.dosetrack.pro.monthly"
-        static let proAnnual = "com.robbrown.dosetrack.pro.annual"
+        // Recreated twice after App Store Connect review-bundling errors that followed the
+        // subscription across every rename/recreation within the original "DoseTrack Plus"
+        // group — the group itself, not any one product, turned out to be the corrupted
+        // object. This product now lives in a brand-new group ("DoseTrack Plus 2").
+        static let proMonthly = "com.robbrown.dosetrack.pro.monthly3"
+        // Recreated in the new group alongside Monthly. The original `...pro.annual` still exists,
+        // orphaned, in the old "DoseTrack Plus" group — a subscription cannot be moved between
+        // groups in App Store Connect, so reaching the working group required a new product ID.
+        // Apple never releases a used product ID, hence the suffix rather than a reuse.
+        static let proAnnual = "com.robbrown.dosetrack.pro.annual2"
     }
 
     enum UserDefaultsKeys {
@@ -19,6 +27,28 @@ enum Constants {
 
     enum FreeTier {
         static let maxMedications = 5
+    }
+
+    enum PromoCode {
+        /// The single shared code redeemable for a temporary Plus unlock (e.g. bundled with a
+        /// physical product sold outside the app). Not unique per purchase — enforcement of
+        /// "once per account" happens server-side via promo_redemptions' unique constraint, not
+        /// by the code itself being secret or single-use.
+        static let sharedCode = "POPAPILL"
+        static let durationDays = 30
+
+        /// What the reminder banner tells the user they'll lose, in the same order as the
+        /// paywall's feature list (PaywallView.featureList) so the messaging stays consistent.
+        static let featuresLost = [
+            "Unlimited medications",
+            "PDF doctor reports",
+            "Caring for someone else",
+            "Cross-device sync",
+        ]
+
+        /// Days-remaining thresholds that trigger an expiry reminder — only the final run-up to
+        /// expiry, not the whole 30-day window.
+        static let reminderThresholds: Set<Int> = [5, 4, 3, 2, 1]
     }
 
     enum DeveloperOptions {
@@ -35,12 +65,23 @@ enum Constants {
         /// Pre-launch placeholder — swap for the real App Store listing URL once live.
         static let appStoreFallback = URL(string: "https://dosetrack.app/get-the-app")!
 
-        /// Hosted privacy policy (GitHub Pages) — same URL registered in App Store Connect.
-        static let privacyPolicy = URL(string: "https://4032332.github.io/dosetrack/privacy.html")!
+        /// Hosted privacy policy (neurotrocity.com) — same URL registered in App Store Connect.
+        static let privacyPolicy = URL(string: "https://neurotrocity.com/dosetrack/privacy/")!
 
         /// Terms of Use (EULA). Apple's standard EULA satisfies the auto-renewable-subscription
         /// requirement; swap for a hosted custom Terms page (neurotrocity.com/dosetrack/terms) once live.
         static let termsOfUse = URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")!
+
+        /// The DoseTrack Organiser storefront — a physical weekly pill organiser sold outside the
+        /// app. Promo codes for a free month of Plus are bundled with it, so this is linked both
+        /// from the redeem screen (for anyone who doesn't have a code yet) and from Settings.
+        static let store = URL(string: "https://dosetrack.neurotrocity.com/")!
+
+        /// Deep link straight to the App Store's "Write a Review" flow for the app's own listing.
+        /// Used by the "Rate DoseTrack" button — SKStoreReviewController's requestReview() is
+        /// throttled by Apple to a few prompts a year and can silently no-op, which is wrong for
+        /// a button the user explicitly tapped expecting something to happen.
+        static let appStoreWriteReview = URL(string: "https://apps.apple.com/app/id6788554606?action=write-review")!
     }
 
     enum MedicationColors {

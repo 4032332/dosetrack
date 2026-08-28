@@ -1,9 +1,11 @@
 // DoseTrack/Views/Today/TodayView.swift
 import SwiftUI
+import StoreKit
 
 struct TodayView: View {
     @Environment(\.managedObjectContext) private var context
     @EnvironmentObject private var caregiverManager: CaregiverManager
+    @EnvironmentObject private var subscriptionManager: SubscriptionManager
     // Not initialized with the environment context directly: @StateObject's initial value is
     // evaluated before the environment is available. Instead we seed it with a placeholder and
     // rebuild it in `.task`/`.onChange(of: context)` below so the view always operates against
@@ -17,6 +19,11 @@ struct TodayView: View {
     /// Taken-and-past doses default to collapsed so a long list of already-handled doses
     /// doesn't push "Upcoming Today" off screen — the user can still expand to review them.
     @State private var showTakenPast = false
+    @Environment(\.requestReview) private var requestReview
+    @ObservedObject private var reviewPrompts = ReviewPromptManager.shared
+    @State private var selectedAsNeededItem: AsNeededItem?
+    @State private var promoExpiryReminderDays: Int?
+    @State private var showingPaywall = false
     @Binding var showingAccountSwitcher: Bool
 
     init(showingAccountSwitcher: Binding<Bool> = .constant(false)) {
@@ -129,6 +136,8 @@ struct TodayView: View {
                         }
                     }
                 }
+
+                asNeededSection
             }
             .scrollIndicators(.visible)
             // Tightens the large default gaps between time-group sections — grouping doses by
@@ -153,6 +162,11 @@ struct TodayView: View {
                         .padding(.bottom, 8)
                 }
             }
+            .sheet(item: $selectedAsNeededItem) { item in
+                LogAsNeededSheet(item: item) { doseCount, note in
+                    viewModel.logAsNeeded(item, doseCount: doseCount, notes: note)
+                }
+            }
             .sheet(item: $selectedEntry) { entry in
                 DoseActionSheet(
                     entry: entry,
@@ -165,16 +179,104 @@ struct TodayView: View {
         }
         .onAppear {
             syncContext()
+            MissedDoseSweeper.sweep(context: context, pushUserId: ActiveAccountResolver.shared.activeUserId)
             viewModel.refresh()
+            // At most one promo-expiry reminder per calendar day — promoExpiryReminderDaysRemaining()
+            // itself tracks whether today's reminder already fired, so this is safe to call on
+            // every appearance of the tab (not just cold launch).
+            promoExpiryReminderDays = subscriptionManager.promoExpiryReminderDaysRemaining()
         }
         .onChange(of: context) { _, _ in syncContext() }
         .onChange(of: viewModel.celebrateNow) { _, newValue in
-            if newValue { showConfetti = true }
+            guard newValue else { return }
+            showConfetti = true
+
+            // Ask for a review only here: they've just finished every dose for the day, so nothing
+            // is outstanding and the moment is a positive one. Deliberately delayed until the
+            // confetti has largely cleared — a system sheet landing on top of the celebration would
+            // step on it, and would read as interrupting rather than congratulating.
+            //
+            // The system decides whether anything actually appears (already-rated users see
+            // nothing, and there's a 3-per-year cap); see ReviewPromptManager for why we can't know.
+            if reviewPrompts.shouldRequestReview() {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2.2) {
+                    requestReview()
+                    reviewPrompts.recordRequestMade()
+                }
+            }
         }
         .overlay {
             if showConfetti {
                 ConfettiView { showConfetti = false }
                     .transition(.opacity)
+            }
+        }
+        .alert(
+            promoExpiryReminderDays == 1
+                ? "Your Plus access ends tomorrow"
+                : "Your Plus access ends in \(promoExpiryReminderDays ?? 0) days",
+            isPresented: Binding(
+                get: { promoExpiryReminderDays != nil },
+                set: { if !$0 { promoExpiryReminderDays = nil } }
+            )
+        ) {
+            Button("Not Now", role: .cancel) {}
+            Button("Subscribe") { showingPaywall = true }
+        } message: {
+            Text("Once it ends, you'll lose " + Constants.PromoCode.featuresLost.joined(separator: ", ") + ". Subscribe to DoseTrack Plus to keep them.")
+        }
+        .sheet(isPresented: $showingPaywall) {
+            PaywallView().environmentObject(subscriptionManager)
+        }
+    }
+
+    /// Ad-hoc items, always last so the day still reads top-to-bottom as a timeline. These have no
+    /// time and no status: a row shows only what's been taken today, never a "due" or "missed"
+    /// state, because nothing here was ever expected at a particular moment.
+    @ViewBuilder
+    private var asNeededSection: some View {
+        if !viewModel.asNeededItems.isEmpty {
+            Section {
+                ForEach(viewModel.asNeededItems) { item in
+                    Button {
+                        selectedAsNeededItem = item
+                    } label: {
+                        HStack(spacing: 12) {
+                            RoundedRectangle(cornerRadius: 7, style: .continuous)
+                                .fill(item.medication.color)
+                                .frame(width: 29, height: 29)
+                                .overlay {
+                                    Image(systemName: item.medication.unitIconName)
+                                        .font(.system(size: 14, weight: .semibold))
+                                        .foregroundStyle(.white)
+                                }
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(item.medication.wrappedName)
+                                    .font(.body)
+                                    .foregroundStyle(.primary)
+                                if item.dosesTakenToday > 0 {
+                                    Text("\(item.dosesTakenToday) taken today")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                } else if !item.medication.doseSummary.isEmpty {
+                                    Text(item.medication.doseSummary)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                            Spacer()
+                            Image(systemName: "plus.circle.fill")
+                                .font(.title3)
+                                .foregroundStyle(.tint)
+                        }
+                        .padding(.vertical, 2)
+                    }
+                }
+            } header: {
+                SectionHeader("As Needed")
+            } footer: {
+                Text("Tap to log a dose. These aren't scheduled, so they never count as missed.")
+                    .font(.caption)
             }
         }
     }
@@ -486,7 +588,7 @@ private struct AlertRow: View {
     private var subtitle: String {
         switch alert {
         case .lowRefill(let med, let remaining):
-            let dpd = max(Int(med.totalDosesPerDay), 1)
+            let dpd = max(Int(med.totalDosesPerDay.rounded()), 1)
             let days = remaining / dpd
             if remaining <= 0 { return "No supply left — refill now" }
             if days == 0 { return "\(remaining) dose\(remaining == 1 ? "" : "s") left — refill now" }
