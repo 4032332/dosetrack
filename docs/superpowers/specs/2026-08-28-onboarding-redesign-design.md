@@ -285,3 +285,71 @@ This is a prerequisite, not a parallel task.
 **Data loss is the failure mode that matters.** Every other bug here is cosmetic;
 losing a user's entered medications is not. The merge tests are the highest-value
 tests in this spec.
+
+---
+
+## Visual refresh (added 2026-08-29)
+
+### The audit
+
+Two generations of mascot art coexist. The older generation is confined entirely
+to the screens this redesign already replaces:
+
+| Asset | Size | Generation | Used by |
+|---|---|---|---|
+| `SplashHero` | 588K | Current Milli | Splash, paywall, medications empty state, avatar picker, onboarding p1 |
+| `AllDone` | 592K | Current Milli | Today "all done" |
+| `EmptyState` | 320K | Current Milli | Today empty |
+| `WatchHero` | — | Current | Watch splash + Today |
+| `OnboardingWelcome` | 120K | **Old flat** | `AuthView:36`, `OnboardingView:339` |
+| `OnboardingNotification` | 88K | **Old flat** | `OnboardingView:176` |
+| `OnboardingAllDone` | 96K | **Old flat** | **Nothing — dead asset** |
+
+The file sizes are the tell: the old assets are roughly a fifth the weight,
+because they are the earlier flat illustrations rather than the rendered mascot.
+`AuthView.swift:27` carries a comment noting `OnboardingWelcome` has *"an opaque
+white background baked in"* — precisely the defect CLAUDE.md §12b records as
+fixed at the asset level for the current generation. That fix never reached these
+three files.
+
+Today, Medications, Restock, History, the paywall, the splash and the watch are
+all already on current-generation art.
+
+### Scope
+
+Because every screen carrying old art is a screen this redesign rebuilds, the
+visual refresh is **not additional scope** — it is the same scope done properly:
+
+- Replace `OnboardingWelcome` and `OnboardingNotification` with current-generation
+  art at the point their screens are rebuilt.
+- **Delete `OnboardingAllDone`.** It is referenced nowhere.
+- Retire the white-background workaround in `AuthView` along with the asset that
+  requires it.
+- Audit the rebuilt screens against §13's design language (rounded system font,
+  brand-blue gradient, spring motion) rather than reproducing existing layout.
+
+### App icon
+
+A new icon in the anime Milli style, drawn from `design-assets/milli-anime-ads/`.
+
+Two constraints that must shape the work rather than be discovered late:
+
+- **It has to survive 60x60.** The anime art is detailed, and detail that reads
+  well in a marketing render turns to mush at icon size. Candidates must be
+  reviewed at true icon dimensions on a real home screen, not as large previews.
+- **Changing the icon has a real user cost.** People locate the app by its icon;
+  existing users will hunt for it once. That is usually worth paying at a major
+  version, but it is a cost, not free.
+
+The three Pro alternate icons (§7b: Midnight, Mint, Lavender) are generated from
+the same source art and must be regenerated to match, or they will visibly
+belong to the previous generation.
+
+### Version
+
+**2.0**, not 1.2 — pending confirmation.
+
+The first-run experience is inverted, a guided tour is added, and the icon
+changes. 1.2 reads as a maintenance bump and wastes the "What's New" moment,
+which matters given that impressions (not conversion) are the current growth
+bottleneck. 2.0 gives a genuine relaunch beat for the store listing.
