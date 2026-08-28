@@ -26,7 +26,7 @@ settings:
     # builds behave like a normal statically-linked binary. Archive/Release builds were never
     # affected by this (the acceleration is Debug-only).
     ENABLE_DEBUG_DYLIB: NO
-    MARKETING_VERSION: "1.1.1"
+    MARKETING_VERSION: "1.1.2"
     CURRENT_PROJECT_VERSION: "43"
     CODE_SIGN_STYLE: Automatic
     # Baked in so Xcode's "Update to recommended settings" banner stops reappearing —
