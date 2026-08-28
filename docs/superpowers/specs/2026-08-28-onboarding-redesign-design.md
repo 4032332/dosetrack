@@ -342,6 +342,12 @@ visual refresh is **not additional scope** — it is the same scope done properl
 
 A new icon in the anime Milli style, drawn from `design-assets/milli-anime-ads/`.
 
+**Chosen (2026-08-29): candidate 04 — anime Milli, arms wide, brand-blue gradient.**
+Source cutout and 1024px master in `design-assets/icon-2.0/`. It fills the square
+better than the arms-raised poses (which leave empty corners and so read smaller),
+and its large eyes stay legible at 60px where finer features collapse. Brand blue
+is retained, so the icon still reads as DoseTrack.
+
 Two constraints that must shape the work rather than be discovered late:
 
 - **It has to survive 60x60.** The anime art is detailed, and detail that reads
@@ -352,8 +358,13 @@ Two constraints that must shape the work rather than be discovered late:
   version, but it is a cost, not free.
 
 The three Pro alternate icons (§7b: Midnight, Mint, Lavender) are generated from
-the same source art and must be regenerated to match, or they will visibly
-belong to the previous generation.
+the same source art and must be regenerated to match, or they will visibly belong
+to the previous generation. Midnight and Mint drafts are already in
+`design-assets/icon-2.0/`; Lavender still needs generating.
+
+**Known issue in every current draft:** the capsules inside the jar mush together
+at 60px. The production icon needs that interior simplified — fewer, larger
+capsules. This is an art edit, not a redesign, and it must happen before ship.
 
 ### Version
 
