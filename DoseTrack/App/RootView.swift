@@ -68,19 +68,27 @@ struct RootView: View {
     /// for that case; the guest has no caregiver relationships, so the account-switcher UI
     /// (gated on `overseenPatients` being non-empty) never appears for them regardless.
     private func refreshActiveAccount() {
-        guard let userId = auth.session?.user.id else {
-            if guestMode {
-                let guestId = localGuestId()
-                if activeAccount?.ownUserId != guestId {
-                    activeAccount = ActiveAccountContext(ownUserId: guestId, ownDisplayName: "You")
-                }
-            } else {
-                activeAccount = nil
+        // `GuestMode.isActive()` reads UserDefaults directly, NOT the `guestMode` @AppStorage
+        // property above. That distinction is the whole fix for the blank-screen bug: this method
+        // is called synchronously from the `.guestModeActivated` handler, in the same tick as the
+        // write that triggered it, and @AppStorage's mirror can still read `false` at that point.
+        // It then took the signed-out branch, cleared `activeAccount`, and — with nothing left to
+        // re-trigger it — left RootView with no branch to render. See GuestMode.swift.
+        switch ActiveAccountDecision.resolve(
+            sessionUserId: auth.session?.user.id,
+            isGuestModeActive: GuestMode.isActive(),
+            localGuestId: localGuestId
+        ) {
+        case .signedIn(let userId):
+            if activeAccount?.ownUserId != userId {
+                activeAccount = ActiveAccountContext(ownUserId: userId, ownDisplayName: auth.displayName)
             }
-            return
-        }
-        if activeAccount?.ownUserId != userId {
-            activeAccount = ActiveAccountContext(ownUserId: userId, ownDisplayName: auth.displayName)
+        case .guest(let guestId):
+            if activeAccount?.ownUserId != guestId {
+                activeAccount = ActiveAccountContext(ownUserId: guestId, ownDisplayName: "You")
+            }
+        case .signedOut:
+            activeAccount = nil
         }
     }
 

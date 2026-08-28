@@ -32,7 +32,7 @@ enum ScreenshotSeeder {
         guard ProcessInfo.processInfo.arguments.contains("-SeedScreenshotData") else { return }
 
         UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
-        UserDefaults.standard.set(true, forKey: "guestMode")
+        GuestMode.activate()
 
         let context = PersistenceController.shared.viewContext
 

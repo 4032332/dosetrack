@@ -18,6 +18,7 @@
 		16A12E9E6DE8748ED6DCECF2 /* ScanTextAccumulatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92DDE4D1A64539EDD477A11F /* ScanTextAccumulatorTests.swift */; };
 		1A0B4C927FF9EE0923E0F461 /* NotificationCopyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 878A5393C63F6234D1FD1534 /* NotificationCopyTests.swift */; };
 		1BD39FB6371E2772D68AF688 /* NotificationCopy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 948B5045FB2A7C01809085B5 /* NotificationCopy.swift */; };
+		1C5ADA83BF90BD750CEC063F /* GuestMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05A6A0ED7E7D1777F7ED47BF /* GuestMode.swift */; };
 		1C754212C521F888A1A4EEBB /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52ACDE6D4899772FC43A7390 /* MainTabView.swift */; };
 		1E6D95CE6D459A3E57CC30D7 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAB551C1FB8D1EA35972B282 /* OnboardingView.swift */; };
 		22EE2C8CD64A1DBD581B3AAA /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0092AEE5F32DECE392F1FBC5 /* PaywallView.swift */; };
@@ -36,6 +37,7 @@
 		37BC34AB00889BC038C55C6E /* MediumWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = A177488B7127CD2F5DCABCEB /* MediumWidget.swift */; };
 		3AC02CB59E3F208940FCC564 /* AdherenceChartView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15FB0D0175781373455B3A93 /* AdherenceChartView.swift */; };
 		3BA950E13CC41C8E2FCEE218 /* RoutineStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91EE2257272872A45D6CBFF3 /* RoutineStoreTests.swift */; };
+		3C34E8A7E8525F9A9B4490E5 /* ActiveAccountDecisionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 062965D7A24204717A76A6BB /* ActiveAccountDecisionTests.swift */; };
 		3C8CF57990D8AF763876B214 /* AccountSwitcherPill.swift in Sources */ = {isa = PBXBuildFile; fileRef = AEBCBE124AF08FD49F0BE6BB /* AccountSwitcherPill.swift */; };
 		4187CF3941EE18972034E4E7 /* MarkDoseTakenIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59C94278F5723E542529E8BA /* MarkDoseTakenIntent.swift */; };
 		495721E2FC0B4A6C27C3932A /* TabNavigator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A7EC4C5C94FE23E59262D0 /* TabNavigator.swift */; };
@@ -218,7 +220,9 @@
 		020BE8E8783CD63DD6223C2A /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		029DF751591E2CD71D187974 /* MealTimesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealTimesView.swift; sourceTree = "<group>"; };
 		0566CD401968CDF5B32D227F /* SelectAllTextField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelectAllTextField.swift; sourceTree = "<group>"; };
+		05A6A0ED7E7D1777F7ED47BF /* GuestMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuestMode.swift; sourceTree = "<group>"; };
 		06256A2FC39F11A9D6318FBE /* DoseLoggingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DoseLoggingService.swift; sourceTree = "<group>"; };
+		062965D7A24204717A76A6BB /* ActiveAccountDecisionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActiveAccountDecisionTests.swift; sourceTree = "<group>"; };
 		0642B52A4FE3BAEB0C80CDEC /* MissedDoseDetectorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MissedDoseDetectorTests.swift; sourceTree = "<group>"; };
 		06BD5AED4A605BD4C784089A /* LogAsNeededSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogAsNeededSheet.swift; sourceTree = "<group>"; };
 		0C4D1437D2355D0E27A61D1E /* ScanSubjectLocator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanSubjectLocator.swift; sourceTree = "<group>"; };
@@ -601,6 +605,7 @@
 				DB8881AEF9994F330EEA6BB1 /* ColorExtensions.swift */,
 				BBFCBCE0FBCEF7C83ABACD61 /* Constants.swift */,
 				B251F7099AC1614FB9283711 /* CoreDataSave.swift */,
+				05A6A0ED7E7D1777F7ED47BF /* GuestMode.swift */,
 				354DC9CA78BDB7F89C818170 /* NumberExtensions.swift */,
 				0566CD401968CDF5B32D227F /* SelectAllTextField.swift */,
 				45FE49CC7A35859480FBCB71 /* TimeFormatting.swift */,
@@ -674,6 +679,7 @@
 			isa = PBXGroup;
 			children = (
 				ACABF038925D50BED3918261 /* ActiveAccountContextTests.swift */,
+				062965D7A24204717A76A6BB /* ActiveAccountDecisionTests.swift */,
 				4246EEBC4AA6FDEF4F8AE04C /* ActiveAccountResolverTests.swift */,
 				56B5E2D8D1A525B4D9624923 /* AddEditMedicationViewModelTests.swift */,
 				A3C137AE71909B05AA99C229 /* AdherenceCalculatorTests.swift */,
@@ -959,6 +965,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				7DE4589978C2550373CAD8E8 /* ActiveAccountContextTests.swift in Sources */,
+				3C34E8A7E8525F9A9B4490E5 /* ActiveAccountDecisionTests.swift in Sources */,
 				4F61AE6A5DD74774B7724BE4 /* ActiveAccountResolverTests.swift in Sources */,
 				FE3369F99BF36FC26E5BFE59 /* AddEditMedicationViewModelTests.swift in Sources */,
 				A7BF7E3D338864668FBF87CE /* AdherenceCalculatorTests.swift in Sources */,
@@ -1061,6 +1068,7 @@
 				2C98FE3103EBB26D84D66BB2 /* DoseTrackApp.swift in Sources */,
 				4BEFA88285563F2053A2829D /* EnterInviteCodeView.swift in Sources */,
 				93B2CC95359EBB9FD24E0837 /* ExportManager.swift in Sources */,
+				1C5ADA83BF90BD750CEC063F /* GuestMode.swift in Sources */,
 				BC601149CDF3569D6DD837A0 /* GuidedScheduleView.swift in Sources */,
 				CF78CFEB0883C456B2A70708 /* HistoryView.swift in Sources */,
 				B88C9038817C7EB6A325029B /* HistoryViewModel.swift in Sources */,

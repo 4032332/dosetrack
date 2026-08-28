@@ -98,7 +98,7 @@ final class AuthManager: ObservableObject {
         } catch {
             // If anonymous auth is disabled in Supabase, fall back to a local-only flag
             errorMessage = nil
-            UserDefaults.standard.set(true, forKey: "guestMode")
+            GuestMode.activate()
             // Publish a synthetic signed-in state so RootView advances
             session = nil
             NotificationCenter.default.post(name: .guestModeActivated, object: nil)
@@ -160,7 +160,7 @@ final class AuthManager: ObservableObject {
     func signOut() async {
         isLoading = true
         defer { isLoading = false }
-        UserDefaults.standard.removeObject(forKey: "guestMode")
+        GuestMode.deactivate()
         do {
             try await client.auth.signOut()
         } catch { /* session cleared locally regardless */ }
