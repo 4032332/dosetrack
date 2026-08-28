@@ -34,8 +34,8 @@ safer change than it first appears.
 - A gender or pronoun field (see Decision 2).
 - Any change to adherence scoring, notification copy, the review prompt, or the
   subscription paywall's contents.
-- Fixing the undiagnosed sign-out bug. It is a **prerequisite**, not part of this
-  work (see Risks).
+- Re-fixing the guest-mode blank-screen bug. It was the stated prerequisite; it
+  was diagnosed and fixed in 70bc76d before this work begins (see Risks).
 
 ---
 
@@ -274,13 +274,23 @@ copy.
 
 **The area is known-fragile.** This touches the auth gate, the disclaimer gate,
 onboarding, and the guest fallback — the same machinery behind the build 28
-account-switch data loss and the sign-out bug reported this session and never
-diagnosed.
+account-switch data loss.
 
-**The sign-out bug should be understood before this work starts, not after.**
-Building an inverted gate order on top of an undiagnosed fault in that same
-machinery risks producing a second bug that is indistinguishable from the first.
-This is a prerequisite, not a parallel task.
+**The prerequisite is cleared.** The blank-screen bug in exactly this machinery
+was diagnosed and fixed in 70bc76d: `continueAsGuest()` posted
+`.guestModeActivated` in the same tick as its UserDefaults write, and RootView's
+synchronous handler read SwiftUI's stale `@AppStorage` mirror, cleared
+`activeAccount`, and left no branch to render. `GuestMode` now owns the key and
+provides an authoritative read, and `ActiveAccountDecision` makes the rule a
+tested pure function. Building the inverted gate order on top of that is now
+safe — it was not before.
+
+**One known defect remains in the same file, deliberately unfixed.**
+`AuthManager.signOut()` sets `session = nil` *after* awaiting
+`client.auth.signOut()`, and the Supabase SDK POSTs to `/logout` before
+returning. Offline, sign-out will appear to do nothing. It is latent today
+because every guest takes the local path, but this redesign makes real-account
+sign-out common. Fix it before or alongside implementation, as its own change.
 
 **Data loss is the failure mode that matters.** Every other bug here is cosmetic;
 losing a user's entered medications is not. The merge tests are the highest-value
