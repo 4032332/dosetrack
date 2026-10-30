@@ -145,76 +145,64 @@
 
   <div class="container">
     <div class="card">
-      <span class="updated">Last updated: July 8, 2026</span>
+      <span class="updated">Last updated: DRAFT &mdash; set on publication</span>
 
-      <p>DoseTrack ("we," "us," "the app") is a medication reminder app made by an independent developer. This policy explains what information DoseTrack collects, how it's used, and the choices you have. We wrote it in plain language on purpose — no legal filler.</p>
+      <p>DoseTrack ("we," "us," "the app") is a medication reminder app made by Neurotrocity, an independent developer. This policy explains what information DoseTrack collects, how it's used, and the choices you have. It is written in plain language on purpose.</p>
 
       <h2>The short version</h2>
       <div class="summary-box">
         <ul>
-          <li>DoseTrack works fully <strong>without an account</strong>. If you never sign in, your medication data never leaves your device.</li>
-          <li>Creating an account is optional and only needed for sync across devices, caregiver sharing, or missed-dose push alerts.</li>
-          <li>We never sell your data, and we don't use advertising or tracking SDKs of any kind.</li>
-          <li>You can delete all your data, at any time, from Settings → Delete All Data.</li>
+          <li><strong>Your medication data stays on your device.</strong> DoseTrack has no accounts and no DoseTrack server. Your medications, schedules, dose history, notes and photos are never sent anywhere by the app.</li>
+          <li><strong>DoseTrack is free and shows one banner ad</strong> on the Today screen. The ad is provided by Google (Google Mobile Ads). To show it, Google receives some device-level information (listed below). It never includes anything about your medications.</li>
+          <li><strong>Ads are non-personalised.</strong> DoseTrack does not ask to track you across other apps and websites.</li>
+          <li>If you are in the UK or EU, you are asked for your consent before any ad is shown, and you can change your choice at any time.</li>
+          <li>You can delete all your data at any time from Settings &rarr; Delete All Data.</li>
         </ul>
       </div>
 
-      <h2>Information we collect</h2>
+      <h2>Information that stays on your device</h2>
+      <p>Your medications, schedules, dose history, notes, bottle photos, E-Script images, profile name and app settings are stored only in the app's local database on your iPhone. DoseTrack does not transmit them. If you create a backup file (Settings &rarr; Backup &amp; Restore), it goes only where you choose to send it using the share sheet. That is you moving your own data, not us collecting it.</p>
+      <p>DoseTrack does not use HealthKit and does not collect your contacts or browsing history. The camera is used only when you scan a medication box, and the image is processed on your device.</p>
 
-      <h3>If you don't create an account</h3>
-      <p>Nothing leaves your device. Your medications, schedules, dose history, notes, and any bottle photos you add are stored only in the app's local database on your iPhone.</p>
-
-      <h3>If you create an account (optional)</h3>
-      <p>Creating an account — via email/password, Sign in with Apple, or Sign in with Google — lets you sync your data across devices and unlock optional features. When you do, we (through our backend provider, Supabase) store:</p>
+      <h2>Advertising and the information Google receives</h2>
+      <p>DoseTrack is funded by a single banner ad shown on the Today screen, served by Google Mobile Ads. When an ad is requested, the Google SDK collects and sends information to Google. Google's SDK declares the following data types:</p>
       <ul>
-        <li><strong>Account information</strong>: your email address and, if provided, your display name.</li>
-        <li><strong>Medication data</strong>: medication names, dosages, schedules, and your dose history (taken/skipped/missed), so it can sync across your devices.</li>
-        <li><strong>Bottle photos</strong>, if you choose to attach one to a medication.</li>
-        <li><strong>A push notification device token</strong>, so we can deliver missed-dose reminder alerts to your device. This token identifies your device to Apple's push notification service — it doesn't identify you personally beyond that.</li>
-        <li><strong>Caregiver sharing information</strong>, if you use that feature (see below).</li>
+        <li><strong>Device identifiers</strong> &mdash; linked to your device/identity by Google; used for third-party advertising and analytics.</li>
+        <li><strong>Coarse (approximate) location</strong> &mdash; linked; used for third-party advertising and analytics.</li>
+        <li><strong>Advertising data</strong> &mdash; linked; used for third-party advertising and analytics.</li>
+        <li><strong>Product interaction</strong> (e.g. ad taps and views) &mdash; linked; used for analytics and advertising.</li>
+        <li><strong>Other diagnostic data</strong> &mdash; not linked; used for advertising and analytics.</li>
+        <li><strong>Performance data</strong> &mdash; not linked; used for advertising and analytics.</li>
+        <li><strong>Crash data</strong> &mdash; not linked; used for analytics.</li>
       </ul>
-      <p>We do <strong>not</strong> collect your location, contacts, browsing history, or any data from Apple Health/HealthKit — DoseTrack does not use HealthKit.</p>
+      <p>This information is collected by Google's SDK, not by DoseTrack's own code, and is handled under Google's own privacy policy. <strong>None of your medication information is ever passed to Google or into an ad request.</strong></p>
 
-      <h2>Caregiver sharing</h2>
-      <p>DoseTrack lets an account holder invite another DoseTrack user to act as a caregiver — for example, an adult child helping a parent manage medications. If you use this feature:</p>
-      <ul>
-        <li>You generate an invite code and choose to share it with someone.</li>
-        <li>Once accepted, the caregiver can view and help manage the medications and schedules on the linked account.</li>
-        <li>Either person can end the caregiver relationship at any time from within the app, which immediately revokes the caregiver's access.</li>
-      </ul>
-      <p>This sharing only happens if you explicitly set it up. We never share your data with a caregiver, or anyone else, without your direct action.</p>
+      <h3>Non-personalised ads, and no tracking prompt</h3>
+      <p>Every ad request DoseTrack makes is set to non-personalised. DoseTrack does not show Apple's App Tracking Transparency prompt and does not use ads to follow you across other companies' apps and websites. We do not sell your data.</p>
 
-      <h2>How we use your information</h2>
-      <p>We use the information above only to operate the app's features:</p>
-      <ul>
-        <li>Syncing your medication data across your own devices.</li>
-        <li>Sending you medication reminders and missed-dose alerts.</li>
-        <li>Enabling caregiver sharing, if you turn it on.</li>
-        <li>Basic customer support, if you contact us.</li>
-      </ul>
-      <p>We do not use your data for advertising, and we do not sell, rent, or trade your information to third parties for any purpose.</p>
+      <h3>Consent in the UK and EU</h3>
+      <p>If you are in the European Economic Area or the UK, DoseTrack shows Google's consent form on first use and shows <strong>no ad</strong> until you have answered it. If you decline, you see no ads. You can review or withdraw your choice at any time from <strong>Settings &rarr; Ad Privacy Options</strong> (shown when it applies to you).</p>
 
-      <h2>Third-party services we use</h2>
-      <p>DoseTrack relies on a small number of service providers to operate account-based features:</p>
+      <h2>Notifications</h2>
+      <p>Medication reminders are scheduled on your device. They are local notifications and do not pass through any DoseTrack server.</p>
+
+      <h2>Third-party services</h2>
       <ul>
-        <li><strong>Supabase</strong> — our backend database and authentication provider. Supabase stores account and medication data on our behalf, under their own security and privacy safeguards.</li>
-        <li><strong>Apple</strong> — Sign in with Apple (optional login method) and Apple Push Notification service (for reminders).</li>
-        <li><strong>Google</strong> — Sign in with Google (optional login method).</li>
+        <li><strong>Google (Google Mobile Ads SDK and User Messaging Platform)</strong> &mdash; serves the banner ad and, where required, the consent form, as described above.</li>
+        <li><strong>Apple</strong> &mdash; App Store, notifications and, if you use it, the share sheet and iCloud Drive for your own backup files.</li>
       </ul>
-      <p>None of these providers are permitted to use your DoseTrack data for their own advertising or independent purposes.</p>
 
       <h2>Data retention and deletion</h2>
-      <p>You can permanently delete all of your data — both on-device and, if you have an account, on our servers — at any time from <strong>Settings → Delete All Data</strong>. This action is immediate and cannot be undone. If you'd like help deleting your data or have questions about what we store, contact us below.</p>
+      <p>Your medication data lives only on your device. You can delete all of it at any time from <strong>Settings &rarr; Delete All Data</strong>, or by deleting the app. DoseTrack holds no copy on any server, so there is nothing for us to delete on your behalf. Data held by Google as part of ad delivery is subject to Google's own policy and controls.</p>
 
       <h2>Children's privacy</h2>
-      <p>DoseTrack is rated 4+ and is not directed at children. We do not knowingly collect personal information from children under 13. If you believe a child has provided us with personal information, please contact us and we will delete it.</p>
+      <p>DoseTrack is rated 4+ and is not directed at children. We do not knowingly collect personal information from children under 13. If you believe a child has provided us with personal information, contact us.</p>
 
       <h2>Security</h2>
-      <p>We use industry-standard practices to protect your information, including encrypted network connections (HTTPS/TLS) for all data sent to our servers, and Supabase's built-in access controls to keep your account data isolated from other users.</p>
-      <p>No method of electronic storage or transmission is 100% secure, and we can't guarantee absolute security — but we don't ask for or store more than what's needed to run the app.</p>
+      <p>Your medication data is stored in the app's sandboxed local database on your device and protected by your device's own security (passcode and encryption). Network traffic from the ad SDK uses encrypted connections. No method of electronic storage or transmission is 100% secure.</p>
 
       <h2>Changes to this policy</h2>
-      <p>If we make material changes to this policy, we'll update the "Last updated" date above and, where appropriate, notify you within the app.</p>
+      <p>If we make material changes we will update the "Last updated" date and, where appropriate, tell you in the app. Version 2.1 removed accounts, cloud sync and caregiver sharing, and version 3.0 made the app free and ad-supported; earlier versions of this policy described accounts and a backend that no longer exist.</p>
 
       <h2>Contact us</h2>
       <p>Questions about this policy or your data? Email us at <a href="mailto:4032332@gmail.com">4032332@gmail.com</a>.</p>
